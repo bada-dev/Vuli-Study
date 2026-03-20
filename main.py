@@ -1442,7 +1442,7 @@ def generate_from_template(exclude_hashes=None):
 
 UKMT_PROMPT = """You are an expert UKMT question writer with deep knowledge of all past UKMT papers from 1988 to present.
 
-Generate ONE original UKMT-style multiple choice question at level: {level}
+You will generate ONE original UKMT-style multiple choice question at level: {level}
 
 WHAT MAKES A REAL UKMT QUESTION:
 - It has a CLEVER TRICK or elegant insight that makes it easy once you see it
