@@ -21,7 +21,7 @@ DISCORD_CONSOLE_CHANNEL_ID = os.environ.get('DISCORD_CONSOLE_CHANNEL_ID')
 client = Groq(api_key=GROQ_API_KEY)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATABASE
+# DATABASE.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_db():
