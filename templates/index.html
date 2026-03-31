@@ -1034,6 +1034,86 @@ body {
   box-shadow: 0 4px 12px rgba(107,207,127,0.3);
 }
 
+
+.todo-timer-panel {
+  background: rgba(255,255,255,0.35);
+  border: 2px solid rgba(255,255,255,0.45);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+.todo-timer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2D3142;
+  margin-bottom: 10px;
+}
+
+.todo-timer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.todo-timer-grid input,
+.todo-timer-grid select,
+.todo-timer-grid button {
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.6);
+  font-size: 12px;
+  font-weight: 600;
+  color: #2D3142;
+}
+
+.todo-timer-grid input:focus,
+.todo-timer-grid select:focus {
+  outline: none;
+  border-color: #6BCF7F;
+}
+
+.todo-timer-grid .full { grid-column: 1 / -1; }
+
+#todoTimerActionBtn {
+  background: linear-gradient(135deg, #6BCF7F 0%, #5ABF6F 100%);
+  border: none;
+  color: white;
+  font-weight: 700;
+}
+
+.todo-timer-chip {
+  background: rgba(255,255,255,0.35);
+  border-radius: 11px;
+  padding: 9px 10px;
+  margin-top: 7px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.todo-timer-chip button {
+  border: none;
+  background: #FF6B6B;
+  color: white;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.todo-history-title {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5B4A3A;
+}
+
 /* Shop Page */
 .shop-content {
   flex: 1;
@@ -2535,6 +2615,30 @@ button:disabled {
             <option value="created">🕒 Recently Added</option>
           </select>
         </div>
+
+        <div class="todo-timer-panel">
+          <div class="todo-timer-title">Task Alarms & Timers</div>
+          <div class="todo-timer-grid">
+            <select id="todoAlarmType">
+              <option value="timer">⏳ Timer</option>
+              <option value="alarm">🕒 Set Time</option>
+            </select>
+            <input id="todoAlarmLabel" type="text" maxlength="30" placeholder="Optional label">
+            <input id="todoTimerMinutes" type="number" min="0" max="600" placeholder="Minutes">
+            <input id="todoTimerSeconds" type="number" min="0" max="59" placeholder="Seconds">
+            <input id="todoAlarmTime" type="time" class="full" style="display:none;">
+            <select id="todoAlarmSchedule" class="full">
+              <option value="once">Once</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <button id="todoTimerActionBtn" class="full">Start Timer / Alarm</button>
+          </div>
+          <div id="todoActiveAlarms"></div>
+          <div class="todo-history-title">Last 10</div>
+          <div id="todoAlarmHistory"></div>
+        </div>
+
         <div class="todo-list" id="todoList"></div>
       </div>
 
@@ -3131,7 +3235,10 @@ const state = {
   lastHappyDecay: Date.now(),
   studyingDisabledUntil: null, // 
   gameActive: false, // 
-  currentGraphFilter: 'all'
+  currentGraphFilter: 'all',
+  todoAlarms: [],
+  todoAlarmHistory: [],
+  todoAlarmInterval: null
 };
 
 const cosmetics = [
@@ -5120,6 +5227,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   if (confirm('This will reset ALL data!!! ONLY do this when you know what yor doing')) {
     if (state.happyDecayInterval) clearInterval(state.happyDecayInterval);
     if (state.timerInterval) clearInterval(state.timerInterval);
+    if (state.todoAlarmInterval) clearInterval(state.todoAlarmInterval);
     if (state.emojiInterval) clearInterval(state.emojiInterval);
     if (state.rebornInterval) clearInterval(state.rebornInterval);
     if (state.pauseInterval) clearInterval(state.pauseInterval);
@@ -5136,6 +5244,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     state.sessionColors = {};
     state.colorSubjects = {};
     state.todos = [];
+    state.todoAlarms = [];
+    state.todoAlarmHistory = [];
     state.ownedCosmetics = [];
     state.ownedBackgrounds = ['default'];
     state.ownedEmotes = [];
@@ -5166,6 +5276,161 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     saveState();
   }
 });
+
+function requestAlarmNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function formatAlarmTime(timestamp) {
+  return new Date(timestamp).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+}
+
+function addAlarmHistoryEntry(entry) {
+  state.todoAlarmHistory.unshift(entry);
+  state.todoAlarmHistory = state.todoAlarmHistory.slice(0, 10);
+}
+
+function notifyAlarmFinished(alarm) {
+  const title = alarm.label ? `⏰ ${alarm.label}` : '⏰ Alarm complete';
+  const body = alarm.type === 'timer' ? 'Your task timer is over.' : 'Your scheduled alarm time is now.';
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/static/StudyBuddyImg.png' });
+  }
+
+  if (navigator.vibrate) navigator.vibrate([200, 150, 200, 150, 300]);
+  alert(`${title}
+${body}`);
+}
+
+function advanceRecurringAlarm(alarm) {
+  const next = new Date(alarm.targetAt);
+  if (alarm.schedule === 'daily') {
+    next.setDate(next.getDate() + 1);
+  } else if (alarm.schedule === 'weekly') {
+    next.setDate(next.getDate() + 7);
+  }
+  alarm.targetAt = next.getTime();
+}
+
+function runTodoAlarmTick() {
+  const now = Date.now();
+  let changed = false;
+
+  state.todoAlarms.forEach(alarm => {
+    if (now >= alarm.targetAt) {
+      notifyAlarmFinished(alarm);
+      addAlarmHistoryEntry({
+        label: alarm.label || (alarm.type === 'timer' ? 'Timer' : 'Alarm'),
+        type: alarm.type,
+        schedule: alarm.schedule,
+        firedAt: now
+      });
+      changed = true;
+
+      if (alarm.schedule === 'once') {
+        alarm.completed = true;
+      } else {
+        advanceRecurringAlarm(alarm);
+      }
+    }
+  });
+
+  if (changed) {
+    state.todoAlarms = state.todoAlarms.filter(a => !a.completed);
+    renderTodoAlarmPanel();
+    saveState();
+  }
+}
+
+function startTodoAlarmEngine() {
+  if (state.todoAlarmInterval) clearInterval(state.todoAlarmInterval);
+  state.todoAlarmInterval = setInterval(() => {
+    runTodoAlarmTick();
+    renderTodoAlarmPanel();
+  }, 1000);
+}
+
+function renderTodoAlarmPanel() {
+  const activeWrap = document.getElementById('todoActiveAlarms');
+  const historyWrap = document.getElementById('todoAlarmHistory');
+  if (!activeWrap || !historyWrap) return;
+
+  const now = Date.now();
+  activeWrap.innerHTML = state.todoAlarms.length
+    ? state.todoAlarms.map(alarm => {
+        const remainMs = Math.max(0, alarm.targetAt - now);
+        const remainSec = Math.floor(remainMs / 1000);
+        const hh = String(Math.floor(remainSec / 3600)).padStart(2, '0');
+        const mm = String(Math.floor((remainSec % 3600) / 60)).padStart(2, '0');
+        const ss = String(remainSec % 60).padStart(2, '0');
+        const label = alarm.label ? `${alarm.label} · ` : '';
+        return `<div class="todo-timer-chip">${label}${alarm.type === 'timer' ? 'Timer' : 'Alarm'} · ${hh}:${mm}:${ss} · ${alarm.schedule}<button data-alarm-id="${alarm.id}">Stop</button></div>`;
+      }).join('')
+    : '<div class="todo-timer-chip">No active timer or alarm.</div>';
+
+  historyWrap.innerHTML = state.todoAlarmHistory.length
+    ? state.todoAlarmHistory.map(item => `<div class="todo-timer-chip">${item.label} · ${item.type} · ${item.schedule} · ${formatAlarmTime(item.firedAt)}</div>`).join('')
+    : '<div class="todo-timer-chip">No history yet.</div>';
+
+  activeWrap.querySelectorAll('button[data-alarm-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.todoAlarms = state.todoAlarms.filter(a => a.id !== btn.dataset.alarmId);
+      renderTodoAlarmPanel();
+      saveState();
+    });
+  });
+}
+
+function createTodoAlarmFromInputs() {
+  const type = document.getElementById('todoAlarmType').value;
+  const schedule = document.getElementById('todoAlarmSchedule').value;
+  const label = document.getElementById('todoAlarmLabel').value.trim();
+
+  let targetAt = null;
+
+  if (type === 'timer') {
+    const mins = Number(document.getElementById('todoTimerMinutes').value || 0);
+    const secs = Number(document.getElementById('todoTimerSeconds').value || 0);
+    const total = mins * 60 + secs;
+    if (total <= 0) {
+      alert('Enter a valid timer duration.');
+      return;
+    }
+    targetAt = Date.now() + total * 1000;
+  } else {
+    const timeValue = document.getElementById('todoAlarmTime').value;
+    if (!timeValue) {
+      alert('Choose an alarm time.');
+      return;
+    }
+    const [hours, minutes] = timeValue.split(':').map(Number);
+    const dt = new Date();
+    dt.setHours(hours, minutes, 0, 0);
+    if (dt.getTime() <= Date.now()) {
+      if (schedule === 'once') {
+        alert('That time has already passed today. Pick a future time.');
+        return;
+      }
+      dt.setDate(dt.getDate() + (schedule === 'weekly' ? 7 : 1));
+    }
+    targetAt = dt.getTime();
+  }
+
+  state.todoAlarms.push({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    type,
+    schedule,
+    label,
+    targetAt
+  });
+
+  renderTodoAlarmPanel();
+  saveState();
+}
 
 // To-Do List
 function renderTodos() {
@@ -5247,6 +5512,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+
+const todoAlarmTypeSelect = document.getElementById('todoAlarmType');
+if (todoAlarmTypeSelect) {
+  todoAlarmTypeSelect.addEventListener('change', (e) => {
+    const isTimer = e.target.value === 'timer';
+    document.getElementById('todoTimerMinutes').style.display = isTimer ? 'block' : 'none';
+    document.getElementById('todoTimerSeconds').style.display = isTimer ? 'block' : 'none';
+    document.getElementById('todoAlarmTime').style.display = isTimer ? 'none' : 'block';
+  });
+}
+
+document.getElementById('todoTimerActionBtn')?.addEventListener('click', () => {
+  requestAlarmNotificationPermission();
+  createTodoAlarmFromInputs();
+});
+
 document.getElementById('addTodoBtn').addEventListener('click', () => {
   if (state.todos.length >= 20) {
     alert('Maximum 20 tasks allowed!');
@@ -5272,6 +5553,7 @@ document.getElementById('saveTodoBtn').addEventListener('click', () => {
     renderTodos();
     renderCalendar();
     document.getElementById('todoModal').classList.remove('active');
+    saveState();
   }
 });
 
@@ -5580,6 +5862,8 @@ function saveState() {
     studyMinutes: state.studyMinutes,
     todos: state.todos,
     todoSort: state.todoSort,
+    todoAlarms: state.todoAlarms,
+    todoAlarmHistory: state.todoAlarmHistory,
     durations: state.durations,
     stopwatchTime: state.stopwatchTime,
     ownedCosmetics: state.ownedCosmetics,
@@ -5615,6 +5899,9 @@ function loadState() {
     try {
       const data = JSON.parse(saved);
       Object.assign(state, data);
+
+      state.todoAlarms = Array.isArray(state.todoAlarms) ? state.todoAlarms : [];
+      state.todoAlarmHistory = Array.isArray(state.todoAlarmHistory) ? state.todoAlarmHistory.slice(0, 10) : [];
       
       // Only reset timeLeft if NOT in an active session
       if (!state.isRunning && !state.isPaused) {
@@ -6035,6 +6322,7 @@ if (freezeIndicator) {
 }
 
 renderTodos();
+renderTodoAlarmPanel();
 renderCalendar();
 renderShop();
 if (typeof Chart !== 'undefined') {
@@ -6043,6 +6331,7 @@ if (typeof Chart !== 'undefined') {
   console.warn('⚠️ Chart.js not ready on startup — graph will load when you visit Stats');
 }
 startHappyDecay();
+startTodoAlarmEngine();
 checkAchievements();
 
 if (state.showFloatingEmojis) {
