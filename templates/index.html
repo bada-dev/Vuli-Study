@@ -2657,6 +2657,27 @@ button:disabled {
         <div class="todo-alarm-strip">
           <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
           <button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
+        <div class="todo-timer-panel">
+          <div class="todo-timer-title">Task Alarms & Timers</div>
+          <div class="todo-timer-grid">
+            <select id="todoAlarmType">
+              <option value="timer">⏳ Timer</option>
+              <option value="alarm">🕒 Set Time</option>
+            </select>
+            <input id="todoAlarmLabel" type="text" maxlength="30" placeholder="Optional label">
+            <input id="todoTimerMinutes" type="number" min="0" max="600" placeholder="Minutes">
+            <input id="todoTimerSeconds" type="number" min="0" max="59" placeholder="Seconds">
+            <input id="todoAlarmTime" type="time" class="full" style="display:none;">
+            <select id="todoAlarmSchedule" class="full">
+              <option value="once">Once</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <button id="todoTimerActionBtn" class="full">Start Timer / Alarm</button>
+          </div>
+          <div id="todoActiveAlarms"></div>
+          <div class="todo-history-title">Last 10</div>
+          <div id="todoAlarmHistory"></div>
         </div>
 
         <div class="todo-list" id="todoList"></div>
