@@ -906,6 +906,12 @@ body {
   margin-bottom: 16px;
 }
 
+.todo-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .todo-title {
   font-size: 24px;
   font-weight: 700;
@@ -927,6 +933,35 @@ body {
 
 .add-todo-btn:active {
   transform: scale(0.9);
+}
+
+.open-alarm-btn {
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.5);
+  border: 2px solid rgba(255,255,255,0.45);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2D3142;
+  cursor: pointer;
+}
+
+.todo-alarm-strip {
+  background: rgba(255,255,255,0.35);
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.todo-alarm-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4E5565;
 }
 
 .todo-list {
@@ -2606,7 +2641,10 @@ button:disabled {
       <div class="todo-content">
         <div class="todo-header">
           <div class="todo-title">To-Do List</div>
-          <button class="add-todo-btn" id="addTodoBtn">+</button>
+          <div class="todo-header-actions">
+            <button class="open-alarm-btn" id="openTodoAlarmBtn">⏰ Alarm</button>
+            <button class="add-todo-btn" id="addTodoBtn">+</button>
+          </div>
         </div>
         <div class="todo-sort-bar">
           <select id="todoSort" class="todo-sort-select">
@@ -2616,6 +2654,9 @@ button:disabled {
           </select>
         </div>
 
+        <div class="todo-alarm-strip">
+          <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
+          <button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
         <div class="todo-timer-panel">
           <div class="todo-timer-title">Task Alarms & Timers</div>
           <div class="todo-timer-grid">
@@ -2881,6 +2922,32 @@ button:disabled {
     <div class="modal-text" id="viewTodoDescription" style="text-align: left; white-space: pre-wrap;"></div>
     <div class="modal-text" id="viewTodoDeadline" style="font-weight: 600;"></div>
     <button class="modal-btn primary" id="closeTodoViewBtn" style="width: 100%;">Close</button>
+  </div>
+</div>
+
+<div class="modal" id="todoAlarmModal">
+  <div class="modal-content" style="max-width: 360px; max-height: 84vh; overflow-y: auto;">
+    <div class="modal-title">Task Alarms & Timers</div>
+    <div class="todo-timer-grid">
+      <select id="todoAlarmType">
+        <option value="timer">⏳ Timer</option>
+        <option value="alarm">🕒 Set Time</option>
+      </select>
+      <input id="todoAlarmLabel" type="text" maxlength="30" placeholder="Optional label">
+      <input id="todoTimerMinutes" type="number" min="0" max="600" placeholder="Minutes">
+      <input id="todoTimerSeconds" type="number" min="0" max="59" placeholder="Seconds">
+      <input id="todoAlarmTime" type="time" class="full" style="display:none;">
+      <select id="todoAlarmSchedule" class="full">
+        <option value="once">Once</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+      </select>
+      <button id="todoTimerActionBtn" class="full">Start Timer / Alarm</button>
+    </div>
+    <div id="todoActiveAlarms"></div>
+    <div class="todo-history-title">Last 10</div>
+    <div id="todoAlarmHistory"></div>
+    <button class="modal-btn primary" id="closeTodoAlarmBtn" style="width:100%; margin-top: 12px;">Close</button>
   </div>
 </div>
 <div class="modal" id="blurModal">
@@ -5357,6 +5424,12 @@ function startTodoAlarmEngine() {
 function renderTodoAlarmPanel() {
   const activeWrap = document.getElementById('todoActiveAlarms');
   const historyWrap = document.getElementById('todoAlarmHistory');
+  const summaryEl = document.getElementById('todoAlarmSummary');
+  if (summaryEl) {
+    summaryEl.textContent = state.todoAlarms.length
+      ? `${state.todoAlarms.length} active alarm${state.todoAlarms.length > 1 ? 's' : ''}`
+      : 'No active alarms or timers.';
+  }
   if (!activeWrap || !historyWrap) return;
 
   const now = Date.now();
@@ -5526,6 +5599,18 @@ if (todoAlarmTypeSelect) {
 document.getElementById('todoTimerActionBtn')?.addEventListener('click', () => {
   requestAlarmNotificationPermission();
   createTodoAlarmFromInputs();
+});
+
+document.getElementById('openTodoAlarmBtn')?.addEventListener('click', () => {
+  document.getElementById('todoAlarmModal').classList.add('active');
+});
+
+document.getElementById('openTodoAlarmBtn2')?.addEventListener('click', () => {
+  document.getElementById('todoAlarmModal').classList.add('active');
+});
+
+document.getElementById('closeTodoAlarmBtn')?.addEventListener('click', () => {
+  document.getElementById('todoAlarmModal').classList.remove('active');
 });
 
 document.getElementById('addTodoBtn').addEventListener('click', () => {
