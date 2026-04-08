@@ -98,15 +98,22 @@ body {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 0.32s cubic-bezier(0.4, 0.0, 0.2, 1);
   overflow-y: auto;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .page.active {
   transform: translateX(0);
 }
 
-.page.prev {
+.page.exit-left {
+  transform: translateX(-100%);
+}
+
+.page.enter-left {
   transform: translateX(-100%);
 }
 
@@ -2656,8 +2663,9 @@ button:disabled {
 
         <div class="todo-alarm-strip">
           <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
-          <button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
-        <div class="todo-timer-panel">
+			<button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
+        </div>
+        <div class="todo-timer-panel" style="display:none;">
           <div class="todo-timer-title">Task Alarms & Timers</div>
           <div class="todo-timer-grid">
             <select id="todoAlarmType">
@@ -4828,39 +4836,43 @@ document.querySelectorAll('.nav-item[data-page]').forEach((item) => {
   item.addEventListener('click', () => {
     const page = item.dataset.page;
     const newIndex = pages.indexOf(page);
-    
     if (newIndex === currentPageIndex) return;
-    
+
     const currentPage = document.getElementById(pages[currentPageIndex] + 'Page');
     const newPage = document.getElementById(page + 'Page');
-    
-    if (newIndex > currentPageIndex) {
-      currentPage.classList.add('prev');
-      newPage.classList.add('active');
-    } else {
-      currentPage.classList.remove('active');
-      currentPage.classList.add('prev');
-      newPage.classList.remove('prev');
-      newPage.classList.add('active');
-    }
-    
-    setTimeout(() => {
-      currentPage.classList.remove('active', 'prev');
-    }, 400);
-    
-    currentPageIndex = newIndex;
-    
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
-    
-    if (page === 'shop') {
-      renderShop();
-    }
-    
-    if (page === 'stats') {
-      setTimeout(renderGraph, 450);
-    }
-    
+    const goingForward = newIndex > currentPageIndex;
+
+    // Snap new page into its off-screen start position WITHOUT a transition,
+    // so the browser never sees it at translateX(0) mid-paint.
+    newPage.style.transition = 'none';
+    newPage.classList.remove('active', 'exit-left', 'enter-left');
+    if (!goingForward) newPage.classList.add('enter-left');
+    newPage.getBoundingClientRect(); // force reflow — commits position before transition re-enables
+    newPage.style.transition = '';
+
+    // Double rAF: first frame commits the off-screen paint,
+    // second frame starts the transition — eliminates the flash entirely.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (goingForward) {
+        currentPage.classList.add('exit-left');
+        currentPage.classList.remove('active');
+        newPage.classList.add('active');
+      } else {
+        // Removing .active alone slides current right (back to default translateX(100%))
+        currentPage.classList.remove('active');
+        newPage.classList.remove('enter-left');
+        newPage.classList.add('active');
+      }
+
+      currentPageIndex = newIndex;
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
+
+      if (page === 'shop') renderShop();
+      if (page === 'stats') setTimeout(renderGraph, 350);
+
+      setTimeout(() => currentPage.classList.remove('exit-left'), 320);
+    }));
   });
 });
 
@@ -5969,7 +5981,9 @@ function saveState() {
     currentCalendarYear: state.currentCalendarYear,
     studyingDisabledUntil: state.studyingDisabledUntil,
 	studyingDisabledUntil: state.studyingDisabledUntil,
-	isRunning: state.isRunning,
+    charOffsetX: state.charOffsetX || 0,
+    charOffsetY: state.charOffsetY || 0,
+    isRunning: state.isRunning,
 	isPaused: state.isPaused,
 	mode: state.mode,
 	timeLeft: state.timeLeft,
