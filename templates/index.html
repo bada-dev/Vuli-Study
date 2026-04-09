@@ -103,18 +103,22 @@ body {
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  visibility: hidden;
 }
 
 .page.active {
   transform: translateX(0);
+  visibility: visible;
 }
 
 .page.exit-left {
   transform: translateX(-100%);
+  visibility: visible;
 }
 
 .page.enter-left {
   transform: translateX(-100%);
+  visibility: visible;
 }
 
 /* Top Bar */
