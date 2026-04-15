@@ -97,28 +97,16 @@ body {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.4, 0.0, 0.2, 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
   overflow-y: auto;
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  visibility: hidden;
+  will-change: opacity;
 }
 
 .page.active {
-  transform: translateX(0);
-  visibility: visible;
-}
-
-.page.exit-left {
-  transform: translateX(-100%);
-  visibility: visible;
-}
-
-.page.enter-left {
-  transform: translateX(-100%);
-  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Top Bar */
@@ -4890,43 +4878,20 @@ document.querySelectorAll('.nav-item[data-page]').forEach((item) => {
     const newIndex = pages.indexOf(page);
     if (newIndex === currentPageIndex) return;
 
-    const currentPage = document.getElementById(pages[currentPageIndex] + 'Page');
-    const newPage = document.getElementById(page + 'Page');
-    const goingForward = newIndex > currentPageIndex;
+    // Immediately deactivate current, activate new — opacity handles the crossfade
+    document.getElementById(pages[currentPageIndex] + 'Page').classList.remove('active');
+    document.getElementById(page + 'Page').classList.add('active');
 
-    // Snap new page into its off-screen start position WITHOUT a transition,
-    // so the browser never sees it at translateX(0) mid-paint.
-    newPage.style.transition = 'none';
-    newPage.classList.remove('active', 'exit-left', 'enter-left');
-    if (!goingForward) newPage.classList.add('enter-left');
-    newPage.getBoundingClientRect(); // force reflow — commits position before transition re-enables
-    newPage.style.transition = '';
+    currentPageIndex = newIndex;
 
-    // Double rAF: first frame commits the off-screen paint,
-    // second frame starts the transition — eliminates the flash entirely.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (goingForward) {
-        currentPage.classList.add('exit-left');
-        currentPage.classList.remove('active');
-        newPage.classList.add('active');
-      } else {
-        // Removing .active alone slides current right (back to default translateX(100%))
-        currentPage.classList.remove('active');
-        newPage.classList.remove('enter-left');
-        newPage.classList.add('active');
-      }
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
 
-      currentPageIndex = newIndex;
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
-
-      if (page === 'shop') renderShop();
-      if (page === 'stats') setTimeout(renderGraph, 350);
-
-      setTimeout(() => currentPage.classList.remove('exit-left'), 320);
-    }));
+    if (page === 'shop') renderShop();
+    if (page === 'stats') setTimeout(renderGraph, 230);
   });
 });
+
 
 // Shop
 document.querySelectorAll('.shop-tab').forEach(tab => {
