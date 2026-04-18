@@ -3411,7 +3411,17 @@ const motivationalQuotes = [
   "If you are always afraid of the day it cannot always b ae night",
   "You can, you should, and if you're brave enough to start, you will. - Stephen King",
   "If you want something you’ve never had, you must be willing to do something you’ve never done.",
-  "You can conquer almost any fear if you will make up your mind to do so. For remember, fear doesn't exist anywhere except in the mind."
+  "You can conquer almost any fear if you will make up your mind to do so. For remember, fear doesn't exist anywhere except in the mind.",
+  "Every expert was once a beginner who didn’t quit.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts. — Winston Churchill",
+  "Pain is temporary but Quitting lasts forever.",
+  "You miss 100% of the shots you don’t take. — Wayne Gretzky",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts. — Winston Churchill",
+  "It always seems impossible until it’s done. — Nelson Mandela",
+  "The future depends on what you do today. — Mahatma Gandhi",
+  "If you’re going through hell, keep going. — Winston Churchill",
+  "The way to hell feels like heaven, but the way to heaven, feels like hell.",
+  "The way to hell feels like heaven, but the way to heaven, feels like hell."
 ];
 
 const backgrounds = [
@@ -6708,9 +6718,10 @@ if ('serviceWorker' in navigator) {
 updateOnlineStatus();
 
 function applyCharOffset() {
-  const el = document.getElementById('character');
-  el.style.marginTop = (state.charOffsetY || 0) + 'px';
-  el.style.marginLeft = (state.charOffsetX || 0) + 'px';
+  const mouth = character.querySelector('.character-mouth');
+  if (!mouth) return;
+  mouth.style.marginTop = (state.charOffsetY || 0) + 'px';
+  mouth.style.marginLeft = (state.charOffsetX || 0) + 'px';
 }
 
 // === AUTO-SAVE ===
