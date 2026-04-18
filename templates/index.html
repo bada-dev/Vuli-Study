@@ -1934,6 +1934,68 @@ body {
   font-weight: 600;
 }
 
+/* Plus Action Popover */
+.plus-popover {
+  position: absolute;
+  bottom: 56px;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 500;
+  transform: scale(0.85) translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: bottom right;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 160px;
+}
+
+.plus-popover.open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.plus-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2D3142;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.plus-popover-item:active {
+  background: rgba(0,0,0,0.06);
+  transform: scale(0.97);
+}
+
+.plus-popover-item .popover-icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.plus-popover-item.task-opt .popover-icon { background: rgba(107,207,127,0.15); }
+.plus-popover-item.alarm-opt .popover-icon { background: rgba(255,184,77,0.15); }
+	
 /* Offline Banner */
 .offline-banner {
   position: fixed;
@@ -2662,9 +2724,18 @@ button:disabled {
       <div class="todo-content">
         <div class="todo-header">
           <div class="todo-title">To-Do List</div>
-          <div class="todo-header-actions">
-            <button class="open-alarm-btn" id="openTodoAlarmBtn">⏰ Alarm</button>
+			<div class="todo-header-actions" style="position:relative;">
             <button class="add-todo-btn" id="addTodoBtn">+</button>
+            <div class="plus-popover" id="plusPopover">
+              <button class="plus-popover-item task-opt" id="popoverTaskBtn">
+                <span class="popover-icon">📝</span>
+                New Task
+              </button>
+              <button class="plus-popover-item alarm-opt" id="popoverAlarmBtn">
+                <span class="popover-icon">⏰</span>
+                Timer / Alarm
+              </button>
+            </div>
           </div>
         </div>
         <div class="todo-sort-bar">
@@ -2675,9 +2746,9 @@ button:disabled {
           </select>
         </div>
 
-        <div class="todo-alarm-strip">
+		<div class="todo-alarm-strip" id="todoAlarmStrip" style="cursor:pointer;" id="openTodoAlarmBtn2">
           <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
-			<button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
+          <span style="font-size:13px;font-weight:700;color:#6B7080;">›</span>
         </div>
         <div class="todo-timer-panel" style="display:none;">
           <div class="todo-timer-title">Task Alarms & Timers</div>
@@ -5642,11 +5713,7 @@ document.getElementById('todoTimerActionBtn')?.addEventListener('click', () => {
   createTodoAlarmFromInputs();
 });
 
-document.getElementById('openTodoAlarmBtn')?.addEventListener('click', () => {
-  document.getElementById('todoAlarmModal').classList.add('active');
-});
-
-document.getElementById('openTodoAlarmBtn2')?.addEventListener('click', () => {
+document.getElementById('todoAlarmStrip')?.addEventListener('click', () => {
   document.getElementById('todoAlarmModal').classList.add('active');
 });
 
