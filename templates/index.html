@@ -3763,7 +3763,7 @@ function updateCharacterAppearance() {
     character.classList.add('sad');
   }
   
-  if (state.isRunning && state.mode === 'focus' && !state.isDead) {
+  if (state.isRunning && state.mode !== 'long' && !state.isDead) {
     character.classList.add('focused');
   }
   
@@ -4469,6 +4469,7 @@ function pauseTimer() {
   state.pauseElapsed = 0;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
+  releaseWakeLock();
   sessionLabel.textContent = 'Paused';
   actionBtn.textContent = 'Resume';
   actionBtn.className = 'action-btn';
@@ -4506,6 +4507,7 @@ function stopTimer() {
   state.isPaused = false;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
+  releaseWakeLock();
   
   if (state.mode === 'stopwatch') {
     const duration = Math.floor(state.stopwatchTime / 60);
@@ -6721,21 +6723,40 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // === KEEP-AWAKE ===
-let wakeLock;
+let wakeLock = null;
 
 async function requestWakeLock() {
-  if ('wakeLock' in navigator && document.visibilityState === 'visible') {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-    } catch {}
+  if (!('wakeLock' in navigator)) return;
+  if (document.visibilityState !== 'visible') return;
+  if (wakeLock !== null && !wakeLock.released) return; // already held, don't stack
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+      // OS released it (screen dimmed, tab switched, etc.)
+      // Re-request immediately if the timer is still actively running
+      if (state.isRunning && !state.isPaused && document.visibilityState === 'visible') {
+        setTimeout(requestWakeLock, 300);
+      }
+    });
+  } catch (e) {
+    // Device denied it (low battery, user preference) — fail silently cuz bov
   }
 }
 
-setInterval(() => {
-  if (state.isRunning && !state.isPaused) {
+async function releaseWakeLock() {
+  if (wakeLock !== null && !wakeLock.released) {
+    try { await wakeLock.release(); } catch {}
+  }
+  wakeLock = null;
+}
+
+// Re-acquire when user comes back to the app (most important case on mobile)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.isRunning && !state.isPaused) {
     requestWakeLock();
   }
-}, 30000);
+});
 
 
 </script>
