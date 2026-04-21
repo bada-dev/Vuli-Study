@@ -23,7 +23,9 @@ def init_db():
         character_width INTEGER DEFAULT 140,
         happiness INTEGER DEFAULT 100,
         last_active INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1
+        is_active INTEGER DEFAULT 1,
+        current_status TEXT DEFAULT 'idle',
+        study_history TEXT DEFAULT '{}'
     )''')
     conn.execute('''CREATE TABLE IF NOT EXISTS feedback_cooldowns (
         ip TEXT PRIMARY KEY,
@@ -33,6 +35,25 @@ def init_db():
         username TEXT PRIMARY KEY,
         last_sync INTEGER DEFAULT 0
     )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS msg_ratelimit (
+        username TEXT PRIMARY KEY,
+        last_msg INTEGER DEFAULT 0
+    )''')
+    # Safely add new columns to existing users table
+    for col, definition in [
+        ('current_status', "TEXT DEFAULT 'idle'"),
+        ('study_history', "TEXT DEFAULT '{}'")
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE users ADD COLUMN {col} {definition}')
+        except Exception:
+            pass
     conn.commit()
     conn.close()
 
@@ -90,39 +111,67 @@ def sync_score():
     username = data.get('username')
     if not username:
         return jsonify({'success': False})
+
     conn = get_db()
     try:
-        user = conn.execute('SELECT username FROM users WHERE username = ?', (username,)).fetchone()
+        user = conn.execute(
+            'SELECT username FROM users WHERE username = ?',
+            (username,)
+        ).fetchone()
         if not user:
             return jsonify({'success': False, 'error': 'User not found'})
+
         # Rate limit
-        rl = conn.execute('SELECT last_sync FROM sync_ratelimit WHERE username = ?', (username,)).fetchone()
+        rl = conn.execute(
+            'SELECT last_sync FROM sync_ratelimit WHERE username = ?',
+            (username,)
+        ).fetchone()
         if rl and (int(time.time()) - rl['last_sync']) < SYNC_COOLDOWN:
             return jsonify({'success': False, 'error': 'Rate limited'})
-        conn.execute('INSERT OR REPLACE INTO sync_ratelimit (username, last_sync) VALUES (?, ?)',
-                     (username, int(time.time())))
+
+        conn.execute(
+            'INSERT OR REPLACE INTO sync_ratelimit (username, last_sync) VALUES (?, ?)',
+            (username, int(time.time()))
+        )
+
         total_minutes = min(int(data.get('totalMinutes', 0)), MAX_MINUTES)
         streak = min(int(data.get('streak', 0)), MAX_STREAK)
         reborns = min(int(data.get('reborns', 0)), MAX_REBORNS)
+
         equipped_cosmetic = data.get('equippedCosmetic', None)
         active_background = data.get('activeBackground', 'default')
+
         character_width = min(max(int(data.get('characterWidth', 140)), 140), 420)
         happiness = min(max(int(data.get('happiness', 100)), 0), 100)
+
         if equipped_cosmetic not in VALID_COSMETICS:
             equipped_cosmetic = None
         if active_background not in VALID_BACKGROUNDS:
             active_background = 'default'
+
+        # NEW PART
+        current_status = data.get('currentStatus', 'idle')
+        if current_status not in ['studying', 'break', 'idle']:
+            current_status = 'idle'
+
+        study_history = data.get('studyHistory', '{}')
+        if len(study_history) > 2000:
+            study_history = '{}'
+
         conn.execute('''UPDATE users SET
                         total_minutes=?, streak=?, reborns=?,
                         equipped_cosmetic=?, active_background=?,
                         character_width=?, happiness=?,
-                        last_active=?, is_active=1
+                        last_active=?, is_active=1,
+                        current_status=?, study_history=?
                         WHERE username=?''',
                      (total_minutes, streak, reborns, equipped_cosmetic,
                       active_background, character_width, happiness,
-                      int(time.time()), username))
+                      int(time.time()), current_status, study_history, username))
+
         conn.commit()
         return jsonify({'success': True})
+
     finally:
         conn.close()
 
@@ -203,6 +252,87 @@ def delete_user():
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
+MSG_COOLDOWN = 3
+MAX_MESSAGES = 100
+MAX_MSG_LEN = 200
+
+@app.route('/update-status', methods=['POST'])
+def update_status():
+    data = request.get_json()
+    username = data.get('username')
+    status = data.get('status', 'idle')
+    if not username or status not in ['studying', 'break', 'idle']:
+        return jsonify({'success': False})
+    conn = get_db()
+    conn.execute('UPDATE users SET current_status=?, last_active=?, is_active=1 WHERE username=?',
+                 (status, int(time.time()), username))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/send-message', methods=['POST'])
+def send_message():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    content = data.get('content', '').strip()
+    if not username or not content:
+        return jsonify({'success': False, 'error': 'Missing fields'})
+    if len(content) > MAX_MSG_LEN:
+        return jsonify({'success': False, 'error': 'Message too long'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT username FROM users WHERE username=?', (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        rl = conn.execute('SELECT last_msg FROM msg_ratelimit WHERE username=?', (username,)).fetchone()
+        if rl and (int(time.time()) - rl['last_msg']) < MSG_COOLDOWN:
+            return jsonify({'success': False, 'error': 'Slow down!'})
+        conn.execute('INSERT OR REPLACE INTO msg_ratelimit (username, last_msg) VALUES (?,?)',
+                     (username, int(time.time())))
+        conn.execute('INSERT INTO messages (username, content, timestamp) VALUES (?,?,?)',
+                     (username, content, int(time.time() * 1000)))
+        # Keep only last MAX_MESSAGES
+        conn.execute('''DELETE FROM messages WHERE id NOT IN (
+            SELECT id FROM messages ORDER BY id DESC LIMIT ?)''', (MAX_MESSAGES,))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/get-messages', methods=['GET'])
+def get_messages():
+    conn = get_db()
+    msgs = conn.execute(
+        'SELECT username, content, timestamp FROM messages ORDER BY id DESC LIMIT 50'
+    ).fetchall()
+    ten_min_ago = int(time.time()) - 600
+    online_users = conn.execute(
+        '''SELECT username, current_status, streak, reborns, happiness, study_history, equipped_cosmetic
+           FROM users WHERE last_active > ? AND is_active=1 ORDER BY last_active DESC LIMIT 20''',
+        (ten_min_ago,)
+    ).fetchall()
+    conn.close()
+    return jsonify({
+        'messages': [dict(m) for m in reversed(msgs)],
+        'online': [dict(u) for u in online_users]
+    })
+
+@app.route('/get-chat-profile', methods=['POST'])
+def get_chat_profile():
+    data = request.get_json()
+    username = data.get('username')
+    if not username:
+        return jsonify({'success': False})
+    conn = get_db()
+    user = conn.execute(
+        'SELECT username, streak, reborns, happiness, study_history, current_status, equipped_cosmetic, total_minutes, last_active FROM users WHERE username=?',
+        (username,)
+    ).fetchone()
+    conn.close()
+    if not user:
+        return jsonify({'success': False})
+    return jsonify({'success': True, 'user': dict(user)})
 
 if __name__ == '__main__':
     app.run()
