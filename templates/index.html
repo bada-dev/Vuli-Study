@@ -13,7 +13,7 @@
 <!--
     Project: Study Buddy
     Author: ETHANTYAGI
-    Version: 4.3.0
+    Version: 4.2.1
 	ALL RIGHTS RESERVED
 -->
 
@@ -1934,328 +1934,6 @@ body {
   font-weight: 600;
 }
 
-/* Plus Action Popover */
-.plus-popover {
-  position: absolute;
-  bottom: 56px;
-  right: 0;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 500;
-  transform: scale(0.85) translateY(10px);
-  opacity: 0;
-  pointer-events: none;
-  transform-origin: bottom right;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  min-width: 160px;
-}
-
-.plus-popover.open {
-  transform: scale(1) translateY(0);
-  opacity: 1;
-  pointer-events: all;
-}
-
-.plus-popover-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 11px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #2D3142;
-  cursor: pointer;
-  transition: background 0.15s;
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-}
-
-.plus-popover-item:active {
-  background: rgba(0,0,0,0.06);
-  transform: scale(0.97);
-}
-
-.plus-popover-item .popover-icon {
-  font-size: 20px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-}
-
-.plus-popover-item.task-opt .popover-icon { background: rgba(107,207,127,0.15); }
-.plus-popover-item.alarm-opt .popover-icon { background: rgba(255,184,77,0.15); }
-
-/* ── Chat Drawer ── */
-.menu-drawer {
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: 88%;
-  max-width: 360px;
-  background: linear-gradient(180deg, #f5ede0 0%, #ede0ce 100%);
-  transform: translateX(-100%);
-  transition: transform 0.32s cubic-bezier(0.4, 0.0, 0.2, 1);
-  z-index: 1001;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 6px 0 30px rgba(0,0,0,0.22);
-  border-radius: 0 24px 24px 0;
-  overflow: hidden;
-}
-.menu-drawer.active { transform: translateX(0); }
-
-.chat-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 18px 12px;
-  background: rgba(255,255,255,0.5);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0,0,0,0.07);
-  flex-shrink: 0;
-}
-.chat-top-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #2D3142;
-}
-.chat-filter-btns {
-  display: flex;
-  gap: 5px;
-}
-.chat-filter-btn {
-  padding: 5px 10px;
-  border-radius: 20px;
-  border: none;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  background: rgba(0,0,0,0.08);
-  color: #5B4A3A;
-  transition: all 0.2s;
-}
-.chat-filter-btn.active {
-  background: linear-gradient(135deg, #6BCF7F, #5ABF6F);
-  color: white;
-}
-
-.online-strip {
-  display: flex;
-  gap: 10px;
-  padding: 10px 14px;
-  overflow-x: auto;
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.3);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  scrollbar-width: none;
-}
-.online-strip::-webkit-scrollbar { display: none; }
-.online-user-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.online-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #B8865C, #986652);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  position: relative;
-  border: 2px solid rgba(255,255,255,0.6);
-}
-.status-dot {
-  position: absolute;
-  bottom: 1px; right: 1px;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  border: 2px solid white;
-}
-.status-dot.studying { background: #6BCF7F; }
-.status-dot.break { background: #FFB84D; }
-.status-dot.idle { background: #B0B0B0; }
-.online-name {
-  font-size: 9px;
-  font-weight: 700;
-  color: #5B4A3A;
-  max-width: 38px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  scrollbar-width: thin;
-}
-.chat-msg {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 90%;
-}
-.chat-msg.mine { align-self: flex-end; align-items: flex-end; }
-.chat-msg.theirs { align-self: flex-start; align-items: flex-start; }
-.chat-msg-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: #8B7A6A;
-  font-weight: 600;
-}
-.chat-msg-username {
-  cursor: pointer;
-  color: #5B4A3A;
-  font-weight: 800;
-}
-.chat-msg-username:active { opacity: 0.7; }
-.chat-bubble {
-  padding: 9px 13px;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #2D3142;
-  line-height: 1.4;
-  word-break: break-word;
-  max-width: 100%;
-}
-.chat-msg.mine .chat-bubble {
-  background: linear-gradient(135deg, #6BCF7F, #5ABF6F);
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-.chat-msg.theirs .chat-bubble {
-  background: rgba(255,255,255,0.75);
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.chat-input-bar {
-  display: flex;
-  gap: 8px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.5);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0,0,0,0.07);
-  flex-shrink: 0;
-}
-.chat-input {
-  flex: 1;
-  padding: 11px 14px;
-  border-radius: 22px;
-  border: 2px solid rgba(0,0,0,0.08);
-  background: white;
-  font-size: 14px;
-  font-family: inherit;
-  color: #2D3142;
-  outline: none;
-  transition: border 0.2s;
-}
-.chat-input:focus { border-color: #6BCF7F; }
-.chat-send-btn {
-  width: 44px; height: 44px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #6BCF7F, #5ABF6F);
-  border: none;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(107,207,127,0.4);
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.chat-send-btn:active { transform: scale(0.92); }
-.chat-no-msgs {
-  text-align: center;
-  color: #B0A090;
-  font-size: 13px;
-  font-weight: 600;
-  margin: auto;
-  padding: 20px;
-}
-
-/* About Modal */
-.about-modal-content {
-  text-align: left;
-  padding: 0;
-  overflow: hidden;
-}
-.about-modal-header {
-  background: linear-gradient(135deg, #c4a07a, #a5845a);
-  padding: 28px 24px 20px;
-  text-align: center;
-}
-.about-modal-body { padding: 20px 24px 24px; }
-.about-stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  font-size: 14px;
-}
-.about-stat-row:last-child { border-bottom: none; }
-.about-stat-label { color: #6B7080; font-weight: 600; }
-.about-stat-value { font-weight: 800; color: #2D3142; }
-
-/* Chat Profile Modal */
-.chat-profile-header {
-  padding: 24px 20px 16px;
-  text-align: center;
-  border-radius: 16px 16px 0 0;
-}
-.chat-profile-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  margin-top: 6px;
-}
-.chat-profile-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  padding: 14px 16px;
-}
-.chat-profile-stat {
-  background: rgba(0,0,0,0.04);
-  border-radius: 12px;
-  padding: 10px 6px;
-  text-align: center;
-}
-.chat-profile-stat-val { font-size: 20px; font-weight: 800; color: #2D3142; }
-.chat-profile-stat-label { font-size: 9px; color: #8B8080; font-weight: 700; margin-top: 2px; }
-.chat-profile-chart { padding: 0 16px 16px; }
-	
 /* Offline Banner */
 .offline-banner {
   position: fixed;
@@ -2984,18 +2662,9 @@ button:disabled {
       <div class="todo-content">
         <div class="todo-header">
           <div class="todo-title">To-Do List</div>
-			<div class="todo-header-actions" style="position:relative;">
+          <div class="todo-header-actions">
+            <button class="open-alarm-btn" id="openTodoAlarmBtn">⏰ Alarm</button>
             <button class="add-todo-btn" id="addTodoBtn">+</button>
-            <div class="plus-popover" id="plusPopover">
-              <button class="plus-popover-item task-opt" id="popoverTaskBtn">
-                <span class="popover-icon">📝</span>
-                New Task
-              </button>
-              <button class="plus-popover-item alarm-opt" id="popoverAlarmBtn">
-                <span class="popover-icon">⏰</span>
-                Timer / Alarm
-              </button>
-            </div>
           </div>
         </div>
         <div class="todo-sort-bar">
@@ -3006,9 +2675,9 @@ button:disabled {
           </select>
         </div>
 
-		<div class="todo-alarm-strip" id="todoAlarmStrip" style="cursor:pointer;" id="openTodoAlarmBtn2">
+        <div class="todo-alarm-strip">
           <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
-          <span style="font-size:13px;font-weight:700;color:#6B7080;">›</span>
+			<button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
         </div>
         <div class="todo-timer-panel" style="display:none;">
           <div class="todo-timer-title">Task Alarms & Timers</div>
@@ -3592,81 +3261,10 @@ button:disabled {
 
 <div class="menu-overlay" id="menuOverlay">
   <div class="menu-drawer" id="menuDrawer">
-    <div class="chat-top-bar">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="chat-top-title">💬 Global Chat</div>
-        <div id="aboutBtn" style="font-size:16px;opacity:0.5;cursor:pointer;" title="About">ℹ️</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="chat-filter-btns">
-          <button class="chat-filter-btn active" id="filterAll">All</button>
-          <button class="chat-filter-btn" id="filterOnline">Online</button>
-        </div>
-        <div id="menuClose" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;color:#5B4A3A;border-radius:50%;background:rgba(0,0,0,0.06);">×</div>
-      </div>
-    </div>
-    <div class="online-strip" id="onlineStrip">
-      <div style="font-size:11px;color:#B0A090;font-weight:600;align-self:center;">No one online yet</div>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <div class="chat-no-msgs">Say hello to the world! 👋</div>
-    </div>
-    <div class="chat-input-bar">
-      <input class="chat-input" id="chatInput" placeholder="Message the world..." maxlength="200">
-      <button class="chat-send-btn" id="chatSendBtn">➤</button>
-    </div>
-  </div>
-</div>
-
-<!-- About Modal -->
-<div class="modal" id="aboutModal">
-  <div class="modal-content about-modal-content" style="max-width:320px;padding:0;overflow:hidden;">
-    <div class="about-modal-header">
-      <div style="font-size:52px;margin-bottom:8px;">🐾</div>
-      <div style="font-size:20px;font-weight:800;color:white;">Study Buddy</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:4px;font-weight:600;">v4.2.1 — by EthanTyagi</div>
-    </div>
-    <div class="about-modal-body">
-      <div class="about-stat-row">
-        <span class="about-stat-label">Focus sessions</span>
-        <span class="about-stat-value">Earn 2🪙 per 5 min</span>
-      </div>
-      <div class="about-stat-row">
-        <span class="about-stat-label">Carrots</span>
-        <span class="about-stat-value">Drag to feed buddy</span>
-      </div>
-      <div class="about-stat-row">
-        <span class="about-stat-label">Happiness decay</span>
-        <span class="about-stat-value">10% per hour</span>
-      </div>
-      <div class="about-stat-row">
-        <span class="about-stat-label">Death</span>
-        <span class="about-stat-value">3 carrots to revive</span>
-      </div>
-      <div class="about-stat-row">
-        <span class="about-stat-label">Reborn</span>
-        <span class="about-stat-value">20 carrots total</span>
-      </div>
-      <div class="about-stat-row" style="border:none;">
-        <span class="about-stat-label">© 2026 EthanTyagi</span>
-        <span class="about-stat-value" style="font-size:11px;color:#8B8080;">All rights reserved</span>
-      </div>
-      <button class="modal-btn primary" id="closeAboutBtn" style="width:100%;margin-top:8px;">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Chat Profile Modal -->
-<div class="modal" id="chatProfileModal">
-  <div class="modal-content" style="max-width:300px;padding:0;overflow:hidden;">
-    <div class="chat-profile-header" id="chatProfileHeader"></div>
-    <div class="chat-profile-stats" id="chatProfileStats"></div>
-    <div class="chat-profile-chart">
-      <canvas id="chatProfileChart" style="height:120px;max-height:120px;"></canvas>
-    </div>
-    <div style="padding:0 16px 16px;">
-      <button class="modal-btn primary" id="closeChatProfileBtn" style="width:100%;">Close</button>
-    </div>
+    <div class="menu-close" id="menuClose">×</div>
+    <div class="menu-item" id="aboutBtn">ℹ️ About</div>
+    <div class="menu-item" id="historyBtn">📅 History</div>
+    <div class="menu-item" id="helpBtn">❓ Help</div>
   </div>
 </div>
 
@@ -3813,17 +3411,7 @@ const motivationalQuotes = [
   "If you are always afraid of the day it cannot always b ae night",
   "You can, you should, and if you're brave enough to start, you will. - Stephen King",
   "If you want something you’ve never had, you must be willing to do something you’ve never done.",
-  "You can conquer almost any fear if you will make up your mind to do so. For remember, fear doesn't exist anywhere except in the mind.",
-  "Every expert was once a beginner who didn’t quit.",
-  "Success is not final, failure is not fatal: it is the courage to continue that counts. — Winston Churchill",
-  "Pain is temporary but Quitting lasts forever.",
-  "You miss 100% of the shots you don’t take. — Wayne Gretzky",
-  "Success is not final, failure is not fatal: it is the courage to continue that counts. — Winston Churchill",
-  "It always seems impossible until it’s done. — Nelson Mandela",
-  "The future depends on what you do today. — Mahatma Gandhi",
-  "If you’re going through hell, keep going. — Winston Churchill",
-  "The way to hell feels like heaven, but the way to heaven, feels like hell.",
-  "The way to hell feels like heaven, but the way to heaven, feels like hell."
+  "You can conquer almost any fear if you will make up your mind to do so. For remember, fear doesn't exist anywhere except in the mind."
 ];
 
 const backgrounds = [
@@ -4175,7 +3763,7 @@ function updateCharacterAppearance() {
     character.classList.add('sad');
   }
   
-  if (state.isRunning && state.mode !== 'long' && !state.isDead) {
+  if (state.isRunning && state.mode === 'focus' && !state.isDead) {
     character.classList.add('focused');
   }
   
@@ -4831,10 +4419,6 @@ function reviveBuddy() {
 function startTimer() {
   saveState();
   if (state.studyingDisabledUntil && Date.now() < state.studyingDisabledUntil && state.mode === 'focus') {
-  const newStatus = state.mode === 'long' ? 'break' : 'studying';
-  pushStatus(newStatus);
-  syncLeaderboard(newStatus);
-  if (typeof median !== 'undefined') { median.screen.keepScreenOn?.(); }
     const secondsLeft = Math.ceil((state.studyingDisabledUntil - Date.now()) / 1000);
     alert(`⏳ Please wait ${secondsLeft}s before starting focus again!`);
     return;
@@ -4885,7 +4469,6 @@ function pauseTimer() {
   state.pauseElapsed = 0;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
-  releaseWakeLock();
   sessionLabel.textContent = 'Paused';
   actionBtn.textContent = 'Resume';
   actionBtn.className = 'action-btn';
@@ -4923,8 +4506,6 @@ function stopTimer() {
   state.isPaused = false;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
-  releaseWakeLock();
-  pushStatus('idle');
   
   if (state.mode === 'stopwatch') {
     const duration = Math.floor(state.stopwatchTime / 60);
@@ -5288,73 +4869,28 @@ document.querySelectorAll('.mode-tab').forEach(tab => {
 });
 
 // Navigation
-// Navigation
 let currentPageIndex = 0;
 const pages = ['home', 'stats', 'todo', 'shop', 'settings'];
 
-function navigateTo(page) {
-  const newIndex = pages.indexOf(page);
-  if (newIndex === currentPageIndex || newIndex === -1) return;
+document.querySelectorAll('.nav-item[data-page]').forEach((item) => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    const newIndex = pages.indexOf(page);
+    if (newIndex === currentPageIndex) return;
 
-  const currentPage = document.getElementById(pages[currentPageIndex] + 'Page');
-  const newPage = document.getElementById(page + 'Page');
-  const goingForward = newIndex > currentPageIndex;
-
-  newPage.style.transition = 'none';
-  newPage.classList.remove('active', 'exit-left', 'enter-left');
-  if (!goingForward) newPage.classList.add('enter-left');
-  newPage.getBoundingClientRect();
-  newPage.style.transition = '';
-
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (goingForward) {
-      currentPage.classList.add('exit-left');
-      currentPage.classList.remove('active');
-      newPage.classList.add('active');
-    } else {
-      currentPage.classList.remove('active');
-      newPage.classList.remove('enter-left');
-      newPage.classList.add('active');
-    }
+    // Immediately deactivate current, activate new — opacity handles the crossfade
+    document.getElementById(pages[currentPageIndex] + 'Page').classList.remove('active');
+    document.getElementById(page + 'Page').classList.add('active');
 
     currentPageIndex = newIndex;
+
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
 
     if (page === 'shop') renderShop();
-    if (page === 'stats') setTimeout(renderGraph, 350);
-
-    setTimeout(() => currentPage.classList.remove('exit-left'), 320);
-  }));
-}
-
-document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-  item.addEventListener('click', () => navigateTo(item.dataset.page));
+    if (page === 'stats') setTimeout(renderGraph, 230);
+  });
 });
-
-// Swipe to switch tabs
-let _swipeStartX = 0, _swipeStartY = 0;
-const pagesContainer = document.querySelector('.pages-container');
-
-pagesContainer.addEventListener('touchstart', e => {
-  _swipeStartX = e.touches[0].clientX;
-  _swipeStartY = e.touches[0].clientY;
-}, { passive: true });
-
-pagesContainer.addEventListener('touchend', e => {
-  // Don't swipe if chat drawer is open
-  if (menuDrawer.classList.contains('active')) return;
-  const deltaX = e.changedTouches[0].clientX - _swipeStartX;
-  const deltaY = e.changedTouches[0].clientY - _swipeStartY;
-  // Only fire if clearly horizontal and big enough
-  if (Math.abs(deltaX) < 60) return;
-  if (Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
-  if (deltaX < 0 && currentPageIndex < pages.length - 1) {
-    navigateTo(pages[currentPageIndex + 1]);
-  } else if (deltaX > 0 && currentPageIndex > 0) {
-    navigateTo(pages[currentPageIndex - 1]);
-  }
-}, { passive: true });
 
 
 // Shop
@@ -5726,16 +5262,19 @@ document.querySelectorAll('.menu-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     menuOverlay.classList.add('active');
     menuDrawer.classList.add('active');
-    fetchChat();
-    clearInterval(chatPollInterval);
-    chatPollInterval = setInterval(fetchChat, 6000);
   });
 });
 
 menuClose.addEventListener('click', () => {
   menuOverlay.classList.remove('active');
   menuDrawer.classList.remove('active');
-  clearInterval(chatPollInterval);
+});
+
+menuOverlay.addEventListener('click', (e) => {
+  if (e.target === menuOverlay) {
+    menuOverlay.classList.remove('active');
+    menuDrawer.classList.remove('active');
+  }
 });
 
 // Settings
@@ -6091,7 +5630,11 @@ document.getElementById('todoTimerActionBtn')?.addEventListener('click', () => {
   createTodoAlarmFromInputs();
 });
 
-document.getElementById('todoAlarmStrip')?.addEventListener('click', () => {
+document.getElementById('openTodoAlarmBtn')?.addEventListener('click', () => {
+  document.getElementById('todoAlarmModal').classList.add('active');
+});
+
+document.getElementById('openTodoAlarmBtn2')?.addEventListener('click', () => {
   document.getElementById('todoAlarmModal').classList.add('active');
 });
 
@@ -6361,211 +5904,22 @@ document.getElementById('okDeathBtn').addEventListener('click', () => {
 
 
 // Menu items
-document.getElementById('aboutBtn')?.addEventListener('click', () => {
-  document.getElementById('aboutModal').classList.add('active');
-});
-// About modal
-document.getElementById('closeAboutBtn')?.addEventListener('click', () => {
-  document.getElementById('aboutModal').classList.remove('active');
+document.getElementById('aboutBtn').addEventListener('click', () => {
+  alert('Study Buddy v4.0\n\nA focus timer app to help you study WAYY better!!\n\nBuy carrots from shop and **drag** them to feed your buddy!\n\nMade by EthanTyagi!!\nStopping mid-session costs 5-15% happiness!\nAll rights reserved.');
+  menuOverlay.classList.remove('active');
+  menuDrawer.classList.remove('active');
 });
 
-// Chat Profile Modal
-document.getElementById('closeChatProfileBtn')?.addEventListener('click', () => {
-  document.getElementById('chatProfileModal').classList.remove('active');
-  if (window._chatProfileChart) { window._chatProfileChart.destroy(); window._chatProfileChart = null; }
+document.getElementById('historyBtn').addEventListener('click', () => {
+  alert('History:\n\nView your study history in the Stats page calendar!\n\nRed dots show tasks with deadlines - click them to view details!');
+  menuOverlay.classList.remove('active');
+  menuDrawer.classList.remove('active');
 });
 
-async function openChatProfile(username) {
-  if (!isOnline) { alert('📡 No internet to load profile.'); return; }
-  const res = await fetch('/get-chat-profile', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({username})
-  });
-  const data = await res.json();
-  if (!data.success) return;
-  const u = data.user;
-  const tenMinAgo = Date.now() - 600000;
-  const isOnlineUser = u.last_active * 1000 > tenMinAgo;
-  const statusColor = u.current_status === 'studying' ? '#6BCF7F' : u.current_status === 'break' ? '#FFB84D' : '#B0B0B0';
-  const statusLabel = u.current_status === 'studying' ? '🟢 Studying' : u.current_status === 'break' ? '🟡 On Break' : '⚫ Offline';
-  const cosmetic = cosmetics.find(c => c.id === u.equipped_cosmetic);
-  const bg = backgrounds.find(b => b.id === 'default');
-
-  document.getElementById('chatProfileHeader').innerHTML = `
-    <div style="font-size:40px;margin-bottom:6px;">${cosmetic ? cosmetic.icon : '🐾'}</div>
-    <div style="font-size:18px;font-weight:800;color:#2D3142;">${u.username}</div>
-    <div class="chat-profile-status-badge" style="background:${statusColor}22;color:${statusColor};">${statusLabel}</div>
-  `;
-
-  document.getElementById('chatProfileStats').innerHTML = `
-    <div class="chat-profile-stat">
-      <div class="chat-profile-stat-val">${u.streak}</div>
-      <div class="chat-profile-stat-label">🔥 STREAK</div>
-    </div>
-    <div class="chat-profile-stat">
-      <div class="chat-profile-stat-val">${u.reborns}</div>
-      <div class="chat-profile-stat-label">🏋️ REBORNS</div>
-    </div>
-    <div class="chat-profile-stat">
-      <div class="chat-profile-stat-val">${u.happiness}%</div>
-      <div class="chat-profile-stat-label">😊 HAPPY</div>
-    </div>
-  `;
-
-  // Parse study history and build 7-day chart
-  let history = {};
-  try { history = JSON.parse(u.study_history || '{}'); } catch {}
-  const labels = [], values = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    labels.push(['Su','Mo','Tu','We','Th','Fr','Sa'][d.getDay()]);
-    values.push(history[key] || 0);
-  }
-
-  if (window._chatProfileChart) { window._chatProfileChart.destroy(); }
-  const canvas = document.getElementById('chatProfileChart');
-  window._chatProfileChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: '#6BCF7F',
-        borderRadius: 6,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true, ticks: { callback: v => v+'m' } }
-      }
-    }
-  });
-
-  document.getElementById('chatProfileModal').classList.add('active');
-}
-
-// ── Global Chat ──
-let chatFilter = 'all';
-let chatPollInterval = null;
-let lastMsgCount = 0;
-
-function relativeTime(ts) {
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-  return Math.floor(diff/86400) + 'd ago';
-}
-
-function renderChat(messages, online) {
-  // Online strip
-  const strip = document.getElementById('onlineStrip');
-  const filtered = chatFilter === 'online'
-    ? online.filter(u => u.current_status !== 'idle')
-    : online;
-
-  if (filtered.length === 0) {
-    strip.innerHTML = '<div style="font-size:11px;color:#B0A090;font-weight:600;align-self:center;">No one online yet</div>';
-  } else {
-    strip.innerHTML = filtered.map(u => {
-      const cosmetic = cosmetics.find(c => c.id === u.equipped_cosmetic);
-      return `<div class="online-user-pill" onclick="openChatProfile('${u.username}')">
-        <div class="online-avatar">
-          ${cosmetic ? cosmetic.icon : '🐾'}
-          <div class="status-dot ${u.current_status || 'idle'}"></div>
-        </div>
-        <div class="online-name">${u.username}</div>
-      </div>`;
-    }).join('');
-  }
-
-  // Messages
-  const container = document.getElementById('chatMessages');
-  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
-
-  if (messages.length === 0) {
-    container.innerHTML = '<div class="chat-no-msgs">Be the first to say something! 👋</div>';
-    return;
-  }
-
-  const filteredMsgs = chatFilter === 'online'
-    ? messages.filter(m => online.some(u => u.username === m.username))
-    : messages;
-
-  container.innerHTML = filteredMsgs.map(msg => {
-    const isMe = msg.username === state.username;
-    return `<div class="chat-msg ${isMe ? 'mine' : 'theirs'}">
-      ${!isMe ? `<div class="chat-msg-meta"><span class="chat-msg-username" onclick="openChatProfile('${msg.username}')">${msg.username}</span> · ${relativeTime(msg.timestamp)}</div>` : `<div class="chat-msg-meta">${relativeTime(msg.timestamp)}</div>`}
-      <div class="chat-bubble">${msg.content.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-    </div>`;
-  }).join('');
-
-  if (wasAtBottom || messages.length !== lastMsgCount) {
-    container.scrollTop = container.scrollHeight;
-  }
-  lastMsgCount = messages.length;
-}
-
-async function fetchChat() {
-  if (!isOnline) return;
-  try {
-    const res = await fetch('/get-messages');
-    const data = await res.json();
-    renderChat(data.messages || [], data.online || []);
-  } catch {}
-}
-
-async function sendChatMessage() {
-  const input = document.getElementById('chatInput');
-  const content = input.value.trim();
-  if (!content) return;
-  if (!state.username) {
-    alert('📝 Set a username in Settings → Identity first!');
-    return;
-  }
-  if (!isOnline) { alert('📡 No internet connection.'); return; }
-  input.value = '';
-  try {
-    await fetch('/send-message', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username: state.username, content})
-    });
-    await fetchChat();
-  } catch {}
-}
-
-document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
-document.getElementById('chatInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendChatMessage();
-});
-
-document.getElementById('filterAll').addEventListener('click', () => {
-  chatFilter = 'all';
-  document.getElementById('filterAll').classList.add('active');
-  document.getElementById('filterOnline').classList.remove('active');
-  fetchChat();
-});
-document.getElementById('filterOnline').addEventListener('click', () => {
-  chatFilter = 'online';
-  document.getElementById('filterOnline').classList.add('active');
-  document.getElementById('filterAll').classList.remove('active');
-  fetchChat();
-});
-
-// Start/stop chat polling when drawer opens/closes
-menuOverlay.addEventListener('click', (e) => {
-  if (e.target === menuOverlay) {
-    menuOverlay.classList.remove('active');
-    menuDrawer.classList.remove('active');
-    clearInterval(chatPollInterval);
-  }
+document.getElementById('helpBtn').addEventListener('click', () => {
+  alert('Help:\n\n1. Set a timer and start focusing\n2. Complete sessions to earn coins (2 coins per 5 min)\n3. Buy carrots from shop (10 coins each)\n4. DRAG carrots to your buddy to feed\n5. Buy cosmetics & backgrounds!\n\nWarning: Happiness decreases 5% per hour!\nAt 0%, your buddy dies and needs 3 carrots to revive!\n\nDuring focus: Floating study emojis appear!');
+  menuOverlay.classList.remove('active');
+  menuDrawer.classList.remove('active');
 });
 
 // === ACHIEVEMENTS ===
@@ -7210,17 +6564,9 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
 });
 
 async function syncLeaderboard() {
-async function syncLeaderboard(currentStatus) {
   if (!state.username) return;
   if (!isOnline) return;
   const totalMinutes = Object.values(state.studyMinutes).reduce((a, b) => a + b, 0);
-  // Build study history (last 14 days) for profile chart
-  const studyHistory = {};
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (state.studyMinutes[key]) studyHistory[key] = state.studyMinutes[key];
-  }
   await fetch('/sync-score', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -7232,20 +6578,9 @@ async function syncLeaderboard(currentStatus) {
       equippedCosmetic: state.equippedCosmetic,
       activeBackground: state.activeBackground,
       characterWidth: state.characterWidth,
-      happiness: Math.floor(state.happiness),
-      currentStatus: currentStatus || 'idle',
-      studyHistory: JSON.stringify(studyHistory)
+      happiness: Math.floor(state.happiness)
     })
   });
-}
-
-function pushStatus(status) {
-  if (!state.username || !isOnline) return;
-  fetch('/update-status', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({username: state.username, status})
-  }).catch(() => {});
 }
 
 async function checkIfKickedFromLeaderboard() {
@@ -7367,19 +6702,13 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 
-// Keep screen on via Median.co native bridge
-if (typeof median !== 'undefined') {
-  median.screen.keepScreenOn?.();
-}
-
 // Run initial online check
 updateOnlineStatus();
 
 function applyCharOffset() {
-  const mouth = character.querySelector('.character-mouth');
-  if (!mouth) return;
-  mouth.style.marginTop = (state.charOffsetY || 0) + 'px';
-  mouth.style.marginLeft = (state.charOffsetX || 0) + 'px';
+  const el = document.getElementById('character');
+  el.style.marginTop = (state.charOffsetY || 0) + 'px';
+  el.style.marginLeft = (state.charOffsetX || 0) + 'px';
 }
 
 // === AUTO-SAVE ===
@@ -7392,40 +6721,21 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // === KEEP-AWAKE ===
-let wakeLock = null;
+let wakeLock;
 
 async function requestWakeLock() {
-  if (!('wakeLock' in navigator)) return;
-  if (document.visibilityState !== 'visible') return;
-  if (wakeLock !== null && !wakeLock.released) return; // already held, don't stack
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    wakeLock.addEventListener('release', () => {
-      wakeLock = null;
-      // OS released it (screen dimmed, tab switched, etc.)
-      // Re-request immediately if the timer is still actively running
-      if (state.isRunning && !state.isPaused && document.visibilityState === 'visible') {
-        setTimeout(requestWakeLock, 300);
-      }
-    });
-  } catch (e) {
-    // Device denied it (low battery, user preference) — fail silently cuz bov
+  if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch {}
   }
 }
 
-async function releaseWakeLock() {
-  if (wakeLock !== null && !wakeLock.released) {
-    try { await wakeLock.release(); } catch {}
-  }
-  wakeLock = null;
-}
-
-// Re-acquire when user comes back to the app (most important case on mobile)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && state.isRunning && !state.isPaused) {
+setInterval(() => {
+  if (state.isRunning && !state.isPaused) {
     requestWakeLock();
   }
-});
+}, 30000);
 
 
 </script>
