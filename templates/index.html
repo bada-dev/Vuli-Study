@@ -3259,12 +3259,60 @@ button:disabled {
   </div>
 </div>
 
-<div class="menu-overlay" id="menuOverlay">
-  <div class="menu-drawer" id="menuDrawer">
-    <div class="menu-close" id="menuClose">×</div>
-    <div class="menu-item" id="aboutBtn">ℹ️ About</div>
-    <div class="menu-item" id="historyBtn">📅 History</div>
-    <div class="menu-item" id="helpBtn">❓ Help</div>
+<!-- Chat List Modal -->
+<div class="modal" id="chatListModal">
+  <div class="modal-content" style="max-width:400px;width:94%;max-height:88vh;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:22px;">
+    <div style="padding:20px 20px 14px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:20px;font-weight:800;color:#2D3142;">💬 Chats</div>
+      <div id="chatListCount" style="font-size:12px;color:#8B8080;font-weight:600;"></div>
+    </div>
+    <div id="chatNoUsername" style="display:none;padding:40px 24px;text-align:center;">
+      <div style="font-size:52px;margin-bottom:14px;">👤</div>
+      <div style="font-size:15px;font-weight:700;color:#2D3142;margin-bottom:6px;">Username required</div>
+      <div style="font-size:13px;color:#6B7080;">Set a username in Settings → Identity to use the chat feature.</div>
+    </div>
+    <div id="chatListContainer" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:60px;"></div>
+    <div id="chatListFooter" style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);display:flex;flex-direction:column;gap:8px;">
+      <button class="modal-btn primary" id="createChatBtn" style="font-size:15px;">+ Create New Chat</button>
+      <button class="modal-btn secondary" id="closeChatListBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat View Modal -->
+<div class="modal" id="chatViewModal">
+  <div class="modal-content" style="max-width:440px;width:96%;height:88vh;max-height:88vh;padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:22px;">
+    <div style="padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.98);">
+      <button id="backToChatListBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;">← Back</button>
+      <div id="chatViewTitle" style="flex:1;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;color:#2D3142;"></div>
+      <button id="chatMembersBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:16px;cursor:pointer;transition:all 0.2s;" title="Members">👥</button>
+    </div>
+    <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px;background:#FAFAFA;"></div>
+    <div style="padding:10px 12px;border-top:1px solid rgba(0,0,0,0.08);display:flex;gap:8px;flex-shrink:0;background:rgba(255,255,255,0.98);align-items:center;">
+      <input id="chatMessageInput" type="text" placeholder="Type a message..." maxlength="500"
+        style="flex:1;padding:11px 16px;border:2px solid #E0E5F0;border-radius:22px;font-size:14px;font-family:inherit;outline:none;transition:border 0.2s;background:#fff;" />
+      <button id="sendMessageBtn"
+        style="background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border:none;border-radius:22px;padding:11px 18px;color:white;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.2s;box-shadow:0 4px 12px rgba(107,207,127,0.35);">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Members Modal -->
+<div class="modal" id="chatMembersModal">
+  <div class="modal-content" style="max-width:340px;max-height:78vh;overflow-y:auto;">
+    <div class="modal-title">👥 Members</div>
+    <div id="chatMembersList" style="margin-bottom:14px;"></div>
+    <div id="addMemberSection" style="display:none;margin-bottom:16px;padding:14px;background:rgba(107,207,127,0.08);border-radius:14px;border:1px solid rgba(107,207,127,0.25);">
+      <div style="font-size:12px;font-weight:700;color:#2D6B3A;margin-bottom:8px;">Add Member <span style="font-weight:500;opacity:0.7;">(exact username · case-sensitive)</span></div>
+      <div style="display:flex;gap:8px;">
+        <input id="addMemberInput" type="text" maxlength="20" placeholder="Exact username..."
+          style="flex:1;padding:10px 12px;border:2px solid #E0E5F0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;transition:border 0.2s;" />
+        <button id="addMemberConfirmBtn"
+          style="background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border:none;border-radius:10px;padding:10px 14px;color:white;font-weight:700;font-size:13px;cursor:pointer;">Add</button>
+      </div>
+    </div>
+    <button id="leaveChatBtn" class="modal-btn secondary" style="width:100%;color:#FF6B6B;margin-bottom:8px;">Leave / Delete Chat</button>
+    <button id="closeMembersBtn" class="modal-btn primary" style="width:100%;">Done</button>
   </div>
 </div>
 
@@ -5253,28 +5301,9 @@ document.getElementById('refreshGraph')?.addEventListener('click', () => {
   renderGraph();
 });
 
-// Menu
-const menuOverlay = document.getElementById('menuOverlay');
-const menuDrawer = document.getElementById('menuDrawer');
-const menuClose = document.getElementById('menuClose');
-
+// Hamburger → Chat
 document.querySelectorAll('.menu-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    menuOverlay.classList.add('active');
-    menuDrawer.classList.add('active');
-  });
-});
-
-menuClose.addEventListener('click', () => {
-  menuOverlay.classList.remove('active');
-  menuDrawer.classList.remove('active');
-});
-
-menuOverlay.addEventListener('click', (e) => {
-  if (e.target === menuOverlay) {
-    menuOverlay.classList.remove('active');
-    menuDrawer.classList.remove('active');
-  }
+  btn.addEventListener('click', () => openChatSystem());
 });
 
 // Settings
@@ -5903,24 +5932,7 @@ document.getElementById('okDeathBtn').addEventListener('click', () => {
 });
 
 
-// Menu items
-document.getElementById('aboutBtn').addEventListener('click', () => {
-  alert('Study Buddy v4.0\n\nA focus timer app to help you study WAYY better!!\n\nBuy carrots from shop and **drag** them to feed your buddy!\n\nMade by EthanTyagi!!\nStopping mid-session costs 5-15% happiness!\nAll rights reserved.');
-  menuOverlay.classList.remove('active');
-  menuDrawer.classList.remove('active');
-});
-
-document.getElementById('historyBtn').addEventListener('click', () => {
-  alert('History:\n\nView your study history in the Stats page calendar!\n\nRed dots show tasks with deadlines - click them to view details!');
-  menuOverlay.classList.remove('active');
-  menuDrawer.classList.remove('active');
-});
-
-document.getElementById('helpBtn').addEventListener('click', () => {
-  alert('Help:\n\n1. Set a timer and start focusing\n2. Complete sessions to earn coins (2 coins per 5 min)\n3. Buy carrots from shop (10 coins each)\n4. DRAG carrots to your buddy to feed\n5. Buy cosmetics & backgrounds!\n\nWarning: Happiness decreases 5% per hour!\nAt 0%, your buddy dies and needs 3 carrots to revive!\n\nDuring focus: Floating study emojis appear!');
-  menuOverlay.classList.remove('active');
-  menuDrawer.classList.remove('active');
-});
+// LETS GOOOO
 
 // === ACHIEVEMENTS ===
 const achievements = [
@@ -6113,9 +6125,6 @@ document.getElementById('resumePauseBtn').addEventListener('click', () => {
 
 // === RAW STATS VIEWER ===
 document.getElementById('rawStatsBtnAdmin')?.addEventListener('click', () => {
-  menuOverlay.classList.remove('active');
-  menuDrawer.classList.remove('active');
-  
   const statsContent = document.getElementById('rawStatsContent');
   
   // Format state object with nested objects expanded
@@ -6424,6 +6433,252 @@ document.getElementById('copyRawStatsBtn')?.addEventListener('click', () => {
   });
 })();
 
+// Must Must finish B E L O W insane programming
+
+// === CHAT SYSTEM ===
+let currentChatId = null;
+let currentChatOwner = null;
+let currentChatName = null;
+let chatPollInterval = null;
+let lastMessageId = 0;
+
+function openChatSystem() {
+  if (!isOnline) { requiresInternet('Chat'); return; }
+  const noUser = document.getElementById('chatNoUsername');
+  const listContainer = document.getElementById('chatListContainer');
+  const footer = document.getElementById('chatListFooter');
+  const countEl = document.getElementById('chatListCount');
+  if (!state.username) {
+    noUser.style.display = 'block';
+    listContainer.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+  } else {
+    noUser.style.display = 'none';
+    listContainer.style.display = 'block';
+    if (footer) footer.style.display = 'flex';
+    loadChatList();
+  }
+  document.getElementById('chatListModal').classList.add('active');
+}
+
+async function loadChatList() {
+  const list = document.getElementById('chatListContainer');
+  const countEl = document.getElementById('chatListCount');
+  list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:14px;">Loading...</div>';
+  try {
+    const res = await fetch('/user-chats', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: state.username})
+    });
+    const data = await res.json();
+    list.innerHTML = '';
+    if (countEl) countEl.textContent = data.chats ? `${data.chats.length}/7` : '0/7';
+    if (!data.chats || data.chats.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No chats yet.<br>Create one to start chatting! 💬</div>';
+      return;
+    }
+    data.chats.forEach(chat => {
+      const item = document.createElement('div');
+      item.style.cssText = 'background:rgba(255,255,255,0.6);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:transform 0.15s,box-shadow 0.15s;';
+      item.innerHTML = `
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(107,207,127,0.3);">💬</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:15px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#2D3142;">${chat.name}</div>
+          <div style="font-size:11px;color:#6B7080;font-weight:500;">${chat.member_count}/30 members${chat.owner === state.username ? ' &nbsp;·&nbsp; 👑 Owner' : ''}</div>
+        </div>
+        <div style="font-size:18px;opacity:0.25;flex-shrink:0;">›</div>
+      `;
+      item.addEventListener('click', () => openChat(chat.id, chat.name, chat.owner));
+      item.addEventListener('mouseenter', () => { item.style.transform='scale(1.01)'; item.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; });
+      item.addEventListener('mouseleave', () => { item.style.transform='scale(1)'; item.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'; });
+      list.appendChild(item);
+    });
+  } catch {
+    list.innerHTML = '<div style="text-align:center;color:#FF6B6B;padding:24px;font-size:14px;">Failed to load chats.</div>';
+  }
+}
+
+async function openChat(chatId, chatName, owner) {
+  currentChatId = chatId;
+  currentChatOwner = owner;
+  currentChatName = chatName;
+  lastMessageId = 0;
+  document.getElementById('chatListModal').classList.remove('active');
+  document.getElementById('chatViewTitle').textContent = chatName;
+  document.getElementById('chatMessages').innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:13px;">Loading messages...</div>';
+  document.getElementById('chatMessageInput').value = '';
+  document.getElementById('chatViewModal').classList.add('active');
+  await fetchMessages(true);
+  if (chatPollInterval) clearInterval(chatPollInterval);
+  chatPollInterval = setInterval(() => fetchMessages(false), 3000);
+}
+
+async function fetchMessages(scrollToBottom) {
+  if (!currentChatId) return;
+  try {
+    const res = await fetch('/chat-messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: state.username, chat_id: currentChatId, since: lastMessageId})
+    });
+    const data = await res.json();
+    if (!data.success) return;
+    const container = document.getElementById('chatMessages');
+    if (lastMessageId === 0 && data.messages.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:13px;" data-empty="1">No messages yet. Say hello! 👋</div>';
+      return;
+    }
+    if (lastMessageId === 0 && data.messages.length > 0) container.innerHTML = '';
+    const wasAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 60;
+    const emptyEl = container.querySelector('[data-empty]');
+    if (emptyEl && data.messages.length > 0) emptyEl.remove();
+    data.messages.forEach(msg => {
+      const isMe = msg.username === state.username;
+      const time = new Date(msg.timestamp * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      const div = document.createElement('div');
+      div.style.cssText = `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};`;
+      const safeMsg = msg.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      div.innerHTML = `
+        <div style="font-size:10px;color:#ABABAB;margin-bottom:3px;padding:0 5px;">${isMe ? 'You' : `<b style="color:#6B7080">${msg.username}</b>`} &middot; ${time}</div>
+        <div style="background:${isMe ? 'linear-gradient(135deg,#6BCF7F,#5ABF6F)' : '#ECECEC'};color:${isMe ? 'white' : '#2D3142'};padding:9px 14px;border-radius:${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};max-width:80%;font-size:14px;word-break:break-word;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,0.09);">${safeMsg}</div>
+      `;
+      container.appendChild(div);
+      if (msg.id > lastMessageId) lastMessageId = msg.id;
+    });
+    if (scrollToBottom || wasAtBottom) container.scrollTop = container.scrollHeight;
+  } catch {}
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatMessageInput');
+  const message = input.value.trim();
+  if (!message || !currentChatId) return;
+  input.value = '';
+  input.focus();
+  try {
+    const res = await fetch('/send-message', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: state.username, chat_id: currentChatId, message})
+    });
+    const data = await res.json();
+    if (data.success) { fetchMessages(true); }
+    else { alert(data.error || 'Failed to send.'); input.value = message; }
+  } catch { alert('Could not send. Check your connection.'); input.value = message; }
+}
+
+function closeChatView() {
+  if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; }
+  currentChatId = null; currentChatOwner = null; currentChatName = null; lastMessageId = 0;
+  document.getElementById('chatViewModal').classList.remove('active');
+  document.getElementById('chatListModal').classList.add('active');
+  loadChatList();
+}
+
+async function openChatMembers() {
+  const membersList = document.getElementById('chatMembersList');
+  const addSection = document.getElementById('addMemberSection');
+  membersList.innerHTML = '<div style="color:#6B7080;text-align:center;padding:12px;font-size:13px;">Loading...</div>';
+  addSection.style.display = 'none';
+  document.getElementById('chatMembersModal').classList.add('active');
+  try {
+    const res = await fetch('/chat-members', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: state.username, chat_id: currentChatId})
+    });
+    const data = await res.json();
+    if (!data.success) { membersList.innerHTML = '<div style="color:#FF6B6B;text-align:center;padding:12px;">Failed to load.</div>'; return; }
+    membersList.innerHTML = '';
+    const countDiv = document.createElement('div');
+    countDiv.style.cssText = 'text-align:center;font-size:11px;color:#8B8080;font-weight:600;margin-bottom:10px;';
+    countDiv.textContent = `${data.members.length} / 30 members`;
+    membersList.appendChild(countDiv);
+    data.members.forEach(member => {
+      const isOwner = member === data.owner;
+      const isYou = member === state.username;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.04);border-radius:11px;margin-bottom:6px;';
+      row.innerHTML = `
+        <div style="font-size:20px;">${isOwner ? '👑' : '👤'}</div>
+        <div style="flex:1;font-weight:${isOwner ? '700' : '600'};font-size:14px;color:#2D3142;">${member}${isYou ? ' <span style="font-size:11px;color:#6B7080;">(You)</span>' : ''}${isOwner ? ' <span style="font-size:11px;color:#FFB84D;">Owner</span>' : ''}</div>
+      `;
+      membersList.appendChild(row);
+    });
+    if (data.owner === state.username) {
+      addSection.style.display = 'block';
+      document.getElementById('addMemberInput').value = '';
+    }
+  } catch { membersList.innerHTML = '<div style="color:#FF6B6B;text-align:center;padding:12px;">Failed to load.</div>'; }
+}
+
+// --- Chat event listeners ---
+document.getElementById('closeChatListBtn').addEventListener('click', () => {
+  document.getElementById('chatListModal').classList.remove('active');
+});
+
+document.getElementById('createChatBtn').addEventListener('click', async () => {
+  if (!requiresInternet('Creating a chat')) return;
+  try {
+    const res = await fetch('/user-chats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
+    const data = await res.json();
+    if (data.chats && data.chats.length >= 7) { alert('❌ You can only be in 7 chats at once!'); return; }
+  } catch {}
+  const name = prompt('Chat name (max 30 characters):');
+  if (!name || !name.trim()) return;
+  if (name.trim().length > 30) { alert('Name too long! Max 30 characters.'); return; }
+  try {
+    const res = await fetch('/create-chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username,name:name.trim()})});
+    const data = await res.json();
+    if (data.success) { loadChatList(); }
+    else { alert(`❌ ${data.error || 'Failed to create chat.'}`); }
+  } catch { alert('Could not create chat. Check your connection.'); }
+});
+
+document.getElementById('backToChatListBtn').addEventListener('click', closeChatView);
+
+document.getElementById('chatMembersBtn').addEventListener('click', openChatMembers);
+
+document.getElementById('sendMessageBtn').addEventListener('click', sendChatMessage);
+
+document.getElementById('chatMessageInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+});
+document.getElementById('chatMessageInput').addEventListener('focus', (e) => { e.target.style.borderColor = '#6BCF7F'; });
+document.getElementById('chatMessageInput').addEventListener('blur', (e) => { e.target.style.borderColor = '#E0E5F0'; });
+
+document.getElementById('closeMembersBtn').addEventListener('click', () => {
+  document.getElementById('chatMembersModal').classList.remove('active');
+});
+
+document.getElementById('leaveChatBtn').addEventListener('click', async () => {
+  const isOwner = currentChatOwner === state.username;
+  const msg = isOwner
+    ? '⚠️ You are the owner. Leaving will permanently DELETE this chat and all its messages for everyone. Continue?'
+    : 'Leave this chat?';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch('/leave-chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username,chat_id:currentChatId})});
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('chatMembersModal').classList.remove('active');
+      closeChatView();
+    }
+  } catch { alert('Failed. Check your connection.'); }
+});
+
+document.getElementById('addMemberConfirmBtn').addEventListener('click', async () => {
+  const name = document.getElementById('addMemberInput').value.trim();
+  if (!name) { alert('Enter a username.'); return; }
+  try {
+    const res = await fetch('/add-chat-member', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requester:state.username,chat_id:currentChatId,username:name})});
+    const data = await res.json();
+    if (data.success) { document.getElementById('addMemberInput').value=''; openChatMembers(); alert(`✅ ${name} added to the chat!`); }
+    else { alert(`❌ ${data.error || 'Could not add member.'}`); }
+  } catch { alert('Could not add member. Check your connection.'); }
+});
+	
 // === INITIALIZE ===
 loadState();
 initUsername();
