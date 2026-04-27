@@ -1148,266 +1148,159 @@ body {
   color: #5B4A3A;
 }
 
-/* Shop Page — Reworked */
+/* Shop Page */
 .shop-content {
   flex: 1;
-  padding: 0;
+  padding: 16px;
   overflow-y: auto;
 }
 
-/* Category pill tabs */
-.shop-tabs-grid {
+.shop-tabs {
   display: flex;
-  gap: 8px;
-  padding: 14px 14px 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-bottom: 0;
+  gap: 6px;
+  margin-bottom: 16px;
 }
-.shop-tabs-grid::-webkit-scrollbar { display: none; }
 
 .shop-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.3);
-  border: 2px solid transparent;
-  border-radius: 16px;
-  font-size: 11px;
-  font-weight: 700;
+  flex: 1;
+  padding: 9px;
+  background: rgba(255,255,255,0.25);
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: #5B4A3A;
   cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
-  line-height: 1;
+  transition: all 0.2s;
 }
-.shop-tab .tab-icon { font-size: 20px; }
-.shop-tab.active {
-  background: rgba(255,255,255,0.85);
-  color: #2D3142;
-  border-color: rgba(107,207,127,0.4);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-}
-.shop-tab:active { transform: scale(0.93); }
 
-/* Featured banner */
-.shop-featured {
-  margin: 12px 14px 0;
-  border-radius: 20px;
-  overflow: hidden;
-  position: relative;
-  cursor: pointer;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
-  transition: transform 0.2s;
+.shop-tab.active {
+  background: rgba(255,255,255,0.7);
+  color: #2D3142;
+  font-weight: 700;
 }
-.shop-featured:active { transform: scale(0.98); }
-.shop-featured-inner {
-  padding: 16px 18px;
+
+.shop-tabs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.shop-tabs-grid .shop-tab {
+  padding: 16px 8px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 90px;
-}
-.shop-featured-icon { font-size: 52px; flex-shrink: 0; }
-.shop-featured-text { flex: 1; }
-.shop-featured-label {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,0.8);
-  margin-bottom: 3px;
-}
-.shop-featured-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 4px;
-}
-.shop-featured-desc {
-  font-size: 11px;
-  color: rgba(255,255,255,0.85);
-  font-weight: 600;
-}
-.shop-featured-price {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.shop-featured-old {
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-  text-decoration: line-through;
-  font-weight: 600;
-}
-.shop-featured-new {
-  font-size: 20px;
-  font-weight: 800;
-  color: white;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1.2;
+  min-height: 60px;
 }
 
-/* Shop items grid */
+.shop-tab {
+  transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.shop-tab:active {
+  transform: scale(0.95);
+}
+
 .shop-items {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 12px 14px 20px;
 }
 
-/* Item card */
 .shop-item {
-  background: rgba(255,255,255,0.5);
-  border-radius: 20px;
-  padding: 0;
+  background: rgba(255,255,255,0.4);
+  border-radius: 16px;
+  padding: 14px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  border: 2.5px solid transparent;
+  transition: all 0.3s;
+  border: 3px solid transparent;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
 }
-.shop-item:active { transform: scale(0.94); box-shadow: 0 1px 6px rgba(0,0,0,0.1); }
-.shop-item.owned { border-color: #6BCF7F; }
-.shop-item.equipped { border-color: #FFB84D; }
 
-.shop-item-preview {
-  height: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 17px 17px 0 0;
-  font-size: 52px;
-  position: relative;
+.shop-item:active {
+  transform: scale(0.95);
 }
-.shop-item-body { padding: 10px 10px 12px; }
+
+.shop-item.owned {
+  border-color: #6BCF7F;
+}
+
+.shop-item.equipped {
+  border-color: #FFB84D;
+  background: rgba(255,184,77,0.25);
+}
+
+.shop-item-icon {
+  font-size: 44px;
+  margin-bottom: 6px;
+}
+
 .shop-item-name {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
+  margin-bottom: 6px;
   color: #2D3142;
-  margin-bottom: 3px;
 }
-.shop-item-desc {
-  font-size: 10px;
-  color: #8B7A6A;
+
+.shop-item-price {
+  font-size: 11px;
+  color: #6B7080;
   font-weight: 600;
-  margin-bottom: 8px;
-  line-height: 1.3;
-}
-.shop-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.shop-item-price-tag {
-  font-size: 13px;
-  font-weight: 800;
-  color: #2D3142;
-  background: rgba(0,0,0,0.06);
-  padding: 5px 12px;
-  border-radius: 20px;
-}
-.shop-item-price-tag.can-afford { background: rgba(107,207,127,0.2); color: #2D6B3A; }
-.shop-item-price-tag.cant-afford { background: rgba(255,107,107,0.15); color: #B03030; }
-.shop-item-price-tag.owned-tag { background: rgba(107,207,127,0.15); color: #2D6B3A; }
-.shop-item-price-tag.equipped-tag { background: rgba(255,184,77,0.25); color: #8B6000; }
-
-/* Badge overlays */
-.shop-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  z-index: 2;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-.shop-badge.owned-badge { background: #6BCF7F; color: white; }
-.shop-badge.equipped-badge { background: #FFB84D; color: white; }
-
-/* Coin progress bar for unaffordable */
-.shop-progress-wrap {
-  margin-top: 6px;
-  background: rgba(0,0,0,0.08);
-  border-radius: 10px;
-  height: 4px;
-  overflow: hidden;
-}
-.shop-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #FFB84D, #6BCF7F);
-  border-radius: 10px;
-  transition: width 0.5s;
 }
 
-/* Background cards — full bleed */
-.shop-bg-card {
+.bg-item {
   aspect-ratio: 1;
-  border-radius: 20px;
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  border: 2.5px solid transparent;
+  transition: all 0.3s;
+  border: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.12);
 }
-.shop-bg-card:active { transform: scale(0.93); }
-.shop-bg-card.owned { border-color: #6BCF7F; }
-.shop-bg-card.active-bg { border-color: #FFB84D; box-shadow: 0 0 0 3px rgba(255,184,77,0.35), 0 3px 12px rgba(0,0,0,0.12); }
-.shop-bg-card-name {
+
+.bg-item:active {
+  transform: scale(0.95);
+}
+
+.bg-item.owned {
+  border-color: #6BCF7F;
+}
+
+.bg-item.active {
+  border-color: #FFB84D;
+  box-shadow: 0 0 0 3px rgba(255,184,77,0.3);
+}
+
+.bg-item-name {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
   color: white;
   font-size: 11px;
-  font-weight: 800;
-  padding: 18px 8px 7px;
-  text-align: center;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
 }
-.shop-bg-card-price {
+
+.bg-price {
   position: absolute;
-  top: 7px; right: 7px;
-  background: rgba(0,0,0,0.55);
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.7);
   color: white;
   font-size: 10px;
   font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-}
-.shop-bg-card-check {
-  position: absolute;
-  top: 7px; left: 7px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: #6BCF7F;
-  color: white;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
-/* Section title inside shop */
-.shop-section-title {
-  font-size: 11px;
-  font-weight: 800;
-  color: #8B7A6A;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  padding: 10px 14px 0;
+  padding: 3px 6px;
+  border-radius: 8px;
 }
 
 /* Settings Page */
@@ -1731,14 +1624,14 @@ body {
 /* Sparkles */
 .sparkle {
   position: fixed;
-  width: 12px;
-  height: 12px;
-  font-size: 12px;
-  line-height: 1;
+  width: 9px;
+  height: 9px;
+  background: #FFD93D;
+  border-radius: 50%;
   pointer-events: none;
   animation: sparkle-fall 1.2s ease-out forwards;
   z-index: 999;
-  user-select: none;
+  box-shadow: 0 0 8px #FFD93D;
 }
 
 @keyframes sparkle-fall {
@@ -3194,11 +3087,11 @@ button:disabled {
         <div class="stats-header">Shop</div>
 
 		<div id="shopDiscountBanner" style="margin-bottom:10px;"></div>
-		<div class="shop-tabs-grid">
-          <button class="shop-tab active" data-category="items"><span class="tab-icon">🛍️</span>Items</button>
-          <button class="shop-tab" data-category="cosmetics"><span class="tab-icon">👑</span>Hats</button>
-          <button class="shop-tab" data-category="emotes"><span class="tab-icon">😄</span>Emotes</button>
-          <button class="shop-tab" data-category="backgrounds"><span class="tab-icon">🎨</span>Themes</button>
+        <div class="shop-tabs-grid">
+          <button class="shop-tab active" data-category="items">Items</button>
+          <button class="shop-tab" data-category="cosmetics">Cosmetics</button>
+          <button class="shop-tab" data-category="emotes">Emotes</button>
+          <button class="shop-tab" data-category="backgrounds">Backgrounds</button>
         </div>
 
         <div class="shop-items" id="shopItems"></div>
@@ -3778,8 +3671,6 @@ button:disabled {
 </div>
 
 <script>
-(function() {
-'use strict';
 const state = {
   mode: 'focus',
   isRunning: false,
@@ -4735,19 +4626,17 @@ function renderAchievements() {
 
 function createSparkles(element) {
   const rect = element.getBoundingClientRect();
-  const chars = ['✦','✧','⭐','💛','✨','⚡'];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 10; i++) {
     setTimeout(() => {
       const sparkle = document.createElement('div');
       sparkle.className = 'sparkle';
-      sparkle.textContent = chars[Math.floor(Math.random() * chars.length)];
-      const x = rect.left + rect.width / 2 + (Math.random() - 0.5) * 120;
-      const y = rect.top + rect.height / 2 + (Math.random() - 0.5) * 40;
+      const x = rect.left + rect.width / 2 + (Math.random() - 0.5) * 110;
+      const y = rect.top + rect.height / 2 + (Math.random() - 0.5) * 35;
       sparkle.style.left = `${x}px`;
       sparkle.style.top = `${y}px`;
       document.body.appendChild(sparkle);
       setTimeout(() => sparkle.remove(), 1200);
-    }, i * 50);
+    }, i * 55);
   }
 }
 
@@ -5478,342 +5367,318 @@ document.querySelectorAll('.shop-tab').forEach(tab => {
   });
 });
 
-// Item metadata with descriptions
-const itemMeta = {
-  carrot:   { icon:'🥕', name:'Carrot',        desc:'Feed to your buddy to restore happiness',    bg:'linear-gradient(135deg,#FFF3E0,#FFE0B2)', basePrice:10  },
-  bundle:   { icon:'🥕🥕🥕', name:'Carrot Bundle', desc:'3 carrots for less — stock up!',          bg:'linear-gradient(135deg,#FFF8E1,#FFECB3)', basePrice:25  },
-  freezer:  { icon:'❄️', name:'Streak Freezer', desc:'Miss a day without breaking your streak',   bg:'linear-gradient(135deg,#E3F2FD,#BBDEFB)', basePrice:60  },
-  book:     { icon:'📚', name:'Study Book',     desc:'Earn 1.5× coins on your next session',      bg:'linear-gradient(135deg,#E8F5E9,#C8E6C9)', basePrice:25  },
-};
-
-const cosmeticMeta = {
-  tophat: { desc:'A dapper top hat for a sophisticated buddy' },
-  wizard: { desc:'Cast spells and conjure study powers' },
-  pirate: { desc:'Arrr! Rule the study seas' },
-};
-
-const emoteMeta = {
-  wave:   { desc:'Give a friendly greeting' },
-  love:   { desc:'Show some love' },
-  star:   { desc:'Feeling starstruck!' },
-  crazy:  { desc:'Go absolutely wild' },
-};
-
-function makeShopCard({ icon, name, desc, bg, owned, equipped, canAfford, price, oldPrice, onTap, isItem, progressPct }) {
-  const el = document.createElement('div');
-  el.className = 'shop-item' + (owned ? ' owned' : '') + (equipped ? ' equipped' : '');
-
-  // Badge
-  let badge = '';
-  if (equipped) badge = '<div class="shop-badge equipped-badge">★</div>';
-  else if (owned) badge = '<div class="shop-badge owned-badge">✓</div>';
-
-  // Price tag
-  let priceHTML = '';
-  if (equipped) {
-    priceHTML = '<div class="shop-item-price-tag equipped-tag">Equipped</div>';
-  } else if (owned) {
-    priceHTML = '<div class="shop-item-price-tag owned-tag">Tap to ' + (isItem ? 'buy again' : 'equip') + '</div>';
-  } else if (canAfford) {
-    const old = oldPrice ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px;margin-right:3px;">${oldPrice}🪙</span>` : '';
-    priceHTML = `<div class="shop-item-price-tag can-afford">${old}${price}🪙</div>`;
-  } else {
-    priceHTML = `<div class="shop-item-price-tag cant-afford">${price}🪙</div>`;
-  }
-
-  // Progress bar
-  let progressHTML = '';
-  if (!owned && !canAfford && progressPct !== undefined) {
-    progressHTML = `<div class="shop-progress-wrap"><div class="shop-progress-bar" style="width:${Math.min(100,progressPct)}%"></div></div>`;
-  }
-
-  el.innerHTML = `
-    ${badge}
-    <div class="shop-item-preview" style="background:${bg || 'rgba(200,180,160,0.2)'}">
-      <span style="filter:${!canAfford && !owned ? 'grayscale(0.4)' : 'none'}">${icon}</span>
-    </div>
-    <div class="shop-item-body">
-      <div class="shop-item-name">${name}</div>
-      <div class="shop-item-desc">${desc}</div>
-      <div class="shop-item-footer">
-        <div style="width:100%;">
-          ${priceHTML}
-          ${progressHTML}
-        </div>
-      </div>
-    </div>
-  `;
-
-  el.addEventListener('click', onTap);
-  return el;
-}
-
-function getDailyFeatured(discount) {
-  // Seed by day so it changes daily
-  const today = new Date();
-  const seed = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
-  const allItems = [
-    { ...itemMeta.freezer, id:'freezer' },
-    { ...itemMeta.book, id:'book' },
-    ...cosmetics.map(c => ({...c, bg:'linear-gradient(135deg,#F3E5F5,#E1BEE7)', desc: cosmeticMeta[c.id]?.desc || '' })),
-    ...emotes.map(e => ({...e, bg:'linear-gradient(135deg,#FFF8E1,#FFECB3)', desc: emoteMeta[e.id]?.desc || '' })),
-  ];
-  const idx = seed % allItems.length;
-  const item = allItems[idx];
-  const discountPct = 20;
-  const discountedPrice = Math.floor(item.price * (1 - discountPct/100));
-  return { ...item, discountPct, discountedPrice };
-}
-
-function renderFeatured(container) {
-  const featured = getDailyFeatured();
-  const banner = document.createElement('div');
-  banner.className = 'shop-featured';
-  banner.innerHTML = `
-    <div class="shop-featured-inner" style="background:linear-gradient(135deg,#c4a07a,#6BCF7F);">
-      <div class="shop-featured-icon">${featured.icon}</div>
-      <div class="shop-featured-text">
-        <div class="shop-featured-label">⚡ Daily Deal — ${featured.discountPct}% OFF</div>
-        <div class="shop-featured-name">${featured.name}</div>
-        <div class="shop-featured-desc">${featured.desc}</div>
-      </div>
-      <div class="shop-featured-price">
-        <div class="shop-featured-old">${featured.price}🪙</div>
-        <div class="shop-featured-new">${featured.discountedPrice}🪙</div>
-      </div>
-    </div>
-  `;
-  banner.addEventListener('click', () => {
-    if (!isOnline && featured.id !== 'carrot' && featured.id !== 'bundle') {}
-    const canAfford = state.coins >= featured.discountedPrice;
-    if (!canAfford) { alert(`❌ Need ${featured.discountedPrice - state.coins} more coins!`); return; }
-    if (!confirm(`Buy ${featured.name} for ${featured.discountedPrice}🪙 (Daily Deal)?`)) return;
-    state.coins -= featured.discountedPrice;
-    // Grant the item
-    if (featured.id === 'freezer') { state.streakFreezeActive = true; document.getElementById('freezeIndicator').textContent = '❄️'; }
-    else if (featured.id === 'book') { state.hasBook = true; }
-    else if (cosmetics.find(c => c.id === featured.id)) { if (!state.ownedCosmetics.includes(featured.id)) state.ownedCosmetics.push(featured.id); }
-    else if (emotes.find(e => e.id === featured.id)) { if (!state.ownedEmotes.includes(featured.id)) state.ownedEmotes.push(featured.id); }
-    createSparkles(banner);
-    updateDisplay();
-    renderShop();
-    saveState();
-  });
-  container.appendChild(banner);
-}
-
 function renderShop() {
   const container = document.getElementById('shopItems');
   container.innerHTML = '';
-
+  
+  // Calculate discounts
   const itemDiscount = state.streak >= 30 ? 0.05 : 0;
-  const bgDiscount   = state.streak >= 50 ? 0.40 : 0;
-
-  // Streak discount banner (compact)
-  const bannerEl = document.getElementById('shopDiscountBanner');
-  bannerEl.innerHTML = '';
-  let bannerMsg = '';
-  if (state.streak >= 50 && currentShopCategory === 'backgrounds') bannerMsg = `🔥 ${state.streak} day streak = 40% OFF themes!`;
-  else if (state.streak >= 30 && currentShopCategory === 'items') bannerMsg = `🔥 ${state.streak} day streak = 5% OFF items!`;
-  else if (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') bannerMsg = `⚡ ${30 - state.streak} more streak days = 5% discount`;
-  else if (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') bannerMsg = `⚡ ${50 - state.streak} more days = 40% theme discount`;
-  if (bannerMsg) {
-    bannerEl.innerHTML = `<div style="margin:0 14px;padding:9px 14px;background:linear-gradient(135deg,rgba(255,184,77,0.25),rgba(107,207,127,0.25));border-radius:12px;font-size:12px;font-weight:700;color:#2D3142;text-align:center;border:1px solid rgba(255,184,77,0.3);">${bannerMsg}</div>`;
+  const bgDiscount = state.streak >= 50 ? 0.40 : 0;
+  
+  // Remove old banner
+  document.getElementById('shopDiscountBanner').innerHTML = '';
+  
+  // Show streak discount banner
+  if ((state.streak >= 30 && currentShopCategory === 'items') || 
+      (state.streak >= 50 && currentShopCategory === 'backgrounds') ||
+      (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') ||
+      (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') ||
+      (state.streak < 20)) {
+    
+    const banner = document.createElement('div');
+    banner.id = 'streakDiscountBanner';
+    banner.style.cssText = 'background: linear-gradient(135deg, rgba(255,184,77,0.3), rgba(107,207,127,0.3)); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: #2D3142; text-align: center; border: 1px solid rgba(255,184,77,0.4);';
+    
+    if (state.streak >= 50 && currentShopCategory === 'backgrounds') {
+      banner.textContent = `🔥 ${state.streak} day streak = 40% OFF backgrounds!`;
+    } else if (state.streak >= 30 && currentShopCategory === 'items') {
+      banner.textContent = `🔥 ${state.streak} day streak = 5% OFF items!`;
+    } else if (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') {
+      banner.textContent = `⚡ ${30 - state.streak} more days = 5% item discount!`;
+    } else if (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') {
+      banner.textContent = `⚡ ${50 - state.streak} more days = 40% background discount!`;
+    } else if (state.streak < 20 && (currentShopCategory === 'items' || currentShopCategory === 'backgrounds')) {
+		//alr
+    }
+    
+    document.getElementById('shopDiscountBanner').innerHTML = '';
+	document.getElementById('shopDiscountBanner').appendChild(banner);
   }
-
+  
   if (currentShopCategory === 'items') {
-    // Daily featured
-    renderFeatured(container);
-
-    const sectionTitle = document.createElement('div');
-    sectionTitle.className = 'shop-section-title';
-    sectionTitle.textContent = 'All Items';
-    container.appendChild(sectionTitle);
-
-    const grid = document.createElement('div');
-    grid.className = 'shop-items';
-    grid.style.paddingTop = '8px';
-
-    const itemsList = [
-      { key:'carrot',  qty:1,  price: Math.floor(10*(1-itemDiscount)), oldPrice: itemDiscount>0?10:null,
-        onBuy: () => { state.coins -= Math.floor(10*(1-itemDiscount)); state.carrots += 1; } },
-      { key:'bundle',  qty:3,  price: Math.floor(25*(1-itemDiscount)), oldPrice: itemDiscount>0?25:null,
-        onBuy: () => { state.coins -= Math.floor(25*(1-itemDiscount)); state.carrots += 3; } },
-      { key:'freezer', qty:null, price: Math.floor(60*(1-itemDiscount)), oldPrice: itemDiscount>0?60:null,
-        onBuy: () => { state.coins -= Math.floor(60*(1-itemDiscount)); state.streakFreezeActive = true; document.getElementById('freezeIndicator').textContent='❄️'; } },
-      { key:'book',    qty:null, price: Math.floor(25*(1-itemDiscount)), oldPrice: itemDiscount>0?25:null,
-        onBuy: () => { state.coins -= Math.floor(25*(1-itemDiscount)); state.hasBook = true; } },
-    ];
-
-    itemsList.forEach(({key, qty, price, oldPrice, onBuy}) => {
-      const meta = itemMeta[key];
-      const canAfford = state.coins >= price;
-      const isActive = (key==='freezer' && state.streakFreezeActive) || (key==='book' && state.hasBook);
-      const progressPct = (state.coins / price) * 100;
-
-      const card = makeShopCard({
-        icon: meta.icon, name: meta.name, desc: meta.desc, bg: meta.bg,
-        owned: false, equipped: isActive, canAfford, price, oldPrice,
-        isItem: true, progressPct,
-        onTap: () => {
-          if (isActive) { alert(`${meta.icon} Already active!`); return; }
-          if (!canAfford) { alert(`❌ Need ${price - state.coins} more coins!`); return; }
-          if (!confirm(`Buy ${meta.name} for ${price}🪙?`)) return;
-          onBuy();
-          createSparkles(card);
-          updateDisplay(); renderShop(); saveState();
-        }
-      });
-      grid.appendChild(card);
+    // === CARROT ===
+    const carrotBasePrice = 10;
+    const carrotPrice = Math.floor(carrotBasePrice * (1 - itemDiscount));
+    const canAffordCarrot = state.coins >= carrotPrice;
+    
+    const carrotItem = document.createElement('div');
+    carrotItem.className = 'shop-item';
+    carrotItem.innerHTML = `
+      <div class="shop-item-icon">🥕</div>
+      <div class="shop-item-name">Carrot</div>
+      <div class="shop-item-price">${itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${carrotBasePrice}🪙</span> ` : ''}${canAffordCarrot ? carrotPrice + ' 🪙' : carrotPrice + ' 🪙 (Need ' + (carrotPrice - state.coins) + ')'}</div>
+    `;
+    if (!canAffordCarrot) {
+      carrotItem.style.opacity = '0.5';
+      carrotItem.style.cursor = 'not-allowed';
+    }
+    carrotItem.addEventListener('click', () => {
+      if (canAffordCarrot && confirm(`Buy 1 carrot for ${carrotPrice} coins?`)) {
+        state.coins -= carrotPrice;
+        state.carrots++;
+        updateDisplay();
+        renderShop();
+      } else if (!canAffordCarrot) {
+        alert('❌ Not enough coins!');
+      }
     });
+    container.appendChild(carrotItem);
+    
+    // === CARROT BUNDLE ===
+    const bundleBasePrice = 25;
+    const bundlePrice = Math.floor(bundleBasePrice * (1 - itemDiscount));
+    const canAffordBundle = state.coins >= bundlePrice;
+    
+    const carrotBundle = document.createElement('div');
+    carrotBundle.className = 'shop-item';
+    carrotBundle.innerHTML = `
+      <div class="shop-item-icon">🥕🥕🥕</div>
+      <div class="shop-item-name">Carrot Bundle</div>
+      <div class="shop-item-price">${itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${bundleBasePrice}🪙</span> ` : ''}${canAffordBundle ? bundlePrice + ' 🪙' : bundlePrice + ' 🪙 (Need ' + (bundlePrice - state.coins) + ')'}</div>
+    `;
+    if (!canAffordBundle) {
+      carrotBundle.style.opacity = '0.5';
+      carrotBundle.style.cursor = 'not-allowed';
+    }
+    carrotBundle.addEventListener('click', () => {
+      if (canAffordBundle && confirm(`Buy 3 carrots for ${bundlePrice} coins?`)) {
+        state.coins -= bundlePrice;
+        state.carrots += 3;
+        updateDisplay();
+        renderShop();
+      } else if (!canAffordBundle) {
+        alert('❌ Not enough coins!');
+      }
+    });
+    container.appendChild(carrotBundle);
 
-    container.appendChild(grid);
+    // === STREAK FREEZER ===
+    const freezerBasePrice = 60;
+    const freezerPrice = Math.floor(freezerBasePrice * (1 - itemDiscount));
+    const canAffordFreezer = state.coins >= freezerPrice;
+    const freezerActive = state.streakFreezeActive;
 
+    const streakFreezer = document.createElement('div');
+    streakFreezer.className = 'shop-item';
+    streakFreezer.innerHTML = `
+      <div class="shop-item-icon">❄️</div>
+      <div class="shop-item-name">Streak Freezer</div>
+      <div class="shop-item-price">${freezerActive ? 'Active!' : (itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${freezerBasePrice}🪙</span> ` : '') + (canAffordFreezer ? freezerPrice + ' 🪙' : freezerPrice + ' 🪙 (Need ' + (freezerPrice - state.coins) + ')')}</div>
+    `;
+    if (freezerActive) {
+      streakFreezer.classList.add('equipped');
+      streakFreezer.style.cursor = 'default';
+    } else if (!canAffordFreezer) {
+      streakFreezer.style.opacity = '0.5';
+      streakFreezer.style.cursor = 'not-allowed';
+    }
+    streakFreezer.addEventListener('click', () => {
+      if (freezerActive) {
+        alert('❄️ Streak Freezer is already active! It will protect your streak for 1 missed day.');
+      } else if (canAffordFreezer && confirm(`Buy Streak Freezer for ${freezerPrice} coins?`)) {
+        state.coins -= freezerPrice;
+        state.streakFreezeActive = true;
+        document.getElementById('freezeIndicator').textContent = '❄️';
+        updateDisplay();
+        renderShop();
+        alert('❄️ Streak Freezer activated!');
+      } else if (!canAffordFreezer) {
+        alert('❌ Not enough coins!');
+      }
+    });
+    container.appendChild(streakFreezer);
+
+    // === STUDY BOOK ===
+    const bookBasePrice = 25;
+    const bookPrice = Math.floor(bookBasePrice * (1 - itemDiscount));
+    const canAffordBook = state.coins >= bookPrice;
+    const bookActive = state.hasBook;
+    
+    const studyBook = document.createElement('div');
+    studyBook.className = 'shop-item';
+    if (bookActive) studyBook.classList.add('equipped');
+    studyBook.innerHTML = `
+      <div class="shop-item-icon">📚</div>
+      <div class="shop-item-name">Study Book</div>
+      <div class="shop-item-price">${bookActive ? 'Active!' : (itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${bookBasePrice}🪙</span> ` : '') + (canAffordBook ? bookPrice + ' 🪙' : bookPrice + ' 🪙 (Need ' + (bookPrice - state.coins) + ')')}</div>
+    `;
+    if (!canAffordBook && !bookActive) {
+      studyBook.style.opacity = '0.5';
+      studyBook.style.cursor = 'not-allowed';
+    }
+    if (bookActive) studyBook.style.cursor = 'default';
+    studyBook.addEventListener('click', () => {
+      if (bookActive) {
+        alert('📚 Study Book is active! Use it in your next focus session for 1.5x coins!');
+      } else if (canAffordBook && confirm(`Buy Study Book for ${bookPrice} coins?`)) {
+        state.coins -= bookPrice;
+        state.hasBook = true;
+        updateDisplay();
+        renderShop();
+        alert('📚 Study Book purchased! Start a focus session to use it!');
+      } else if (!canAffordBook) {
+        alert('❌ Not enough coins!');
+      }
+    });
+    container.appendChild(studyBook);
+    
   } else if (currentShopCategory === 'cosmetics') {
-    renderFeatured(container);
-    const sectionTitle = document.createElement('div');
-    sectionTitle.className = 'shop-section-title';
-    sectionTitle.textContent = 'Hats & Accessories';
-    container.appendChild(sectionTitle);
-    const grid = document.createElement('div');
-    grid.className = 'shop-items';
-    grid.style.paddingTop = '8px';
-
     cosmetics.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'shop-item';
+      const canAfford = state.coins >= item.price;
       const owned = state.ownedCosmetics.includes(item.id);
-      const equipped = state.equippedCosmetic === item.id;
-      const canAfford = state.coins >= item.price;
-      const progressPct = (state.coins / item.price) * 100;
-
-      const card = makeShopCard({
-        icon: item.icon, name: item.name,
-        desc: cosmeticMeta[item.id]?.desc || '',
-        bg: 'linear-gradient(135deg,#F3E5F5,#E1BEE7)',
-        owned, equipped, canAfford,
-        price: item.price, progressPct,
-        onTap: () => {
-          if (owned) {
-            state.equippedCosmetic = equipped ? null : item.id;
-            renderCosmetic(); renderShop(); saveState();
-          } else if (canAfford) {
-            if (!confirm(`Buy ${item.name} for ${item.price}🪙?`)) return;
-            state.coins -= item.price;
-            state.ownedCosmetics.push(item.id);
-            createSparkles(card);
-            checkAchievements(); updateDisplay(); renderShop(); saveState();
-          } else {
-            alert(`❌ Need ${item.price - state.coins} more coins!`);
-          }
+      
+      if (owned) el.classList.add('owned');
+      if (state.equippedCosmetic === item.id) el.classList.add('equipped');
+      
+      let priceText;
+      if (owned) {
+        priceText = state.equippedCosmetic === item.id ? 'Equipped' : 'Equip';
+      } else if (canAfford) {
+        priceText = item.price + ' 🪙';
+      } else {
+        priceText = item.price + ' 🪙 (Need ' + (item.price - state.coins) + ')';
+      }
+      
+      el.innerHTML = `
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-price">${priceText}</div>
+      `;
+      
+      if (!owned && !canAfford) {
+        el.style.opacity = '0.5';
+        el.style.cursor = 'not-allowed';
+      }
+      
+      el.addEventListener('click', () => {
+        if (owned) {
+          state.equippedCosmetic = state.equippedCosmetic === item.id ? null : item.id;
+          renderCosmetic();
+          renderShop();
+        } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
+          state.coins -= item.price;
+          state.ownedCosmetics.push(item.id);
+          checkAchievements();
+          updateDisplay();
+          renderShop();
         }
       });
-      grid.appendChild(card);
+      
+      container.appendChild(el);
     });
-    container.appendChild(grid);
-
+    
   } else if (currentShopCategory === 'emotes') {
-    renderFeatured(container);
-    const sectionTitle = document.createElement('div');
-    sectionTitle.className = 'shop-section-title';
-    sectionTitle.textContent = 'Emotes — tap buddy to use';
-    container.appendChild(sectionTitle);
-    const grid = document.createElement('div');
-    grid.className = 'shop-items';
-    grid.style.paddingTop = '8px';
-
     emotes.forEach(item => {
-      const owned = state.ownedEmotes.includes(item.id);
-      const equipped = state.equippedEmote === item.id;
+      const el = document.createElement('div');
+      el.className = 'shop-item';
       const canAfford = state.coins >= item.price;
-      const progressPct = (state.coins / item.price) * 100;
-
-      const card = makeShopCard({
-        icon: item.icon, name: item.name,
-        desc: emoteMeta[item.id]?.desc || '',
-        bg: 'linear-gradient(135deg,#FFF8E1,#FFECB3)',
-        owned, equipped, canAfford,
-        price: item.price, progressPct,
-        onTap: () => {
-          if (owned) {
-            state.equippedEmote = equipped ? null : item.id;
-            renderShop(); saveState();
-          } else if (canAfford) {
-            if (!confirm(`Buy ${item.name} for ${item.price}🪙?`)) return;
-            state.coins -= item.price;
-            state.ownedEmotes.push(item.id);
-            createSparkles(card);
-            checkAchievements(); updateDisplay(); renderShop(); saveState();
-          } else {
-            alert(`❌ Need ${item.price - state.coins} more coins!`);
-          }
+      const owned = state.ownedEmotes.includes(item.id);
+      
+      if (owned) el.classList.add('owned');
+      if (state.equippedEmote === item.id) el.classList.add('equipped');
+      
+      let priceText;
+      if (owned) {
+        priceText = state.equippedEmote === item.id ? 'Equipped' : 'Equip';
+      } else if (canAfford) {
+        priceText = item.price + ' 🪙';
+      } else {
+        priceText = item.price + ' 🪙 (Need ' + (item.price - state.coins) + ')';
+      }
+      
+      el.innerHTML = `
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-price">${priceText}</div>
+      `;
+      
+      if (!owned && !canAfford) {
+        el.style.opacity = '0.5';
+        el.style.cursor = 'not-allowed';
+      }
+      
+      el.addEventListener('click', () => {
+        if (owned) {
+          state.equippedEmote = state.equippedEmote === item.id ? null : item.id;
+          renderEmote();
+          renderShop();
+       } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
+          state.coins -= item.price;
+          state.ownedEmotes.push(item.id);
+          checkAchievements();
+          updateDisplay();
+          renderShop();
         }
       });
-      grid.appendChild(card);
+      
+      container.appendChild(el);
     });
-    container.appendChild(grid);
-
+    
   } else if (currentShopCategory === 'backgrounds') {
-    const grid = document.createElement('div');
-    grid.className = 'shop-items';
-
     backgrounds.forEach(bg => {
+      const el = document.createElement('div');
+      el.className = 'bg-item';
+      el.style.background = bg.gradient;
+      el.style.backgroundSize = '200% 200%';
+      
       const discountedPrice = Math.floor(bg.price * (1 - bgDiscount));
       const canAfford = state.coins >= discountedPrice;
       const owned = state.ownedBackgrounds.includes(bg.id);
-      const isActive = state.activeBackground === bg.id;
-      const progressPct = (state.coins / discountedPrice) * 100;
-
-      const el = document.createElement('div');
-      el.className = 'shop-bg-card' + (owned ? ' owned' : '') + (isActive ? ' active-bg' : '');
-      el.style.background = bg.gradient;
-      el.style.backgroundSize = '200% 200%';
-
-      let topLeft = '';
-      if (owned) topLeft = '<div class="shop-bg-card-check">✓</div>';
-
-      let priceTag = '';
+      
+      if (owned) el.classList.add('owned');
+      if (state.activeBackground === bg.id) el.classList.add('active');
+      
+      const name = document.createElement('div');
+      name.className = 'bg-item-name';
+      name.textContent = bg.name;
+      el.appendChild(name);
+      
       if (!owned && bg.price > 0) {
-        const txt = bgDiscount > 0
-          ? `<span style="text-decoration:line-through;opacity:0.6">${bg.price}</span> ${discountedPrice}🪙`
-          : `${bg.price}🪙`;
-        priceTag = `<div class="shop-bg-card-price">${txt}</div>`;
+        const price = document.createElement('div');
+        price.className = 'bg-price';
+        if (bgDiscount > 0) {
+          price.innerHTML = `<span style="text-decoration:line-through;opacity:0.6">${bg.price}🪙</span> ${discountedPrice}🪙`;
+          price.style.fontSize = '9px';
+        } else if (canAfford) {
+          price.textContent = `${bg.price}🪙`;
+        } else {
+          price.textContent = `${bg.price}🪙 (${discountedPrice - state.coins})`;
+          price.style.fontSize = '9px';
+        }
+        el.appendChild(price);
+        
+        if (!canAfford) {
+          el.style.opacity = '0.5';
+          el.style.cursor = 'not-allowed';
+        }
       }
-
-      let progressHTML = '';
-      if (!owned && !canAfford && bg.price > 0) {
-        progressHTML = `<div style="position:absolute;bottom:28px;left:6px;right:6px;height:3px;background:rgba(255,255,255,0.3);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,progressPct)}%;background:rgba(255,255,255,0.8);border-radius:4px;"></div></div>`;
-      }
-
-      el.innerHTML = `
-        ${topLeft}
-        ${priceTag}
-        ${progressHTML}
-        ${isActive ? '<div style="position:absolute;top:7px;left:7px;background:rgba(255,184,77,0.9);color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;">Active</div>' : ''}
-        <div class="shop-bg-card-name">${bg.name}</div>
-      `;
-
-      if (!owned && !canAfford && bg.price > 0) {
-        el.style.opacity = '0.65';
-        el.style.cursor = 'not-allowed';
-      }
-
+      
       el.addEventListener('click', () => {
         if (owned) {
-          setBackground(bg.id); renderShop(); saveState();
-        } else if (canAfford || bg.price === 0) {
-          if (bg.price > 0 && !confirm(`Buy ${bg.name} theme for ${discountedPrice}🪙?`)) return;
+          setBackground(bg.id);
+        } else if (canAfford && confirm(`Buy ${bg.name} background for ${discountedPrice} coins?`)) {
           state.coins -= discountedPrice;
           state.ownedBackgrounds.push(bg.id);
           setBackground(bg.id);
-          createSparkles(el);
-          updateDisplay(); renderShop(); saveState();
-        } else {
-          alert(`❌ Need ${discountedPrice - state.coins} more coins!`);
+          updateDisplay();
+          renderShop();
         }
       });
-
-      grid.appendChild(el);
+      
+      container.appendChild(el);
     });
-    container.appendChild(grid);
   }
 }
 // Calendar navigation
@@ -7562,7 +7427,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-})();
+
 </script>
 
 </body>
