@@ -5969,6 +5969,7 @@ const STORAGE_KEY = 'studyBuddyState';
 
 function saveState() {
   const data = {
+    username: state.username || null, //ong
     coins: state.coins,
     breakMinutes: state.breakMinutes,
     sessionColors: state.sessionColors,
