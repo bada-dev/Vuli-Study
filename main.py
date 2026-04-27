@@ -33,6 +33,24 @@ def init_db():
         username TEXT PRIMARY KEY,
         last_sync INTEGER DEFAULT 0
     )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS chats (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner TEXT NOT NULL,
+        created_at INTEGER DEFAULT 0
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS chat_members (
+        chat_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        PRIMARY KEY (chat_id, username)
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp INTEGER DEFAULT 0
+    )''')
     conn.commit()
     conn.close()
 
@@ -203,6 +221,173 @@ def delete_user():
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
+@app.route('/create-chat', methods=['POST'])
+def create_chat():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    name = data.get('name', '').strip()
+    if not username or not name or len(name) > 30:
+        return jsonify({'success': False, 'error': 'Invalid fields'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT username FROM users WHERE username = ?', (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        count = conn.execute('SELECT COUNT(*) FROM chat_members WHERE username = ?', (username,)).fetchone()[0]
+        if count >= 7:
+            return jsonify({'success': False, 'error': 'Max 7 chats allowed'})
+        chat_id = f"{int(time.time())}-{username[:8]}-{__import__('uuid').uuid4().hex[:6]}"
+        conn.execute('INSERT INTO chats (id, name, owner, created_at) VALUES (?, ?, ?, ?)',
+                     (chat_id, name, username, int(time.time())))
+        conn.execute('INSERT INTO chat_members (chat_id, username) VALUES (?, ?)', (chat_id, username))
+        conn.commit()
+        return jsonify({'success': True, 'chat_id': chat_id})
+    finally:
+        conn.close()
+
+@app.route('/user-chats', methods=['POST'])
+def user_chats():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'chats': []})
+    conn = get_db()
+    try:
+        chats = conn.execute('''
+            SELECT c.id, c.name, c.owner, c.created_at,
+                   (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) as member_count
+            FROM chats c
+            JOIN chat_members cm ON c.id = cm.chat_id
+            WHERE cm.username = ?
+            ORDER BY c.created_at DESC
+        ''', (username,)).fetchall()
+        return jsonify({'success': True, 'chats': [dict(c) for c in chats]})
+    finally:
+        conn.close()
+
+@app.route('/add-chat-member', methods=['POST'])
+def add_chat_member():
+    data = request.get_json()
+    requester = data.get('requester', '').strip()
+    chat_id = data.get('chat_id', '').strip()
+    new_member = data.get('username', '').strip()
+    if not all([requester, chat_id, new_member]):
+        return jsonify({'success': False, 'error': 'Missing fields'})
+    conn = get_db()
+    try:
+        chat = conn.execute('SELECT owner FROM chats WHERE id = ?', (chat_id,)).fetchone()
+        if not chat:
+            return jsonify({'success': False, 'error': 'Chat not found'})
+        if chat['owner'] != requester:
+            return jsonify({'success': False, 'error': 'Only the owner can add members'})
+        user = conn.execute('SELECT username FROM users WHERE username = ?', (new_member,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found — username is case-sensitive'})
+        count = conn.execute('SELECT COUNT(*) FROM chat_members WHERE chat_id = ?', (chat_id,)).fetchone()[0]
+        if count >= 30:
+            return jsonify({'success': False, 'error': 'Chat is full (30 members max)'})
+        existing = conn.execute('SELECT 1 FROM chat_members WHERE chat_id = ? AND username = ?',
+                                (chat_id, new_member)).fetchone()
+        if existing:
+            return jsonify({'success': False, 'error': 'Already a member'})
+        member_chats = conn.execute('SELECT COUNT(*) FROM chat_members WHERE username = ?',
+                                    (new_member,)).fetchone()[0]
+        if member_chats >= 7:
+            return jsonify({'success': False, 'error': f'{new_member} is already in 7 chats'})
+        conn.execute('INSERT INTO chat_members (chat_id, username) VALUES (?, ?)', (chat_id, new_member))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/chat-messages', methods=['POST'])
+def chat_messages():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    chat_id = data.get('chat_id', '').strip()
+    since = int(data.get('since', 0))
+    if not username or not chat_id:
+        return jsonify({'success': False, 'messages': []})
+    conn = get_db()
+    try:
+        member = conn.execute('SELECT 1 FROM chat_members WHERE chat_id = ? AND username = ?',
+                              (chat_id, username)).fetchone()
+        if not member:
+            return jsonify({'success': False, 'error': 'Not a member'})
+        messages = conn.execute('''
+            SELECT id, username, message, timestamp FROM chat_messages
+            WHERE chat_id = ? AND id > ?
+            ORDER BY id ASC LIMIT 80
+        ''', (chat_id, since)).fetchall()
+        return jsonify({'success': True, 'messages': [dict(m) for m in messages]})
+    finally:
+        conn.close()
+
+@app.route('/send-message', methods=['POST'])
+def send_message():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    chat_id = data.get('chat_id', '').strip()
+    message = data.get('message', '').strip()
+    if not username or not chat_id or not message or len(message) > 500:
+        return jsonify({'success': False, 'error': 'Invalid data'})
+    conn = get_db()
+    try:
+        member = conn.execute('SELECT 1 FROM chat_members WHERE chat_id = ? AND username = ?',
+                              (chat_id, username)).fetchone()
+        if not member:
+            return jsonify({'success': False, 'error': 'Not a member'})
+        conn.execute('INSERT INTO chat_messages (chat_id, username, message, timestamp) VALUES (?, ?, ?, ?)',
+                     (chat_id, username, message, int(time.time())))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/chat-members', methods=['POST'])
+def get_chat_members():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    chat_id = data.get('chat_id', '').strip()
+    if not username or not chat_id:
+        return jsonify({'success': False})
+    conn = get_db()
+    try:
+        member_check = conn.execute('SELECT 1 FROM chat_members WHERE chat_id = ? AND username = ?',
+                                    (chat_id, username)).fetchone()
+        if not member_check:
+            return jsonify({'success': False, 'error': 'Not a member'})
+        members = conn.execute('SELECT username FROM chat_members WHERE chat_id = ? ORDER BY username ASC',
+                               (chat_id,)).fetchall()
+        chat = conn.execute('SELECT owner FROM chats WHERE id = ?', (chat_id,)).fetchone()
+        return jsonify({'success': True, 'members': [m['username'] for m in members], 'owner': chat['owner']})
+    finally:
+        conn.close()
+
+@app.route('/leave-chat', methods=['POST'])
+def leave_chat():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    chat_id = data.get('chat_id', '').strip()
+    if not username or not chat_id:
+        return jsonify({'success': False})
+    conn = get_db()
+    try:
+        chat = conn.execute('SELECT owner FROM chats WHERE id = ?', (chat_id,)).fetchone()
+        if not chat:
+            return jsonify({'success': False})
+        conn.execute('DELETE FROM chat_members WHERE chat_id = ? AND username = ?', (chat_id, username))
+        remaining = conn.execute('SELECT COUNT(*) FROM chat_members WHERE chat_id = ?',
+                                 (chat_id,)).fetchone()[0]
+        if remaining == 0 or chat['owner'] == username:
+            conn.execute('DELETE FROM chats WHERE id = ?', (chat_id,))
+            conn.execute('DELETE FROM chat_members WHERE chat_id = ?', (chat_id,))
+            conn.execute('DELETE FROM chat_messages WHERE chat_id = ?', (chat_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     app.run()
