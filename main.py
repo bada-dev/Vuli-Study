@@ -119,9 +119,18 @@ def sync_score():
             return jsonify({'success': False, 'error': 'Rate limited'})
         conn.execute('INSERT OR REPLACE INTO sync_ratelimit (username, last_sync) VALUES (?, ?)',
                      (username, int(time.time())))
+        old_data = conn.execute('SELECT total_minutes FROM users WHERE username = ?', (username,)).fetchone()
+        old_minutes = old_data['total_minutes'] if old_data else 0
+
         total_minutes = min(int(data.get('totalMinutes', 0)), MAX_MINUTES)
         streak = min(int(data.get('streak', 0)), MAX_STREAK)
         reborns = min(int(data.get('reborns', 0)), MAX_REBORNS)
+
+        # Anti-tamper: minutes can never go down, and max gain per sync is 480 min (8 hrs)
+        if total_minutes < old_minutes:
+            total_minutes = old_minutes
+        elif total_minutes - old_minutes > 480:
+            total_minutes = old_minutes + 480
         equipped_cosmetic = data.get('equippedCosmetic', None)
         active_background = data.get('activeBackground', 'default')
         character_width = min(max(int(data.get('characterWidth', 140)), 140), 420)
@@ -140,7 +149,8 @@ def sync_score():
                       active_background, character_width, happiness,
                       int(time.time()), username))
         conn.commit()
-        return jsonify({'success': True})
+        conn.commit()
+        return jsonify({'success': True, 'correctedMinutes': total_minutes})
     finally:
         conn.close()
 
@@ -362,6 +372,23 @@ def get_chat_members():
                                (chat_id,)).fetchall()
         chat = conn.execute('SELECT owner FROM chats WHERE id = ?', (chat_id,)).fetchone()
         return jsonify({'success': True, 'members': [m['username'] for m in members], 'owner': chat['owner']})
+    finally:
+        conn.close()
+
+@app.route('/admin-get-user', methods=['POST'])
+def admin_get_user():
+    data = request.get_json()
+    if data.get('password') != ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'error': 'No username'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found on server'})
+        return jsonify({'success': True, 'user': dict(user)})
     finally:
         conn.close()
 
