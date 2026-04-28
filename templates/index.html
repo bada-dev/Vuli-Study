@@ -1092,15 +1092,30 @@ body {
 }
 
 .todo-timer-grid input,
-.todo-timer-grid select,
+.todo-timer-grid select {
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 2px solid #D0D8E8;
+  background: #F4F6FA;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2D3142;
+  transition: border-color 0.2s, background 0.2s;
+}
+.todo-timer-grid input:focus,
+.todo-timer-grid select:focus {
+  outline: none;
+  border-color: #6BCF7F;
+  background: #fff;
+}
 .todo-timer-grid button {
   width: 100%;
   padding: 10px 11px;
   border-radius: 10px;
-  border: 2px solid rgba(255,255,255,0.45);
-  background: rgba(255,255,255,0.6);
+  border: none;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: #2D3142;
 }
 
@@ -2393,6 +2408,20 @@ button:disabled {
   100% { transform: scale(1.08) translateY(-10px) rotate(1deg); }
 }
 
+@keyframes streakPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+@keyframes streakRainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes flameDance {
+  0% { transform: scale(1) rotate(-4deg); }
+  100% { transform: scale(1.15) rotate(4deg); }
+}
+	
 </style>
 </head>
 <body>
@@ -3143,16 +3172,21 @@ button:disabled {
 </div>
 
 <div class="modal" id="streakModal">
-  <div class="modal-content" style="max-width: 280px;">
-    <div class="modal-title">🔥 Daily Streak</div>
-    <div class="modal-text" style="text-align: left;">
-      Keep streak by doing a session more than 5 minutes every day!
-      <br><br>
-      💡 Buy a Streak Freezer (60 🪙) from the shop to protect your streak for 1 missed day!
-      <br><br>
-      Miss a day and your streak resets to 0. 
+  <div class="modal-content" style="max-width:340px;padding:0;overflow:hidden;border-radius:22px;">
+    <div id="streakModalHeader" style="padding:28px 24px 22px;text-align:center;transition:background 0.5s;">
+      <div style="font-size:58px;animation:flameDance 1s ease-in-out infinite alternate;display:inline-block;line-height:1;">🔥</div>
+      <div id="streakModalCount" style="font-size:54px;font-weight:900;color:white;text-shadow:0 3px 14px rgba(0,0,0,0.3);line-height:1;margin-top:8px;">0</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:5px;letter-spacing:1px;text-transform:uppercase;">Day Streak</div>
     </div>
-    <button class="modal-btn primary" id="closeStreakBtn" style="width: 100%;">Got it!</button>
+    <div style="padding:18px 20px 22px;">
+      <div style="font-size:10px;font-weight:700;color:#8B7A6A;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px;">Milestones</div>
+      <div id="streakMilestones" style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;"></div>
+      <div id="streakFreezeStatus" style="margin-bottom:13px;"></div>
+      <div style="background:rgba(107,207,127,0.08);border-radius:11px;padding:10px 13px;margin-bottom:16px;border:1px solid rgba(107,207,127,0.25);font-size:12px;color:#3D5A3E;line-height:1.7;">
+        📚 Complete a <strong>5+ min focus session every day</strong> to maintain your streak. Miss a day and it resets to 0.
+      </div>
+      <button class="modal-btn primary" id="closeStreakBtn" style="width:100%;">Keep Going! 🔥</button>
+    </div>
   </div>
 </div>
 
@@ -4002,6 +4036,7 @@ function updateDisplay() {
   updateCharacterAppearance();
   document.getElementById('focusDurationValue').textContent = `${state.durations.focus} min`;
   document.getElementById('longBreakValue').textContent = `${state.durations.long} min`;
+  updateStreakDisplay();
 }
 
 function updateStats() {
@@ -4537,10 +4572,12 @@ function pauseTimer() {
     
     // After 7 minutes, lose 1 coin every 30 seconds
     if (state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
-      state.coins--;
+      state.coins = Math.max(0, state.coins - 1);
       updateDisplay();
     }
   }, 1000);
+  
+  // Show pause modal with quote
 }
 
 function resumeTimer() {
@@ -5727,19 +5764,50 @@ document.getElementById('confirmAdminBtn').addEventListener('click', async () =>
   const result = await res.json();
   if (result.correct) {
     document.getElementById('adminModal').classList.remove('active');
-    // Populate all fields
-    document.getElementById('coinsInput').value = state.coins;
-    document.getElementById('carrotsInput').value = state.carrots;
-    document.getElementById('happinessInput').value = Math.floor(state.happiness);
-    document.getElementById('charWidthInput').value = state.characterWidth;
-	document.getElementById('charOffsetXInput').value = state.charOffsetX || 0;
-	document.getElementById('charOffsetYInput').value = state.charOffsetY || 0;
-    document.getElementById('streakAdminInput').value = state.streak;
-    document.getElementById('rebornsInput').value = state.reborns;
-    document.getElementById('revivalsInput').value = state.revivals;
-    document.getElementById('carrotsFedAdminInput').value = state.carrotsFed;
-    document.getElementById('longestSessAdminInput').value = state.longestSession;
-    document.getElementById('todayStudyAdminInput').value = state.studyMinutes[getTodayDateString()] || 0;
+
+    function populateAdminLocal() {
+      document.getElementById('coinsInput').value = state.coins;
+      document.getElementById('carrotsInput').value = state.carrots;
+      document.getElementById('happinessInput').value = Math.floor(state.happiness);
+      document.getElementById('charWidthInput').value = state.characterWidth;
+      document.getElementById('charOffsetXInput').value = state.charOffsetX || 0;
+      document.getElementById('charOffsetYInput').value = state.charOffsetY || 0;
+      document.getElementById('streakAdminInput').value = state.streak;
+      document.getElementById('rebornsInput').value = state.reborns;
+      document.getElementById('revivalsInput').value = state.revivals;
+      document.getElementById('carrotsFedAdminInput').value = state.carrotsFed;
+      document.getElementById('longestSessAdminInput').value = state.longestSession;
+      document.getElementById('todayStudyAdminInput').value = state.studyMinutes[getTodayDateString()] || 0;
+    }
+
+    if (state.username && isOnline) {
+      try {
+        const aRes = await fetch('/admin-get-user', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({password, username: state.username})
+        });
+        const aData = await aRes.json();
+        if (aData.success) {
+          const u = aData.user;
+          // Server-authoritative fields
+          document.getElementById('happinessInput').value = u.happiness ?? Math.floor(state.happiness);
+          document.getElementById('charWidthInput').value = u.character_width ?? state.characterWidth;
+          document.getElementById('streakAdminInput').value = u.streak ?? state.streak;
+          document.getElementById('rebornsInput').value = u.reborns ?? state.reborns;
+          document.getElementById('todayStudyAdminInput').value = u.total_minutes ?? 0;
+          // Client-only fields
+          document.getElementById('coinsInput').value = state.coins;
+          document.getElementById('carrotsInput').value = state.carrots;
+          document.getElementById('charOffsetXInput').value = state.charOffsetX || 0;
+          document.getElementById('charOffsetYInput').value = state.charOffsetY || 0;
+          document.getElementById('revivalsInput').value = state.revivals;
+          document.getElementById('carrotsFedAdminInput').value = state.carrotsFed;
+          document.getElementById('longestSessAdminInput').value = state.longestSession;
+          setTimeout(() => alert('✅ Server data loaded into admin panel.'), 150);
+        } else { populateAdminLocal(); }
+      } catch { populateAdminLocal(); }
+    } else { populateAdminLocal(); }
+
     // Reset to Resources tab
     document.querySelectorAll('.admin-tab-panel').forEach(p => p.style.display = 'none');
     document.getElementById('adminTab-resources').style.display = 'block';
@@ -6111,9 +6179,7 @@ document.getElementById('closeAchievementsBtn').addEventListener('click', () => 
 });
 
 // the streak stuff below lasting 2 blocks
-document.getElementById('streakDisplay').addEventListener('click', () => {
-  document.getElementById('streakModal').classList.add('active');
-});
+document.getElementById('streakDisplay').addEventListener('click', openStreakModal);
 
 document.getElementById('closeStreakBtn').addEventListener('click', () => {
   document.getElementById('streakModal').classList.remove('active');
@@ -6442,6 +6508,7 @@ let currentChatOwner = null;
 let currentChatName = null;
 let chatPollInterval = null;
 let lastMessageId = 0;
+let chatSending = false;
 
 function openChatSystem() {
   if (!isOnline) { requiresInternet('Chat'); return; }
@@ -6552,9 +6619,13 @@ async function fetchMessages(scrollToBottom) {
 }
 
 async function sendChatMessage() {
+  if (chatSending) return;
   const input = document.getElementById('chatMessageInput');
   const message = input.value.trim();
   if (!message || !currentChatId) return;
+  chatSending = true;
+  const sendBtn = document.getElementById('sendMessageBtn');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.55'; }
   input.value = '';
   input.focus();
   try {
@@ -6567,6 +6638,7 @@ async function sendChatMessage() {
     if (data.success) { fetchMessages(true); }
     else { alert(data.error || 'Failed to send.'); input.value = message; }
   } catch { alert('Could not send. Check your connection.'); input.value = message; }
+  finally { chatSending = false; if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; } }
 }
 
 function closeChatView() {
@@ -6679,7 +6751,69 @@ document.getElementById('addMemberConfirmBtn').addEventListener('click', async (
     else { alert(`❌ ${data.error || 'Could not add member.'}`); }
   } catch { alert('Could not add member. Check your connection.'); }
 });
-	
+
+// === STREAK DISPLAY ===
+function updateStreakDisplay() {
+  const btn = document.getElementById('streakDisplay');
+  if (!btn) return;
+  const s = state.streak;
+  let gradient, emoji, glow, anim;
+  if (s === 0) {
+    gradient='linear-gradient(135deg,#8B9099,#6B7080)'; emoji='💤'; glow='none'; anim='none';
+  } else if (s < 3) {
+    gradient='linear-gradient(135deg,#FFB84D,#FF9A2E)'; emoji='🔥'; glow='0 6px 18px rgba(255,154,46,0.5)'; anim='none';
+  } else if (s < 7) {
+    gradient='linear-gradient(135deg,#FF8C42,#FF5722)'; emoji='🔥'; glow='0 6px 22px rgba(255,87,34,0.55)'; anim='streakPulse 2s ease-in-out infinite';
+  } else if (s < 14) {
+    gradient='linear-gradient(135deg,#FF4757,#C0392B)'; emoji='🔥'; glow='0 8px 26px rgba(192,57,43,0.65)'; anim='streakPulse 1.5s ease-in-out infinite';
+  } else if (s < 30) {
+    gradient='linear-gradient(135deg,#FFD700,#FF8C00)'; emoji='⚡'; glow='0 8px 30px rgba(255,215,0,0.7)'; anim='streakPulse 1.2s ease-in-out infinite';
+  } else {
+    gradient='linear-gradient(135deg,#FF6B6B,#FFD700,#6BCF7F,#6C63FF,#FF6B6B)'; emoji='👑'; glow='0 10px 36px rgba(255,107,107,0.8)'; anim='streakRainbow 3s linear infinite';
+  }
+  const milestones = [3,7,14,30,50,100];
+  const next = milestones.find(m => m > s);
+  const sub = s === 0 ? 'Start your streak today!' : next ? `${next-s} day${next-s!==1?'s':''} until ${next} 🎯` : 'LEGENDARY — MAX TIER 👑';
+  btn.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="font-size:15px;font-weight:800;">${emoji} <span id="streakCount">${s}</span> Day Streak${state.streakFreezeActive?' ❄️':''}<span id="freezeIndicator" style="display:none"></span></div><div style="font-size:10px;opacity:0.88;">${sub}</div></div>`;
+  btn.style.cssText = `margin:0 0 20px 0;cursor:pointer;position:relative;z-index:10;background:${gradient};background-size:300% 300%;box-shadow:${glow};border:none;border-radius:14px;padding:14px 20px;color:white;width:100%;font-size:14px;animation:${anim};transition:transform 0.2s;`;
+}
+
+function openStreakModal() {
+  const milestones=[
+    {days:3,label:'Ignited',emoji:'🌱'},
+    {days:7,label:'On Fire',emoji:'🔥'},
+    {days:14,label:'Blazing',emoji:'💥'},
+    {days:30,label:'Inferno',emoji:'⚡'},
+    {days:50,label:'Unstoppable',emoji:'🏆'},
+    {days:100,label:'Legendary',emoji:'👑'},
+  ];
+  const s = state.streak;
+  const countEl = document.getElementById('streakModalCount');
+  if (countEl) countEl.textContent = s;
+  const header = document.getElementById('streakModalHeader');
+  if (header) {
+    if (s===0) header.style.background='linear-gradient(135deg,#8B9099,#6B7080)';
+    else if (s<7) header.style.background='linear-gradient(135deg,#FF8C42,#FF5722)';
+    else if (s<14) header.style.background='linear-gradient(135deg,#FF4757,#C0392B)';
+    else if (s<30) header.style.background='linear-gradient(135deg,#FFD700,#FF8C00)';
+    else header.style.background='linear-gradient(135deg,#FF6B6B,#FFD700,#6C63FF)';
+  }
+  const milestonesEl = document.getElementById('streakMilestones');
+  if (milestonesEl) {
+    milestonesEl.innerHTML = milestones.map(m => {
+      const done = s >= m.days;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${done?'rgba(107,207,127,0.12)':'rgba(0,0,0,0.04)'};border-radius:10px;border:2px solid ${done?'rgba(107,207,127,0.35)':'transparent'};"><div style="font-size:20px;${done?'':'filter:grayscale(1);opacity:0.35;'}">${m.emoji}</div><div style="flex:1;font-size:13px;font-weight:700;color:${done?'#2D3142':'#9B9099'};">${m.days} Days — ${m.label}</div><div style="font-size:13px;font-weight:700;">${done?'✅':`<span style="color:#9B9099">${m.days-s}d</span>`}</div></div>`;
+    }).join('');
+  }
+  const freezeEl = document.getElementById('streakFreezeStatus');
+  if (freezeEl) {
+    freezeEl.innerHTML = state.streakFreezeActive
+      ? `<div style="background:rgba(100,149,237,0.12);border-radius:10px;padding:10px 13px;border:2px solid rgba(100,149,237,0.35);font-size:12px;font-weight:700;color:#2D3142;">❄️ Streak Freezer active — protected for 1 missed day.</div>`
+      : `<div style="background:rgba(0,0,0,0.04);border-radius:10px;padding:10px 13px;font-size:12px;color:#8B9099;">No Streak Freezer. Buy one in the Shop for 60 🪙.</div>`;
+  }
+  document.getElementById('streakModal').classList.add('active');
+}
+
 // === INITIALIZE ===
 loadState();
 initUsername();
@@ -6967,6 +7101,29 @@ function applyCharOffset() {
   el.style.marginLeft = (state.charOffsetX || 0) + 'px';
 }
 
+// === BACK BUTTON TRAP ===
+(function() {
+  let backCount = 0, backTimer = null;
+  history.pushState(null, '', location.href);
+  window.addEventListener('popstate', function() {
+    history.pushState(null, '', location.href);
+    backCount++;
+    if (backCount === 1) {
+      const toast = document.createElement('div');
+      toast.id = 'exitToast';
+      toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.82);color:white;padding:11px 24px;border-radius:22px;font-size:14px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;animation:fadeIn 0.2s;';
+      toast.textContent = 'Press back again to exit';
+      document.body.appendChild(toast);
+      backTimer = setTimeout(() => { backCount = 0; toast.remove(); }, 2000);
+    } else {
+      clearTimeout(backTimer);
+      backCount = 0;
+      saveState();
+      window.close();
+    }
+  });
+})();
+	
 // === AUTO-SAVE ===
 setInterval(() => { saveState(); syncLeaderboard(); }, 120000);
 setInterval(saveState, 3000);
