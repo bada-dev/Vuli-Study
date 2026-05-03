@@ -412,69 +412,21 @@ body {
 }
 
 
-.wizard-hat {
-  position: absolute;
-  top: -50px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 38px solid transparent;
-  border-right: 38px solid transparent;
-  border-bottom: 55px solid #4B0082;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-  z-index: 10;
-}
+/* ===== COSMETICS ===== */
+.crown { position: absolute; top: -46px; left: 50%; transform: translateX(-50%); width: 70px; z-index: 10; }
+.crown-base { width: 100%; height: 20px; background: linear-gradient(180deg, #FFD700 0%, #DAA520 100%); border-radius: 0 0 8px 8px; border: 2px solid #b8860b; box-shadow: 0 4px 8px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.4); }
+.crown-points { display: flex; justify-content: space-between; padding: 0 4px; }
+.crown-point { width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-bottom: 22px solid #FFD700; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2)); }
 
-.wizard-hat::after {
-  content: '⭐';
-  position: absolute;
-  top: 8px;
-  left: -7px;
-  font-size: 14px;
-}
+.sunglasses { position: absolute; top: 49px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; z-index: 10; }
+.sg-arm { width: 14px; height: 3px; background: #1a1a1a; border-radius: 2px; }
+.sg-lens { width: 26px; height: 18px; background: rgba(10,10,30,0.85); border-radius: 7px; border: 2px solid #111; box-shadow: inset 0 2px 4px rgba(255,255,255,0.1); }
+.sg-bridge { width: 10px; height: 3px; background: #1a1a1a; border-radius: 1px; }
 
-.wizard-wand {
-  position: absolute;
-  right: -60px;
-  bottom: 20px;
-  width: 130px;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.wizard-hand {
-  position: absolute;
-  right: 48px;
-  bottom: 38px;
-  width: 22px;
-  height: 16px;
-  background: linear-gradient(135deg, #C9996E, #B07A52);
-  border-radius: 50%;
-  border: 2px solid rgba(0,0,0,0.2);
-  z-index: 11;
-}
-
-.pirate-hat {
-  position: absolute;
-  top: -28px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-8deg);
-  width: 65px;
-  height: 32px;
-  background: #1a1a1a;
-  border-radius: 50% 50% 0 0;
-  border: 2px solid #000;
-  z-index: 10;
-}
-
-.pirate-hat::after {
-  content: '☠️';
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 14px;
+.halo { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 52px; height: 14px; border: 4px solid #FFD700; border-radius: 50%; box-shadow: 0 0 14px rgba(255,215,0,0.9), 0 0 6px rgba(255,215,0,0.5); z-index: 10; animation: haloFloat 3s ease-in-out infinite; }
+@keyframes haloFloat {
+  0%,100% { transform: translateX(-50%) translateY(0); box-shadow: 0 0 14px rgba(255,215,0,0.9); }
+  50% { transform: translateX(-50%) translateY(-4px); box-shadow: 0 0 22px rgba(255,215,0,1); }
 }
 
 .character.reborning {
@@ -1227,13 +1179,19 @@ body {
 }
 
 .shop-item {
-  background: rgba(255,255,255,0.4);
-  border-radius: 16px;
-  padding: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.55), rgba(255,255,255,0.32));
+  border-radius: 18px;
+  padding: 16px 12px;
   cursor: pointer;
-  transition: all 0.3s;
-  border: 3px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  border: 2px solid rgba(255,255,255,0.5);
   text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+}
+
+.shop-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.15);
 }
 
 .shop-item:active {
@@ -1242,11 +1200,13 @@ body {
 
 .shop-item.owned {
   border-color: #6BCF7F;
+  background: linear-gradient(145deg, rgba(107,207,127,0.18), rgba(107,207,127,0.08));
 }
 
 .shop-item.equipped {
   border-color: #FFB84D;
-  background: rgba(255,184,77,0.25);
+  background: linear-gradient(145deg, rgba(255,184,77,0.25), rgba(255,184,77,0.12));
+  box-shadow: 0 4px 14px rgba(255,184,77,0.3), 0 0 0 1px rgba(255,184,77,0.2);
 }
 
 .shop-item-icon {
@@ -2408,42 +2368,62 @@ button:disabled {
   100% { transform: scale(1.08) translateY(-10px) rotate(1deg); }
 }
 
-/* ===== EVOLUTION GLOWS (glow only, body shape unchanged) ===== */
-.character.evo-1 .character-body {
-  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 25px 8px rgba(255,200,0,0.45);
-  border: 2px solid rgba(255,200,0,0.4);
-}
-.character.evo-2 .character-body {
-  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 35px 14px rgba(90,50,150,0.55);
-  border: 2px solid rgba(150,80,255,0.45);
-}
-.character.evo-3 .character-body {
-  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 50px 20px rgba(118,75,162,0.7), 0 0 80px rgba(240,147,251,0.3);
-  border: 2px solid rgba(240,147,251,0.5);
-}
-.character.evo-4 .character-body {
-  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 60px 25px rgba(252,70,107,0.65), 0 0 100px rgba(63,94,251,0.4);
-  border: 2px solid rgba(252,70,107,0.5);
-  animation: evo4BodyPulse 2s ease-in-out infinite alternate;
-}
-@keyframes evo4BodyPulse {
-  0% { box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 60px 25px rgba(252,70,107,0.65), 0 0 100px rgba(63,94,251,0.4); }
-  100% { box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 80px 30px rgba(63,94,251,0.8), 0 0 120px rgba(252,70,107,0.5); }
-}
-.character.evo-5 .character-body {
-  box-shadow: 0 0 0 8px rgba(100,0,200,0.25), 0 0 0 16px rgba(100,0,200,0.12), 0 0 80px rgba(100,0,200,0.8);
-  border: 2px solid rgba(150,0,255,0.7);
-  animation: evo5VoidPulse 3s ease-in-out infinite;
-}
-@keyframes evo5VoidPulse {
-  0%,100% { box-shadow: 0 0 0 8px rgba(100,0,200,0.25), 0 0 0 16px rgba(100,0,200,0.12), 0 0 80px rgba(100,0,200,0.8); }
-  50% { box-shadow: 0 0 0 14px rgba(100,0,200,0.35), 0 0 0 28px rgba(100,0,200,0.18), 0 0 120px rgba(100,0,200,1.0); }
-}
-.character.evo-1 { filter: drop-shadow(0 0 12px rgba(255,200,0,0.5)); }
-.character.evo-2 { filter: drop-shadow(0 0 18px rgba(90,50,150,0.6)); }
-.character.evo-3 { filter: drop-shadow(0 0 25px rgba(118,75,162,0.8)); }
-.character.evo-4 { filter: drop-shadow(0 0 35px rgba(252,70,107,0.8)); }
-.character.evo-5 { filter: drop-shadow(0 0 50px rgba(100,0,200,0.95)); }
+/* ===== EVOLUTION SYSTEM ===== */
+.evo-extras { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
+
+/* EVO 1 — Gilded One */
+.character.evo-1 .character-body { background: linear-gradient(135deg, #f6d365 0%, #fda085 30%, #FFD700 60%, #ff8c00 100%); box-shadow: 0 10px 40px rgba(255,165,0,0.5), inset 0 0 20px rgba(255,255,255,0.3); border: 3px solid rgba(255,215,0,0.8); animation: evo1Shimmer 3s ease-in-out infinite alternate; }
+@keyframes evo1Shimmer { 0% { box-shadow: 0 10px 40px rgba(255,165,0,0.5), inset 0 0 20px rgba(255,255,255,0.3); } 100% { box-shadow: 0 10px 60px rgba(255,200,0,0.8), inset 0 0 30px rgba(255,255,255,0.5); } }
+.character.evo-1 .eye { background: #8b0000; box-shadow: 0 0 10px #ff4500; }
+.character.evo-1 .character-mouth { border-color: #8b0000; }
+.character.evo-1 { filter: drop-shadow(0 0 20px rgba(255,200,0,0.6)); }
+.character.evo-1 .evo-extras::before { content: '✨'; position: absolute; top: -12px; right: -18px; font-size: 18px; animation: evo1Sparkle 1.5s ease-in-out infinite; }
+.character.evo-1 .evo-extras::after { content: '✨'; position: absolute; bottom: 8px; left: -18px; font-size: 14px; animation: evo1Sparkle 1.5s ease-in-out infinite 0.75s; }
+@keyframes evo1Sparkle { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.6); } }
+
+/* EVO 2 — Shadow Being */
+.character.evo-2 .character-body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); border-radius: 45% 55% 50% 50% / 50% 50% 50% 50%; box-shadow: 0 10px 50px rgba(0,0,0,0.8), 0 0 30px rgba(90,50,150,0.4); border: 2px solid rgba(90,50,150,0.5); }
+.character.evo-2 .eye { background: #9b59b6; box-shadow: 0 0 18px #9b59b6; }
+.character.evo-2 .eye::after { background: rgba(255,255,255,0.9); }
+.character.evo-2 .character-mouth { border-color: #9b59b6; box-shadow: 0 0 8px #9b59b6; }
+.character.evo-2 { filter: drop-shadow(0 0 28px rgba(90,50,150,0.65)); }
+.character.evo-2 .evo-extras::before { content: '⭐'; position: absolute; top: 4px; left: -26px; font-size: 13px; animation: evoFloat 3s ease-in-out infinite; }
+.character.evo-2 .evo-extras::after { content: '⭐'; position: absolute; top: 18px; right: -26px; font-size: 13px; animation: evoFloat 3s ease-in-out infinite 1.5s; }
+@keyframes evoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* EVO 3 — Void God */
+.character.evo-3 .character-body { background: radial-gradient(circle at 30% 30%, #1a0033 0%, #000000 60%, #0a001a 100%); border-radius: 50%; box-shadow: 0 0 0 8px rgba(100,0,200,0.2), 0 0 0 16px rgba(100,0,200,0.1), 0 0 80px rgba(100,0,200,0.5); border: 2px solid rgba(150,0,255,0.6); animation: evo3Pulse 3s ease-in-out infinite; }
+@keyframes evo3Pulse { 0%,100% { box-shadow: 0 0 0 8px rgba(100,0,200,0.2), 0 0 0 16px rgba(100,0,200,0.1), 0 0 80px rgba(100,0,200,0.5); } 50% { box-shadow: 0 0 0 16px rgba(100,0,200,0.3), 0 0 0 32px rgba(100,0,200,0.15), 0 0 120px rgba(100,0,200,0.7); } }
+.character.evo-3 .eye { background: #bf00ff; box-shadow: 0 0 20px #bf00ff, 0 0 40px #7000ff; }
+.character.evo-3 .eye::after { display: none; }
+.character.evo-3 .character-mouth { border-color: #bf00ff; box-shadow: 0 0 15px #bf00ff; }
+.character.evo-3 { filter: drop-shadow(0 0 50px rgba(100,0,200,0.9)); }
+.character.evo-3 .evo-extras::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 0 rgba(100,0,200,0.6); animation: evo3Ripple 2s ease-out infinite; }
+@keyframes evo3Ripple { 0% { box-shadow: 0 0 0 0 rgba(100,0,200,0.6); } 100% { box-shadow: 0 0 0 90px rgba(100,0,200,0); } }
+
+/* EVO 4 — Cosmic Legend */
+.character.evo-4 .character-body { background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 60%, #f5576c 100%); border-radius: 50% 50% 48% 52% / 52% 50% 50% 48%; box-shadow: 0 0 60px rgba(118,75,162,0.8), 0 0 100px rgba(240,147,251,0.4); border: 3px solid rgba(240,147,251,0.7); animation: evo4Pulse 2s ease-in-out infinite alternate; }
+@keyframes evo4Pulse { 0% { box-shadow: 0 0 60px rgba(118,75,162,0.8), 0 0 100px rgba(240,147,251,0.4); } 100% { box-shadow: 0 0 80px rgba(240,147,251,0.9), 0 0 150px rgba(118,75,162,0.5); } }
+.character.evo-4 .eye { background: white; box-shadow: 0 0 18px white; }
+.character.evo-4 .eye::after { background: #764ba2; }
+.character.evo-4 .character-mouth { border-color: white; box-shadow: 0 0 10px white; }
+.character.evo-4 { filter: drop-shadow(0 0 40px rgba(240,147,251,0.8)); }
+.character.evo-4 .evo-extras::before { content: ''; position: absolute; top: -18px; left: -18px; right: -18px; bottom: -18px; border-radius: 50%; border: 2px solid rgba(240,147,251,0.5); animation: evo4Ring 3s ease-in-out infinite; }
+@keyframes evo4Ring { 0%,100% { border-color: rgba(240,147,251,0.5); transform: scale(1); } 50% { border-color: rgba(102,126,234,0.7); transform: scale(1.06); } }
+.character.evo-4 .evo-extras::after { content: '🌟'; position: absolute; top: -32px; left: 50%; transform: translateX(-50%); font-size: 22px; animation: evoFloat 2s ease-in-out infinite; }
+
+/* EVO 5 — Transcendent */
+.character.evo-5 .character-body { background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); border-radius: 50%; box-shadow: 0 0 80px rgba(252,70,107,0.9), 0 0 120px rgba(63,94,251,0.6); border: 3px solid rgba(255,255,255,0.5); }
+.character.evo-5 { filter: drop-shadow(0 0 50px rgba(252,70,107,0.9)); animation: breathe 3s ease-in-out infinite alternate, evo5Glow 2s ease-in-out infinite alternate; }
+@keyframes evo5Glow { 0% { filter: drop-shadow(0 0 50px rgba(252,70,107,0.9)); } 100% { filter: drop-shadow(0 0 80px rgba(63,94,251,0.9)); } }
+.character.evo-5 .eye { background: white; box-shadow: 0 0 22px white; }
+.character.evo-5 .eye::after { display: none; }
+.character.evo-5 .character-mouth { border-color: white; box-shadow: 0 0 12px white; }
+.character.evo-5 .evo-extras::before,
+.character.evo-5 .evo-extras::after { content: ''; position: absolute; top: -24px; left: -24px; right: -24px; bottom: -24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); animation: evo5Ring 3s linear infinite; }
+.character.evo-5 .evo-extras::after { top: -38px; left: -38px; right: -38px; bottom: -38px; animation-duration: 5s; animation-direction: reverse; }
+@keyframes evo5Ring { from { transform: rotate(0deg); opacity: 0.8; } 50% { opacity: 0.3; } to { transform: rotate(360deg); opacity: 0.8; } }
+/*This took too long 😭*/
 
 /* ===== PREMIUM ===== */
 .premium-gold {
@@ -2552,6 +2532,7 @@ button:disabled {
               </div>
               <div class="character-mouth"></div>
             </div>
+			<div class="evo-extras"></div>
             <div id="cosmeticContainer"></div>
           </div>
           <div class="happy-meter-container">
@@ -3000,17 +2981,24 @@ button:disabled {
 
         <div class="settings-section">
           <div class="section-title">Feedback</div>
-          <div style="background: rgba(255,255,255,0.35); border-radius: 14px; padding: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; cursor: pointer;" id="openFeedbackBtn">
+          <div style="background: rgba(255,255,255,0.2); border-radius: 14px; padding: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; opacity: 0.55;">
             <div>
               <div style="font-size: 15px; font-weight: 700; color: #2D3142;">Suggestions & Bugs</div>
-              <div style="font-size: 11px; color: #8B7A6A; margin-top: 2px; font-weight: 500;">Share feedback with the developer</div>
+              <div style="font-size: 11px; color: #8B7A6A; margin-top: 2px; font-weight: 600;">🚧 Coming soon — check back later!</div>
             </div>
-            <div style="font-size: 22px; opacity: 0.5;">›</div>
+            <div style="font-size: 13px; font-weight: 700; color: #8B7A6A; background: rgba(0,0,0,0.07); padding: 5px 10px; border-radius: 10px;">Soon</div>
           </div>
         </div>
 
         <div class="settings-section">
           <div class="section-title">Account</div>
+          <div class="setting-item" style="cursor: pointer;" id="forceUpdateBtn">
+            <div>
+              <div class="setting-label">🔄 Update App</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Clear cache and force latest version</div>
+            </div>
+            <div style="font-size:22px;opacity:0.4;">›</div>
+          </div>
           <div class="setting-item" style="cursor: pointer;" id="resetBtn">
             <div class="setting-label" style="color: #FF6B6B;">Reset All Data</div>
           </div>
@@ -7930,4 +7918,5 @@ setInterval(() => {
 </script>
 
 </body>
-</html>
+</html><!--
+That's StudyBuddy.
