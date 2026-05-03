@@ -5,7 +5,6 @@ const SHELL_ASSETS = [
   '/static/manifest.json',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js'
 ];
-
 // Install: cache all shell assets
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -14,7 +13,6 @@ self.addEventListener('install', e => {
     }).then(() => self.skipWaiting())
   );
 });
-
 // Activate: delete old caches
 self.addEventListener('activate', e => {
   e.waitUntil(
@@ -23,7 +21,6 @@ self.addEventListener('activate', e => {
     ).then(() => clients.claim())
   );
 });
-
 // Fetch: 
 // - API routes (leaderboard, sync, etc.) → network only, fail silently
 // - Everything else → cache first, then network, cache the response for next time
@@ -40,7 +37,6 @@ self.addEventListener('fetch', e => {
     })));
     return;
   }
-
   // App shell + static assets: cache first
   e.respondWith(
     caches.match(e.request).then(cached => {
