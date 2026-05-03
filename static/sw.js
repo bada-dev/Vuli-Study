@@ -43,6 +43,7 @@ self.addEventListener('fetch', e => {
       if (cached) return cached;
       return fetch(e.request).then(response => {
         if (!response || response.status !== 200 || response.type === 'error') return response;
+        if (e.request.method !== 'GET') return response;
         const toCache = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, toCache));
         return response;
