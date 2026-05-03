@@ -13,7 +13,7 @@
 <!--
     Project: Study Buddy
     Author: ETHANTYAGI
-    Version: 4.2.1
+    Version: 5.0.0
 	ALL RIGHTS RESERVED
 -->
 
@@ -2408,6 +2408,94 @@ button:disabled {
   100% { transform: scale(1.08) translateY(-10px) rotate(1deg); }
 }
 
+/* ===== EVOLUTION GLOWS (glow only, body shape unchanged) ===== */
+.character.evo-1 .character-body {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 25px 8px rgba(255,200,0,0.45);
+  border: 2px solid rgba(255,200,0,0.4);
+}
+.character.evo-2 .character-body {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 35px 14px rgba(90,50,150,0.55);
+  border: 2px solid rgba(150,80,255,0.45);
+}
+.character.evo-3 .character-body {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 50px 20px rgba(118,75,162,0.7), 0 0 80px rgba(240,147,251,0.3);
+  border: 2px solid rgba(240,147,251,0.5);
+}
+.character.evo-4 .character-body {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 60px 25px rgba(252,70,107,0.65), 0 0 100px rgba(63,94,251,0.4);
+  border: 2px solid rgba(252,70,107,0.5);
+  animation: evo4BodyPulse 2s ease-in-out infinite alternate;
+}
+@keyframes evo4BodyPulse {
+  0% { box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 60px 25px rgba(252,70,107,0.65), 0 0 100px rgba(63,94,251,0.4); }
+  100% { box-shadow: 0 10px 28px rgba(0,0,0,0.2), 0 0 80px 30px rgba(63,94,251,0.8), 0 0 120px rgba(252,70,107,0.5); }
+}
+.character.evo-5 .character-body {
+  box-shadow: 0 0 0 8px rgba(100,0,200,0.25), 0 0 0 16px rgba(100,0,200,0.12), 0 0 80px rgba(100,0,200,0.8);
+  border: 2px solid rgba(150,0,255,0.7);
+  animation: evo5VoidPulse 3s ease-in-out infinite;
+}
+@keyframes evo5VoidPulse {
+  0%,100% { box-shadow: 0 0 0 8px rgba(100,0,200,0.25), 0 0 0 16px rgba(100,0,200,0.12), 0 0 80px rgba(100,0,200,0.8); }
+  50% { box-shadow: 0 0 0 14px rgba(100,0,200,0.35), 0 0 0 28px rgba(100,0,200,0.18), 0 0 120px rgba(100,0,200,1.0); }
+}
+.character.evo-1 { filter: drop-shadow(0 0 12px rgba(255,200,0,0.5)); }
+.character.evo-2 { filter: drop-shadow(0 0 18px rgba(90,50,150,0.6)); }
+.character.evo-3 { filter: drop-shadow(0 0 25px rgba(118,75,162,0.8)); }
+.character.evo-4 { filter: drop-shadow(0 0 35px rgba(252,70,107,0.8)); }
+.character.evo-5 { filter: drop-shadow(0 0 50px rgba(100,0,200,0.95)); }
+
+/* ===== PREMIUM ===== */
+.premium-gold {
+  background: linear-gradient(135deg, #FFD700, #FF8C00, #FFD700);
+  background-size: 200% 200%;
+  animation: goldShimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800 !important;
+}
+@keyframes goldShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.premium-btn-gold {
+  background: linear-gradient(135deg, #FFD700, #FF8C00, #FFD700);
+  background-size: 200% 200%;
+  animation: goldShimmer 2s linear infinite;
+  color: #3D1F00 !important;
+  font-weight: 800;
+  border: 2px solid rgba(255,215,0,0.5);
+  box-shadow: 0 6px 20px rgba(255,165,0,0.4);
+}
+
+/* ===== FRIEND CARD ===== */
+.friend-card {
+  background: rgba(255,255,255,0.55);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.friend-card:hover { transform: scale(1.01); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+
+/* ===== CIRCLE TIMER ===== */
+.chat-timer-bar {
+  background: linear-gradient(135deg, rgba(107,207,127,0.12), rgba(107,207,127,0.05));
+  border-bottom: 1px solid rgba(107,207,127,0.25);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
 @keyframes streakPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.03); }
@@ -2541,6 +2629,7 @@ button:disabled {
       <div class="stats-content">
       <div class="stats-header">Statistics</div>
 	  <button class="gcal-btn" id="leaderboardBtn" style="margin: 0 0 10px 0; position:relative; z-index:10;">🏆 Leaderboard</button>
+      <button class="gcal-btn premium-btn-gold" id="premiumCenterStatsBtn" style="margin:0 0 10px 0;position:relative;z-index:10;display:none;">✨ Premium Center</button>
       <button class="gcal-btn" id="achievementsBtn" style="margin: 0 0 10px 0; position:relative; z-index:10;">🏆 Achievements</button>
       <button class="gcal-btn" id="streakDisplay" style="margin: 0 0 20px 0; cursor: pointer; position:relative; z-index:10;">🔥 <span id="streakCount">0</span> Day Streak <span id="freezeIndicator"></span></button>
         
@@ -2854,6 +2943,8 @@ button:disabled {
               </div>
               <div style="font-size:22px;opacity:0.4;">›</div>
             </div>
+            <button id="premiumSettingsBtn" class="gcal-btn premium-btn-gold" style="margin-top:4px;display:none;">✨ Premium</button>
+            <button id="premiumCenterSettingsBtn" class="gcal-btn premium-btn-gold" style="margin-top:4px;display:none;">✨ Premium Center</button>
           </div>
 
           <div class="settings-section">
@@ -3071,6 +3162,7 @@ button:disabled {
       <button class="admin-tab-btn" data-tab="progress" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:rgba(0,0,0,0.08);font-weight:700;cursor:pointer;font-size:11px;">📈 Progress</button>
       <button class="admin-tab-btn" data-tab="unlocks" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:rgba(0,0,0,0.08);font-weight:700;cursor:pointer;font-size:11px;">🔓 Unlocks</button>
       <button class="admin-tab-btn" data-tab="danger" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:rgba(255,107,107,0.2);color:#c0392b;font-weight:700;cursor:pointer;font-size:11px;">⚠️ Danger</button>
+      <button class="admin-tab-btn" data-tab="premium-admin" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:rgba(255,200,0,0.2);color:#7a5900;font-weight:700;cursor:pointer;font-size:11px;">✨ Premium</button>
     </div>
 
     <!-- RESOURCES TAB -->
@@ -3166,7 +3258,22 @@ button:disabled {
         <button class="modal-btn secondary" id="rawStatsBtnAdmin" style="width:100%;">🔧 View Raw Stats</button>
       </div>
     </div>
-
+	<!-- PREMIUM ADMIN TAB -->
+    <div class="admin-tab-panel" id="adminTab-premium-admin" style="display:none;">
+      <div id="premAdminLock">
+        <div style="font-size:13px;font-weight:700;color:#2D3142;margin-bottom:8px;">Secondary Password Required</div>
+        <input type="password" id="secondAdminPwInput" class="modal-input" placeholder="Enter secondary password..." style="margin-bottom:8px;">
+        <button class="modal-btn primary" id="verifySecondAdminBtn" style="width:100%;">Unlock Premium Panel</button>
+        <div id="secondAdminError" style="font-size:12px;color:#FF6B6B;text-align:center;margin-top:6px;"></div>
+      </div>
+      <div id="premAdminPanel" style="display:none;">
+        <div id="currentCodeStatus" style="background:rgba(0,0,0,0.04);border-radius:11px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.7;"></div>
+        <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Set New One-Time Code</div>
+        <input type="text" id="newPremiumCodeInput" class="modal-input" placeholder="New code (max 30 chars)..." maxlength="30" style="margin-bottom:8px;">
+        <button class="modal-btn primary premium-btn-gold" id="setPremiumCodeBtn" style="width:100%;margin-bottom:8px;">✨ Set Code</button>
+        <button class="modal-btn secondary" id="refreshCodeStatusBtn" style="width:100%;">🔄 Refresh Status</button>
+      </div>
+    </div>
     <button class="modal-btn secondary" id="cancelEditBtn" style="width:100%;margin-top:12px;">✕ Close Admin Panel</button>
   </div>
 </div>
@@ -3220,6 +3327,118 @@ button:disabled {
     <div class="modal-buttons">
       <button class="modal-btn secondary" id="skipColorBtn">Skip</button>
       <button class="modal-btn primary" id="saveColorBtn" style="display:none;">Save Tag</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Timer Create Modal -->
+<div class="modal" id="chatTimerModal">
+  <div class="modal-content" style="max-width:300px;">
+    <div class="modal-title">⏱️ Group Timer</div>
+    <div class="modal-text">All active members earn coins when complete.</div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Duration (minutes)</div>
+      <input type="number" id="chatTimerDuration" class="modal-input" min="1" max="120" value="25" style="margin:0;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Reward per person (coins)</div>
+      <input type="number" id="chatTimerRewardInput" class="modal-input" min="1" max="20" value="5" style="margin:0;">
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="cancelChatTimerBtn">Cancel</button>
+      <button class="modal-btn primary" id="startChatTimerBtn">Start Timer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Timer Create Modal -->
+<div class="modal" id="chatTimerModal">
+  <div class="modal-content" style="max-width:300px;">
+    <div class="modal-title">⏱️ Group Timer</div>
+    <div class="modal-text">All active members earn coins when complete.</div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Duration (minutes)</div>
+      <input type="number" id="chatTimerDuration" class="modal-input" min="1" max="120" value="25" style="margin:0;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Reward per person (coins)</div>
+      <input type="number" id="chatTimerRewardInput" class="modal-input" min="1" max="20" value="5" style="margin:0;">
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="cancelChatTimerBtn">Cancel</button>
+      <button class="modal-btn primary" id="startChatTimerBtn">Start Timer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Friend Stats Modal -->
+<div class="modal" id="friendStatsModal">
+  <div class="modal-content" style="max-width:300px;padding:0;overflow:hidden;border-radius:22px;">
+    <div id="friendStatsHeader" style="padding:24px;text-align:center;background:linear-gradient(135deg,#c4a07a,#a5845a);">
+      <div style="font-size:48px;margin-bottom:6px;">🐾</div>
+      <div id="friendStatsName" style="font-size:22px;font-weight:800;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>
+    </div>
+    <div style="padding:18px 20px;">
+      <div id="friendStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"></div>
+      <button class="modal-btn secondary" id="removeFriendBtn" style="width:100%;color:#FF6B6B;margin-bottom:8px;">Remove Friend</button>
+      <button class="modal-btn primary" id="closeFriendStatsBtn" style="width:100%;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Friend Requests Modal -->
+<div class="modal" id="friendRequestsModal">
+  <div class="modal-content" style="max-width:340px;max-height:70vh;overflow-y:auto;">
+    <div class="modal-title">📨 Friend Requests</div>
+    <div id="friendRequestsList" style="margin-bottom:14px;"></div>
+    <button class="modal-btn primary" id="closeFriendRequestsBtn" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- Premium Code Modal -->
+<div class="modal" id="premiumCodeModal">
+  <div class="modal-content" style="max-width:320px;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:48px;">✨</div>
+      <div class="modal-title" style="background:linear-gradient(135deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Premium Access</div>
+      <div class="modal-text">Enter your one-time premium code to unlock advanced features.</div>
+    </div>
+    <input type="text" id="premiumCodeInput" class="modal-input" placeholder="Enter code..." maxlength="30">
+    <div id="premiumCodeStatus" style="font-size:12px;font-weight:600;text-align:center;min-height:16px;margin-bottom:10px;"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="cancelPremiumBtn">Cancel</button>
+      <button class="modal-btn primary premium-btn-gold" id="redeemPremiumBtn">Redeem ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- Premium Center Modal -->
+<div class="modal" id="premiumCenterModal">
+  <div class="modal-content" style="max-width:420px;width:96%;max-height:90vh;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:22px;">
+    <div style="padding:20px;background:linear-gradient(135deg,#FFD700,#FF8C00,#FFD700);background-size:200% 200%;animation:goldShimmer 3s linear infinite;">
+      <div style="font-size:22px;font-weight:900;color:#3D1F00;">✨ Premium Center</div>
+      <div style="font-size:12px;color:rgba(61,31,0,0.7);font-weight:600;margin-top:2px;">Your exclusive study intelligence hub</div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid rgba(0,0,0,0.08);">
+      <button id="premTabAnalytics" style="flex:1;padding:12px;border:none;border-bottom:3px solid #FFB84D;background:none;font-weight:700;font-size:13px;color:#2D3142;cursor:pointer;">📊 Analytics</button>
+      <button id="premTabAI" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🤖 AI Plan</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;">
+      <!-- Analytics Tab -->
+      <div id="premiumAnalyticsTab" style="padding:16px;">
+        <div id="premiumStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;"></div>
+        <canvas id="premiumChart" style="max-height:180px;margin-bottom:12px;"></canvas>
+        <div id="premiumInsights" style="font-size:13px;color:#4A3F35;line-height:1.7;background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;border:1px solid rgba(255,184,77,0.25);"></div>
+      </div>
+      <!-- AI Tab -->
+      <div id="premiumAITab" style="padding:16px;display:none;">
+        <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let AI analyze your study patterns and generate a personalized improvement plan.</div>
+        <button class="modal-btn primary" id="generateStudyPlanBtn" style="width:100%;margin-bottom:14px;">🤖 Generate My Study Plan</button>
+        <div id="studyPlanOutput" style="font-size:13px;line-height:1.8;color:#2D3142;white-space:pre-wrap;background:rgba(0,0,0,0.03);border-radius:12px;padding:14px;min-height:60px;display:none;"></div>
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);">
+      <button class="modal-btn secondary" id="closePremiumCenterBtn" style="width:100%;">Close</button>
     </div>
   </div>
 </div>
@@ -3293,22 +3512,45 @@ button:disabled {
   </div>
 </div>
 
-<!-- Chat List Modal -->
+<!-- Chat / Friends Modal -->
 <div class="modal" id="chatListModal">
   <div class="modal-content" style="max-width:400px;width:94%;max-height:88vh;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:22px;">
-    <div style="padding:20px 20px 14px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:20px;font-weight:800;color:#2D3142;">💬 Chats</div>
-      <div id="chatListCount" style="font-size:12px;color:#8B8080;font-weight:600;"></div>
+    <!-- Header -->
+    <div style="padding:16px 20px 0;border-bottom:1px solid rgba(0,0,0,0.07);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div id="chatFriendModalTitle" style="font-size:20px;font-weight:800;color:#2D3142;">💬 Chats</div>
+        <div id="chatListCount" style="font-size:12px;color:#8B8080;font-weight:600;"></div>
+      </div>
+      <div style="display:flex;gap:0;margin-bottom:-1px;">
+        <button id="tabBtnChats" style="flex:1;padding:10px 6px;border:none;border-bottom:3px solid #6BCF7F;background:none;font-weight:700;font-size:14px;color:#2D3142;cursor:pointer;transition:all 0.2s;">💬 Chats</button>
+        <button id="tabBtnFriends" style="flex:1;padding:10px 6px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:14px;color:#9B9099;cursor:pointer;transition:all 0.2s;">👥 Friends</button>
+      </div>
     </div>
+    <!-- No username -->
     <div id="chatNoUsername" style="display:none;padding:40px 24px;text-align:center;">
       <div style="font-size:52px;margin-bottom:14px;">👤</div>
       <div style="font-size:15px;font-weight:700;color:#2D3142;margin-bottom:6px;">Username required</div>
-      <div style="font-size:13px;color:#6B7080;">Set a username in Settings → Identity to use the chat feature.</div>
+      <div style="font-size:13px;color:#6B7080;margin-bottom:20px;">Set a username in Settings → Identity to use this feature.</div>
+      <button onclick="document.getElementById('chatListModal').classList.remove('active')" class="modal-btn secondary" style="width:100%;">Close</button>
     </div>
-    <div id="chatListContainer" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:60px;"></div>
-    <div id="chatListFooter" style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);display:flex;flex-direction:column;gap:8px;">
-      <button class="modal-btn primary" id="createChatBtn" style="font-size:15px;">+ Create New Chat</button>
-      <button class="modal-btn secondary" id="closeChatListBtn">Close</button>
+    <!-- CHATS TAB -->
+    <div id="chatTabPanel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div id="chatListContainer" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:60px;"></div>
+      <div id="chatListFooter" style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);display:flex;flex-direction:column;gap:8px;">
+        <button class="modal-btn primary" id="createChatBtn" style="font-size:15px;">+ Create New Chat</button>
+        <button class="modal-btn secondary" id="closeChatListBtn">Close</button>
+      </div>
+    </div>
+    <!-- FRIENDS TAB -->
+    <div id="friendsTabPanel" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+      <div id="friendRequestsBanner" style="display:none;margin:10px 16px 0;background:rgba(107,207,127,0.1);border-radius:12px;padding:10px 14px;border:1px solid rgba(107,207,127,0.3);font-size:12px;color:#2D6B3A;font-weight:700;cursor:pointer;">
+        📨 <span id="friendRequestCount">0</span> pending request(s) — tap to view
+      </div>
+      <div id="friendsListContainer" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:60px;"></div>
+      <div style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);display:flex;flex-direction:column;gap:8px;">
+        <button class="modal-btn primary" id="addFriendBtn" style="font-size:15px;">+ Add Friend</button>
+        <button class="modal-btn secondary" onclick="document.getElementById('chatListModal').classList.remove('active')">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3319,7 +3561,21 @@ button:disabled {
     <div style="padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.98);">
       <button id="backToChatListBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;">← Back</button>
       <div id="chatViewTitle" style="flex:1;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;color:#2D3142;"></div>
-      <button id="chatMembersBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:16px;cursor:pointer;transition:all 0.2s;" title="Members">👥</button>
+      <button id="chatTimerBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:16px;cursor:pointer;transition:all 0.2s;margin-right:4px;" title="Group Timer">⏱️</button> 
+	  <button id="chatMembersBtn" style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:16px;cursor:pointer;transition:all 0.2s;" title="Members">👥</button>
+    </div>
+    <div id="chatTimerDisplay" class="chat-timer-bar" style="display:none;">
+      <svg viewBox="0 0 60 60" style="width:52px;height:52px;flex-shrink:0;">
+        <circle cx="30" cy="30" r="25" fill="none" stroke="#E0E5F0" stroke-width="5"/>
+        <circle id="chatTimerCircle" cx="30" cy="30" r="25" fill="none" stroke="#6BCF7F" stroke-width="5"
+          stroke-dasharray="157.1" stroke-dashoffset="0" stroke-linecap="round"
+          transform="rotate(-90 30 30)" style="transition:stroke-dashoffset 0.5s linear;"/>
+      </svg>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;color:#2D3142;">Group Study Timer</div>
+        <div id="chatTimerTimeLeft" style="font-size:22px;font-weight:900;color:#2D3142;line-height:1.1;"></div>
+        <div id="chatTimerReward" style="font-size:11px;color:#6B7080;font-weight:600;"></div>
+      </div>
     </div>
     <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px;background:#FAFAFA;"></div>
     <div style="padding:10px 12px;border-top:1px solid rgba(0,0,0,0.08);display:flex;gap:8px;flex-shrink:0;background:rgba(255,255,255,0.98);align-items:center;">
@@ -3409,8 +3665,12 @@ const state = {
   currentGraphFilter: 'all',
   todoAlarms: [],
   todoAlarmHistory: [],
-  todoAlarmInterval: null
-};
+  todoAlarmInterval: null,
+  evoLevel: 0,
+  isPremium: false,
+  timerStartedAt: null,
+  timerInitialLeft: 0
+};-
 
 // === ONLINE / OFFLINE DETECTION ===
 let isOnline = navigator.onLine;
@@ -3799,6 +4059,7 @@ function startHappyDecay() {
 function handleDeath() {
   state.isDead = true;
   state.carrotsFed = 0;
+  state.evoLevel = Math.max(0, (state.evoLevel || 0) - 1);
   updateCharacterAppearance();
   document.getElementById('deathModal').classList.add('active');
 }
@@ -3852,24 +4113,18 @@ function updateCharacterAppearance() {
   const grayAmount = state.isDead ? 100 : Math.max(0, 100 - state.happiness * 2);
   character.style.filter = `saturate(${100 - grayAmount}%) brightness(${100 - grayAmount * 0.3}%)`;
   
-  // Reborn glow evolution
+  // Evolution glow system
   const body = character.querySelector('.character-body');
-  if (state.reborns > 0 && !state.isDead && !state.isReborning) {
-    const glow = Math.min(state.reborns * 4, 40);
-    const half = glow / 2;
-    const color = state.reborns >= 10 ? '#FFD700' 
-                : state.reborns >= 7  ? '#C084FC' 
-                : state.reborns >= 4  ? '#60A5FA' 
-                : '#6BCF7F';
-    body.style.boxShadow = `0 10px 28px rgba(0,0,0,0.2), 0 0 ${glow}px ${half}px ${color}`;
-    
-    // Increase breathing intensity per reborn
-    if (state.reborns >= 7) {
+  for (let i = 1; i <= 5; i++) character.classList.remove(`evo-${i}`);
+  if ((state.evoLevel || 0) > 0 && !state.isDead && !state.isReborning) {
+    character.classList.add(`evo-${state.evoLevel}`);
+    if (body) body.style.boxShadow = '';
+    if (state.evoLevel >= 4) {
       character.style.animation = 'breatheMax 1.8s ease-in-out infinite alternate';
-    } else if (state.reborns >= 4) {
+    } else if (state.evoLevel >= 2) {
       character.style.animation = 'breatheFast 2.2s ease-in-out infinite alternate';
     } else {
-      character.style.animation = `breathe ${Math.max(1.8, 3 - state.reborns * 0.2)}s ease-in-out infinite alternate`;
+      character.style.animation = 'breathe 3s ease-in-out infinite alternate';
     }
   } else if (!state.isReborning && !state.isReviving) {
     if (body) body.style.boxShadow = '0 10px 28px rgba(0,0,0,0.2)';
@@ -4459,6 +4714,7 @@ function triggerReborn() {
 function completeReborn() {
   state.isReborning = false;
   state.reborns++;
+  state.evoLevel = Math.min(5, (state.evoLevel || 0) + 1);
   state.carrotsFed = 0;
   state.characterWidth = 140;
   
@@ -4532,18 +4788,21 @@ function startTimer() {
     tab.style.opacity = '0.5';
   });
   
+  state.timerStartedAt = Date.now();
+  state.timerInitialLeft = state.mode === 'stopwatch' ? state.stopwatchTime : state.timeLeft;
+
   state.timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - state.timerStartedAt) / 1000);
     if (state.mode === 'stopwatch') {
-      state.stopwatchTime++;
+      state.stopwatchTime = state.timerInitialLeft + elapsed;
     } else {
-      state.timeLeft--;
+      state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
     }
     updateDisplay();
-    
     if (state.mode !== 'stopwatch' && state.timeLeft <= 0) {
       completeSession();
     }
-  }, 1000);
+  }, 500);
 }
 
 function pauseTimer() {
@@ -5823,8 +6082,11 @@ document.getElementById('confirmAdminBtn').addEventListener('click', async () =>
 
 document.getElementById('cancelEditBtn').addEventListener('click', () => {
   document.getElementById('editCurrencyModal').classList.remove('active');
+  document.getElementById('premAdminLock').style.display = 'block';
+  document.getElementById('premAdminPanel').style.display = 'none';
+  document.getElementById('secondAdminPwInput').value = '';
+  document.getElementById('secondAdminError').textContent = '';
 });
-
 // === ADMIN TAB SWITCHING ===
 document.querySelectorAll('.admin-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -5833,10 +6095,17 @@ document.querySelectorAll('.admin-tab-btn').forEach(btn => {
     document.getElementById(`adminTab-${tab}`).style.display = 'block';
     document.querySelectorAll('.admin-tab-btn').forEach(b => {
       b.style.background = 'rgba(0,0,0,0.08)';
-      b.style.color = b.dataset.tab === 'danger' ? '#c0392b' : '';
+      b.style.color = b.dataset.tab === 'danger' ? '#c0392b' : b.dataset.tab === 'premium-admin' ? '#7a5900' : '';
     });
-    btn.style.background = tab === 'danger' ? 'rgba(255,107,107,0.4)' : 'linear-gradient(135deg,#6BCF7F,#5ABF6F)';
-    btn.style.color = tab === 'danger' ? '#c0392b' : 'white';
+    btn.style.background = tab === 'danger' ? 'rgba(255,107,107,0.4)' : tab === 'premium-admin' ? 'rgba(255,200,0,0.35)' : 'linear-gradient(135deg,#6BCF7F,#5ABF6F)';
+    btn.style.color = tab === 'danger' ? '#c0392b' : tab === 'premium-admin' ? '#7a5900' : 'white';
+    // Reset second admin lock whenever you leave that tab
+    if (tab !== 'premium-admin') {
+      document.getElementById('premAdminLock').style.display = 'block';
+      document.getElementById('premAdminPanel').style.display = 'none';
+      document.getElementById('secondAdminPwInput').value = '';
+      document.getElementById('secondAdminError').textContent = '';
+    }
   });
 });
 
@@ -6082,10 +6351,12 @@ function saveState() {
     charOffsetX: state.charOffsetX || 0,
     charOffsetY: state.charOffsetY || 0,
     isRunning: state.isRunning,
-	isPaused: state.isPaused,
-	mode: state.mode,
-	timeLeft: state.timeLeft,
-	stopwatchTime: state.stopwatchTime
+    isPaused: state.isPaused,
+    mode: state.mode,
+    timeLeft: state.timeLeft,
+    stopwatchTime: state.stopwatchTime,
+    evoLevel: state.evoLevel || 0,
+    isPremium: state.isPremium || false
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
@@ -6513,18 +6784,13 @@ let chatSending = false;
 function openChatSystem() {
   if (!isOnline) { requiresInternet('Chat'); return; }
   const noUser = document.getElementById('chatNoUsername');
-  const listContainer = document.getElementById('chatListContainer');
-  const footer = document.getElementById('chatListFooter');
-  const countEl = document.getElementById('chatListCount');
   if (!state.username) {
     noUser.style.display = 'block';
-    listContainer.style.display = 'none';
-    if (footer) footer.style.display = 'none';
+    document.getElementById('chatTabPanel').style.display = 'none';
+    document.getElementById('friendsTabPanel').style.display = 'none';
   } else {
     noUser.style.display = 'none';
-    listContainer.style.display = 'block';
-    if (footer) footer.style.display = 'flex';
-    loadChatList();
+    switchChatTab('chats');
   }
   document.getElementById('chatListModal').classList.add('active');
 }
@@ -6572,14 +6838,18 @@ async function openChat(chatId, chatName, owner) {
   currentChatOwner = owner;
   currentChatName = chatName;
   lastMessageId = 0;
+  activeChatTimerId = null;
+  chatTimerClaimed = false;
   document.getElementById('chatListModal').classList.remove('active');
   document.getElementById('chatViewTitle').textContent = chatName;
   document.getElementById('chatMessages').innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:13px;">Loading messages...</div>';
   document.getElementById('chatMessageInput').value = '';
+  hideChatTimer();
   document.getElementById('chatViewModal').classList.add('active');
   await fetchMessages(true);
   if (chatPollInterval) clearInterval(chatPollInterval);
   chatPollInterval = setInterval(() => fetchMessages(false), 3000);
+  startChatTimerPoll();
 }
 
 async function fetchMessages(scrollToBottom) {
@@ -6643,7 +6913,10 @@ async function sendChatMessage() {
 
 function closeChatView() {
   if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; }
+  if (chatTimerPollInterval) { clearInterval(chatTimerPollInterval); chatTimerPollInterval = null; }
   currentChatId = null; currentChatOwner = null; currentChatName = null; lastMessageId = 0;
+  activeChatTimerId = null; chatTimerClaimed = false;
+  hideChatTimer();
   document.getElementById('chatViewModal').classList.remove('active');
   document.getElementById('chatListModal').classList.add('active');
   loadChatList();
@@ -6814,9 +7087,504 @@ function openStreakModal() {
   document.getElementById('streakModal').classList.add('active');
 }
 
+// === VISIBILITY CHANGE (timer accuracy fix) ===
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    if (state.isRunning && !state.isPaused && state.timerStartedAt) {
+      const elapsed = Math.floor((Date.now() - state.timerStartedAt) / 1000);
+      if (state.mode === 'stopwatch') {
+        state.stopwatchTime = state.timerInitialLeft + elapsed;
+      } else {
+        state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
+      }
+      updateDisplay();
+    }
+    runTodoAlarmTick();
+  }
+});
+
+// === FRIENDS SYSTEM ===
+let currentFriendTarget = null;
+
+function switchChatTab(tab) {
+  const chatsPanel = document.getElementById('chatTabPanel');
+  const friendsPanel = document.getElementById('friendsTabPanel');
+  const chatsBtn = document.getElementById('tabBtnChats');
+  const friendsBtn = document.getElementById('tabBtnFriends');
+  const titleEl = document.getElementById('chatFriendModalTitle');
+  if (tab === 'chats') {
+    chatsPanel.style.display = 'flex';
+    friendsPanel.style.display = 'none';
+    chatsBtn.style.borderBottomColor = '#6BCF7F'; chatsBtn.style.color = '#2D3142'; chatsBtn.style.fontWeight = '700';
+    friendsBtn.style.borderBottomColor = 'transparent'; friendsBtn.style.color = '#9B9099'; friendsBtn.style.fontWeight = '600';
+    titleEl.textContent = '💬 Chats';
+    loadChatList();
+  } else {
+    chatsPanel.style.display = 'none';
+    friendsPanel.style.display = 'flex';
+    friendsBtn.style.borderBottomColor = '#6BCF7F'; friendsBtn.style.color = '#2D3142'; friendsBtn.style.fontWeight = '700';
+    chatsBtn.style.borderBottomColor = 'transparent'; chatsBtn.style.color = '#9B9099'; chatsBtn.style.fontWeight = '600';
+    titleEl.textContent = '👥 Friends';
+    loadFriends();
+  }
+}
+
+document.getElementById('tabBtnChats').addEventListener('click', () => switchChatTab('chats'));
+document.getElementById('tabBtnFriends').addEventListener('click', () => switchChatTab('friends'));
+
+async function loadFriends() {
+  if (!state.username) return;
+  const list = document.getElementById('friendsListContainer');
+  const countEl = document.getElementById('chatListCount');
+  list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:14px;">Loading...</div>';
+  // Load requests
+  try {
+    const rRes = await fetch('/get-friend-requests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
+    const rData = await rRes.json();
+    const banner = document.getElementById('friendRequestsBanner');
+    const reqCount = document.getElementById('friendRequestCount');
+    if (rData.requests && rData.requests.length > 0) {
+      banner.style.display = 'block';
+      reqCount.textContent = rData.requests.length;
+      banner.onclick = () => showFriendRequests(rData.requests);
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch {}
+  // Load friends
+  try {
+    const res = await fetch('/get-friends', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
+    const data = await res.json();
+    list.innerHTML = '';
+    if (countEl) countEl.textContent = data.friends ? `${data.friends.length}/20` : '0/20';
+    if (!data.friends || data.friends.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No friends yet.<br>Add someone to get started! 👥</div>';
+      return;
+    }
+    data.friends.forEach(f => {
+      const cosmetics_map = {tophat:'🎩',wizard:'🧙',pirate:'🏴‍☠️'};
+      const icon = cosmetics_map[f.equipped_cosmetic] || '🐾';
+      const card = document.createElement('div');
+      card.className = 'friend-card';
+      card.innerHTML = `
+        <div style="font-size:32px;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:15px;color:#2D3142;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.friend_username}${f.is_premium?'<span style="font-size:11px;margin-left:4px;" class="premium-gold">✨</span>':''}</div>
+          <div style="font-size:11px;color:#6B7080;font-weight:500;">${f.total_minutes}m · ${f.streak}🔥 streak</div>
+        </div>
+        <button style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">Stats</button>
+      `;
+      card.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); openFriendStats(f.friend_username); });
+      list.appendChild(card);
+    });
+  } catch {
+    list.innerHTML = '<div style="text-align:center;color:#FF6B6B;padding:24px;font-size:14px;">Failed to load friends.</div>';
+  }
+}
+
+async function openFriendStats(username) {
+  currentFriendTarget = username;
+  const modal = document.getElementById('friendStatsModal');
+  const header = document.getElementById('friendStatsHeader');
+  const nameEl = document.getElementById('friendStatsName');
+  const grid = document.getElementById('friendStatsGrid');
+  nameEl.textContent = username;
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#6B7080;padding:12px;">Loading...</div>';
+  modal.classList.add('active');
+  try {
+    const res = await fetch('/get-user-stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requester:state.username,target:username})});
+    const data = await res.json();
+    if (!data.success) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#FF6B6B;">${data.error||'Failed'}</div>`; return; }
+    const u = data.user;
+    const stats = [
+      {label:'Minutes Studied',value:`${u.total_minutes}`,icon:'⏱️'},
+      {label:'Day Streak',value:`${u.streak}🔥`,icon:'🔥'},
+      {label:'Reborns',value:`${u.reborns}`,icon:'💪'},
+      {label:'Happiness',value:`${u.happiness}%`,icon:'😊'},
+    ];
+    grid.innerHTML = stats.map(s=>`<div style="background:rgba(0,0,0,0.04);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#2D3142;">${s.value}</div><div style="font-size:10px;color:#6B7080;font-weight:600;">${s.label.toUpperCase()}</div></div>`).join('');
+  } catch { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#FF6B6B;">Failed to load.</div>'; }
+}
+
+function showFriendRequests(requests) {
+  const list = document.getElementById('friendRequestsList');
+  list.innerHTML = '';
+  if (!requests || requests.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:16px;">No pending requests.</div>';
+  } else {
+    requests.forEach(req => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px;background:rgba(0,0,0,0.04);border-radius:12px;margin-bottom:8px;';
+      row.innerHTML = `
+        <div style="flex:1;font-weight:700;font-size:14px;color:#2D3142;">${req.from_user}</div>
+        <button style="background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border:none;border-radius:10px;padding:8px 12px;color:white;font-weight:700;font-size:12px;cursor:pointer;" data-id="${req.id}" data-action="accepted">Accept</button>
+        <button style="background:#E0E5F0;border:none;border-radius:10px;padding:8px 12px;color:#6B7080;font-weight:700;font-size:12px;cursor:pointer;" data-id="${req.id}" data-action="declined">Decline</button>
+      `;
+      row.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            const res = await fetch('/respond-friend-request', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:btn.dataset.id,username:state.username,status:btn.dataset.action})});
+            const d = await res.json();
+            if (d.success) { row.remove(); loadFriends(); }
+            else { alert(`❌ ${d.error||'Failed'}`); }
+          } catch { alert('Could not respond. Check connection.'); }
+        });
+      });
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('friendRequestsModal').classList.add('active');
+}
+
+document.getElementById('addFriendBtn').addEventListener('click', async () => {
+  if (!requiresInternet('Adding friends')) return;
+  const name = prompt('Enter exact username (case-sensitive):');
+  if (!name || !name.trim()) return;
+  try {
+    const res = await fetch('/send-friend-request', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from_user:state.username,to_user:name.trim()})});
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Friend request sent to "${name.trim()}"!\n\nFor them to add you back, they must search your exact username: "${state.username}"`);
+    } else { alert(`❌ ${data.error||'Failed'}`); }
+  } catch { alert('Could not send request. Check connection.'); }
+});
+
+document.getElementById('closeFriendStatsBtn').addEventListener('click', () => {
+  document.getElementById('friendStatsModal').classList.remove('active');
+});
+document.getElementById('removeFriendBtn').addEventListener('click', async () => {
+  if (!currentFriendTarget || !confirm(`Remove ${currentFriendTarget} from friends?`)) return;
+  try {
+    const res = await fetch('/remove-friend', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username,friend_username:currentFriendTarget})});
+    const d = await res.json();
+    if (d.success) { document.getElementById('friendStatsModal').classList.remove('active'); loadFriends(); }
+  } catch {}
+});
+document.getElementById('closeFriendRequestsBtn').addEventListener('click', () => {
+  document.getElementById('friendRequestsModal').classList.remove('active');
+});
+
+// === CHAT TIMER SYSTEM ===
+let activeChatTimerId = null;
+let chatTimerPollInterval = null;
+let chatPresenceInterval = null;
+let chatTimerClaimed = false;
+
+async function startChatTimerPoll() {
+  if (chatTimerPollInterval) clearInterval(chatTimerPollInterval);
+  chatTimerClaimed = false;
+  chatTimerPollInterval = setInterval(pollChatTimer, 3000);
+  await pollChatTimer();
+}
+
+async function pollChatTimer() {
+  if (!currentChatId || !state.username) return;
+  try {
+    const res = await fetch('/get-chat-timer', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:currentChatId,username:state.username})});
+    const data = await res.json();
+    if (!data.success) return;
+    if (!data.timer) { hideChatTimer(); activeChatTimerId = null; return; }
+    const t = data.timer;
+    activeChatTimerId = t.id;
+    const serverTime = t.server_time;
+    const elapsed = serverTime - t.started_at;
+    const remaining = Math.max(0, t.duration_seconds - elapsed);
+    if (t.completed || remaining === 0) {
+      if (!chatTimerClaimed) {
+        chatTimerClaimed = true;
+        await claimChatTimerReward(t.id);
+      }
+      hideChatTimer();
+    } else {
+      showChatTimer(remaining, t.duration_seconds, t.reward_coins);
+      pingChatPresence(t.id);
+    }
+  } catch {}
+}
+
+function showChatTimer(remaining, total, reward) {
+  const bar = document.getElementById('chatTimerDisplay');
+  const timeEl = document.getElementById('chatTimerTimeLeft');
+  const rewardEl = document.getElementById('chatTimerReward');
+  const circle = document.getElementById('chatTimerCircle');
+  bar.style.display = 'flex';
+  const m = Math.floor(remaining/60), s = remaining%60;
+  timeEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  rewardEl.textContent = `🪙 ${reward} coins on completion`;
+  const circumference = 157.1;
+  const pct = remaining / total;
+  circle.style.strokeDashoffset = circumference * (1 - pct);
+  circle.style.stroke = pct > 0.5 ? '#6BCF7F' : pct > 0.2 ? '#FFB84D' : '#FF6B6B';
+}
+
+function hideChatTimer() {
+  document.getElementById('chatTimerDisplay').style.display = 'none';
+}
+
+async function pingChatPresence(timerId) {
+  if (!state.username || !timerId) return;
+  try {
+    await fetch('/ping-chat-presence', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timer_id:timerId,username:state.username})});
+  } catch {}
+}
+
+async function claimChatTimerReward(timerId) {
+  if (!state.username || !timerId) return;
+  try {
+    const res = await fetch('/claim-chat-timer-reward', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timer_id:timerId,username:state.username})});
+    const data = await res.json();
+    if (data.eligible) {
+      state.coins += data.reward_coins;
+      updateDisplay();
+      saveState();
+      const div = document.createElement('div');
+      div.style.cssText = 'text-align:center;padding:12px;background:linear-gradient(135deg,rgba(107,207,127,0.15),rgba(107,207,127,0.05));border-radius:14px;margin:8px 0;font-weight:700;font-size:14px;color:#2D6B3A;border:1px solid rgba(107,207,127,0.3);';
+      div.innerHTML = `🎉 Timer complete! You earned <strong>+${data.reward_coins} 🪙</strong>`;
+      document.getElementById('chatMessages').appendChild(div);
+      document.getElementById('chatMessages').scrollTop = 99999;
+    }
+  } catch {}
+}
+
+document.getElementById('chatTimerBtn').addEventListener('click', () => {
+  if (activeChatTimerId) { alert('⏱️ A timer is already running!'); return; }
+  document.getElementById('chatTimerModal').classList.add('active');
+});
+
+document.getElementById('cancelChatTimerBtn').addEventListener('click', () => {
+  document.getElementById('chatTimerModal').classList.remove('active');
+});
+
+document.getElementById('startChatTimerBtn').addEventListener('click', async () => {
+  const mins = parseInt(document.getElementById('chatTimerDuration').value) || 0;
+  const reward = parseInt(document.getElementById('chatTimerRewardInput').value) || 2;
+  if (mins < 1 || mins > 120) { alert('Duration must be 1-120 minutes.'); return; }
+  try {
+    const res = await fetch('/start-chat-timer', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:currentChatId,creator:state.username,duration_seconds:mins*60,reward_coins:reward})});
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('chatTimerModal').classList.remove('active');
+      await pollChatTimer();
+    } else { alert(`❌ ${data.error||'Failed to start timer.'}`); }
+  } catch { alert('Could not start timer. Check connection.'); }
+});
+
+// === PREMIUM SYSTEM ===
+function updatePremiumUI() {
+  const settingsBtn = document.getElementById('premiumSettingsBtn');
+  const centerBtn = document.getElementById('premiumCenterSettingsBtn');
+  const statsBtn = document.getElementById('premiumCenterStatsBtn');
+  const nameLabel = document.getElementById('usernameDisplayLabel');
+  if (state.isPremium) {
+    if (settingsBtn) settingsBtn.style.display = 'none';
+    if (centerBtn) centerBtn.style.display = 'block';
+    if (statsBtn) statsBtn.style.display = 'block';
+    if (nameLabel && state.username) nameLabel.classList.add('premium-gold');
+  } else {
+    if (settingsBtn) settingsBtn.style.display = state.username ? 'block' : 'none';
+    if (centerBtn) centerBtn.style.display = 'none';
+    if (statsBtn) statsBtn.style.display = 'none';
+    if (nameLabel) nameLabel.classList.remove('premium-gold');
+  }
+}
+
+document.getElementById('premiumSettingsBtn').addEventListener('click', () => {
+  document.getElementById('premiumCodeInput').value = '';
+  document.getElementById('premiumCodeStatus').textContent = '';
+  document.getElementById('premiumCodeModal').classList.add('active');
+});
+
+document.getElementById('cancelPremiumBtn').addEventListener('click', () => {
+  document.getElementById('premiumCodeModal').classList.remove('active');
+});
+
+document.getElementById('redeemPremiumBtn').addEventListener('click', async () => {
+  if (!requiresInternet('Redeeming premium')) return;
+  const code = document.getElementById('premiumCodeInput').value.trim();
+  const statusEl = document.getElementById('premiumCodeStatus');
+  if (!code) { statusEl.style.color='#FF6B6B'; statusEl.textContent='Enter a code.'; return; }
+  const btn = document.getElementById('redeemPremiumBtn');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+  try {
+    const res = await fetch('/redeem-premium', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username,code})});
+    const data = await res.json();
+    if (data.success) {
+      state.isPremium = true;
+      saveState();
+      updatePremiumUI();
+      document.getElementById('premiumCodeModal').classList.remove('active');
+      setTimeout(() => alert('✨ Welcome to Premium! Your name is now golden and you have access to the Premium Center.'), 200);
+    } else {
+      statusEl.style.color='#FF6B6B';
+      statusEl.textContent = `❌ ${data.error||'Invalid code'}`;
+    }
+  } catch { statusEl.style.color='#FF6B6B'; statusEl.textContent='Could not verify. Check connection.'; }
+  btn.disabled = false; btn.textContent = 'Redeem ✨';
+});
+
+function openPremiumCenter() {
+  if (!state.isPremium) { alert('Premium required.'); return; }
+  // Build analytics
+  const grid = document.getElementById('premiumStatsGrid');
+  const totalMins = Object.values(state.studyMinutes).reduce((a,b)=>a+b,0);
+  const studyDays = Object.keys(state.studyMinutes).length;
+  const avgPerDay = studyDays > 0 ? Math.round(totalMins/studyDays) : 0;
+  const completedTodos = state.todos.filter(t=>t.completed).length;
+  const cards = [
+    {label:'Total Hours',value:(totalMins/60).toFixed(1)+'h',icon:'⏱️'},
+    {label:'Days Studied',value:studyDays,icon:'📅'},
+    {label:'Avg per Day',value:avgPerDay+'m',icon:'📊'},
+    {label:'Tasks Done',value:completedTodos,icon:'✅'},
+    {label:'Streak',value:state.streak+'d',icon:'🔥'},
+    {label:'Evolution',value:`Evo ${state.evoLevel}`,icon:'⚡'},
+  ];
+  grid.innerHTML = cards.map(c=>`<div style="background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(255,184,77,0.2);"><div style="font-size:20px;">${c.icon}</div><div style="font-size:20px;font-weight:800;color:#2D3142;">${c.value}</div><div style="font-size:9px;color:#6B7080;font-weight:700;text-transform:uppercase;">${c.label}</div></div>`).join('');
+  // Build predictions
+  const insights = document.getElementById('premiumInsights');
+  const trend = totalMins > 0 && studyDays > 0 ? (avgPerDay >= 30 ? '🟢 Strong habit forming!' : avgPerDay >= 15 ? '🟡 Building momentum.' : '🔴 Needs more consistency.') : '⬜ Not enough data yet.';
+  const projectedWeek = avgPerDay * 7;
+  insights.innerHTML = `<strong>Weekly Projection:</strong> ${projectedWeek}m at current pace<br><strong>Trend:</strong> ${trend}<br><strong>Streak status:</strong> ${state.streak >= 7 ? '🔥 On a hot streak!' : state.streak >= 3 ? '✅ Building nicely' : '⚠️ Keep going daily!'}<br><strong>Completion rate:</strong> ${state.todos.length>0?Math.round(completedTodos/state.todos.length*100):0}% of tasks done`;
+  // Premium chart
+  if (window.premiumChartInstance) window.premiumChartInstance.destroy();
+  const canvas = document.getElementById('premiumChart');
+  const last14 = [];
+  const labels14 = [];
+  for (let i=13;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    last14.push(state.studyMinutes[ds]||0);
+    labels14.push(i===0?'Today':i===1?'Yesterday':`${i}d ago`);
+  }
+  window.premiumChartInstance = new Chart(canvas, {
+    type:'bar',
+    data:{labels:labels14,datasets:[{label:'Minutes',data:last14,backgroundColor:'rgba(255,184,77,0.6)',borderColor:'rgba(255,184,77,1)',borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>v+'m',font:{size:9}}}}}
+  });
+  document.getElementById('studyPlanOutput').style.display = 'none';
+  document.getElementById('premiumCenterModal').classList.add('active');
+}
+
+document.getElementById('premiumCenterSettingsBtn').addEventListener('click', openPremiumCenter);
+document.getElementById('premiumCenterStatsBtn').addEventListener('click', openPremiumCenter);
+document.getElementById('closePremiumCenterBtn').addEventListener('click', () => {
+  document.getElementById('premiumCenterModal').classList.remove('active');
+});
+
+document.getElementById('premTabAnalytics').addEventListener('click', () => {
+  document.getElementById('premiumAnalyticsTab').style.display = 'block';
+  document.getElementById('premiumAITab').style.display = 'none';
+  document.getElementById('premTabAnalytics').style.borderBottomColor = '#FFB84D';
+  document.getElementById('premTabAnalytics').style.color = '#2D3142';
+  document.getElementById('premTabAnalytics').style.fontWeight = '700';
+  document.getElementById('premTabAI').style.borderBottomColor = 'transparent';
+  document.getElementById('premTabAI').style.color = '#9B9099';
+  document.getElementById('premTabAI').style.fontWeight = '600';
+});
+
+document.getElementById('premTabAI').addEventListener('click', () => {
+  document.getElementById('premiumAITab').style.display = 'block';
+  document.getElementById('premiumAnalyticsTab').style.display = 'none';
+  document.getElementById('premTabAI').style.borderBottomColor = '#FFB84D';
+  document.getElementById('premTabAI').style.color = '#2D3142';
+  document.getElementById('premTabAI').style.fontWeight = '700';
+  document.getElementById('premTabAnalytics').style.borderBottomColor = 'transparent';
+  document.getElementById('premTabAnalytics').style.color = '#9B9099';
+  document.getElementById('premTabAnalytics').style.fontWeight = '600';
+});
+
+document.getElementById('generateStudyPlanBtn').addEventListener('click', async () => {
+  if (!requiresInternet('AI Study Plan')) return;
+  const btn = document.getElementById('generateStudyPlanBtn');
+  const output = document.getElementById('studyPlanOutput');
+  btn.disabled = true; btn.textContent = '🤖 Analyzing...';
+  output.style.display = 'none';
+  const totalMins = Object.values(state.studyMinutes).reduce((a,b)=>a+b,0);
+  const last7 = [];
+  for (let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    last7.push(state.studyMinutes[ds]||0);
+  }
+  const subjects = [...new Set(Object.values(state.colorSubjects))];
+  const pendingTasks = state.todos.filter(t=>!t.completed).map(t=>t.text);
+  const completedTasks = state.todos.filter(t=>t.completed).length;
+  try {
+    const res = await fetch('/generate-study-plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks}})
+    });
+    const data = await res.json();
+    if (data.success) {
+      output.textContent = data.plan;
+      output.style.display = 'block';
+    } else if (data.error === 'contact_owner') {
+      output.textContent = '⚠️ AI service is currently unavailable.\nPlease contact the StudyBuddy owner for assistance.';
+      output.style.display = 'block';
+    } else {
+      alert(`❌ ${data.error||'Failed to generate plan.'}`);
+    }
+  } catch { alert('Could not reach server. Check your connection.'); }
+  btn.disabled = false; btn.textContent = '🤖 Generate My Study Plan';
+});
+
+// === SECOND ADMIN PANEL ===
+document.getElementById('verifySecondAdminBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('secondAdminPwInput').value;
+  const errEl = document.getElementById('secondAdminError');
+  if (!pw) { errEl.textContent = 'Enter password.'; return; }
+  try {
+    const res = await fetch('/second-admin-verify', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('premAdminLock').style.display = 'none';
+      document.getElementById('premAdminPanel').style.display = 'block';
+      loadPremiumCodeStatus(pw);
+    } else { errEl.textContent = '❌ Wrong password.'; }
+  } catch { errEl.textContent = 'Server error.'; }
+});
+
+async function loadPremiumCodeStatus(pw) {
+  try {
+    const res = await fetch('/get-premium-code-status', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const data = await res.json();
+    const el = document.getElementById('currentCodeStatus');
+    if (!data.code) {
+      el.textContent = '⬜ No active code set.';
+    } else {
+      const c = data.code;
+      if (c.redeemed) {
+        el.innerHTML = `✅ Last code <strong>REDEEMED</strong> by <strong>${c.redeemed_by}</strong><br><small>Set a new code below.</small>`;
+      } else {
+        el.innerHTML = `🟡 Active code: <strong>${c.code}</strong><br>Not yet redeemed. Share this with the user.`;
+      }
+    }
+  } catch {}
+}
+
+document.getElementById('setPremiumCodeBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('secondAdminPwInput').value;
+  const code = document.getElementById('newPremiumCodeInput').value.trim();
+  if (!code) { alert('Enter a code.'); return; }
+  try {
+    const res = await fetch('/set-premium-code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,code})});
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('newPremiumCodeInput').value = '';
+      loadPremiumCodeStatus(pw);
+      alert(`✅ Premium code "${code}" set! Share it with the user.`);
+    } else { alert(`❌ ${data.error||'Failed'}`); }
+  } catch { alert('Server error.'); }
+});
+
+document.getElementById('refreshCodeStatusBtn').addEventListener('click', () => {
+  const pw = document.getElementById('secondAdminPwInput').value;
+  loadPremiumCodeStatus(pw);
+});
+
 // === INITIALIZE ===
 loadState();
 initUsername();
+updatePremiumUI();
 syncLeaderboard();
 checkIfKickedFromLeaderboard();
 setBackground(state.activeBackground);
@@ -6918,6 +7686,7 @@ function initUsername() {
     document.getElementById('usernameSubLabel').textContent = 'Username is locked forever';
     document.getElementById('usernameSettingItem').style.cursor = 'default';
   }
+  updatePremiumUI();
 }
 
 document.getElementById('usernameSettingItem').addEventListener('click', () => {
@@ -6945,6 +7714,7 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
     state.username = name;
     saveState();
     initUsername();
+    updatePremiumUI();
     document.getElementById('usernameModal').classList.remove('active');
     await syncLeaderboard();
     alert(`✅ Username "${name}" set!`);
@@ -7047,11 +7817,14 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
 
       podiumOrder.forEach(({user, rank, height, bg, glow, medal}) => {
         const isYou = user.username === state.username;
-        const col = document.createElement('div');
-        col.className = 'lb-podium-col';
-        col.innerHTML = `
+      const col = document.createElement('div');
+      col.className = 'lb-podium-col';
+      const podiumNameStyle = user.is_premium
+        ? 'font-size:11px;font-weight:800;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:linear-gradient(135deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
+        : 'font-size:11px;font-weight:700;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      col.innerHTML = `
           ${rank === 1 ? '<div style="font-size:22px;animation:crownBounce 1.2s ease-in-out infinite;">👑</div>' : '<div style="height:30px;"></div>'}
-          <div style="font-size:11px;font-weight:700;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${user.username}${isYou ? ' 👤' : ''}</div>
+          <div style="${podiumNameStyle}">${user.username}${isYou ? ' 👤' : ''}${user.is_premium ? ' ✨' : ''}</div>
           <div style="font-size:10px;color:#6B7080;">${user.total_minutes}m</div>
           <div class="lb-podium-base" style="height:${height};background:${bg};animation:${glow};">${medal}</div>
         `;
@@ -7068,10 +7841,13 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
       const isYou = user.username === state.username;
       const row = document.createElement('div');
       row.className = 'lb-row' + (isYou ? ' is-you' : '');
+      const rowNameStyle = user.is_premium
+        ? 'font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:linear-gradient(135deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
+        : 'font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
       row.innerHTML = `
         <div style="font-size:15px;font-weight:700;width:24px;text-align:center;color:#6B7080;">${rank}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${user.username}${isYou ? ' 👤' : ''}</div>
+          <div style="${rowNameStyle}">${user.username}${isYou ? ' 👤' : ''}${user.is_premium ? ' ✨' : ''}</div>
           <div style="font-size:10px;color:#6B7080;">${user.total_minutes}m • ${user.streak}🔥 • ${user.reborns} reborns</div>
         </div>
       `;
