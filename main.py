@@ -1,10 +1,16 @@
 import os
 import sqlite3
 import time
+import json
+import urllib.request
+import urllib.error
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
+SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
+AI_API_ONE = os.environ.get('AI_API_ONE')
+AI_API_TWO = os.environ.get('AI_API_TWO')
 
 def get_db():
     conn = sqlite3.connect('leaderboard.db')
@@ -51,6 +57,40 @@ def init_db():
         message TEXT NOT NULL,
         timestamp INTEGER DEFAULT 0
     )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS friend_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user TEXT NOT NULL,
+        to_user TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at INTEGER DEFAULT 0
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS chat_timers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id TEXT NOT NULL,
+        creator TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL,
+        started_at INTEGER DEFAULT 0,
+        completed INTEGER DEFAULT 0,
+        reward_coins INTEGER DEFAULT 2
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS chat_timer_presence (
+        timer_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        first_ping INTEGER DEFAULT 0,
+        last_ping INTEGER DEFAULT 0,
+        PRIMARY KEY (timer_id, username)
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS premium_codes (
+        code TEXT PRIMARY KEY,
+        created_at INTEGER DEFAULT 0,
+        redeemed INTEGER DEFAULT 0,
+        redeemed_by TEXT DEFAULT NULL,
+        redeemed_at INTEGER DEFAULT NULL
+    )''')
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0')
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
@@ -389,6 +429,359 @@ def admin_get_user():
         if not user:
             return jsonify({'success': False, 'error': 'User not found on server'})
         return jsonify({'success': True, 'user': dict(user)})
+    finally:
+        conn.close()
+
+def call_ai(api_key, prompt):
+    if not api_key:
+        raise ValueError('No API key')
+    data = json.dumps({
+        'model': 'claude-haiku-4-5-20251001',
+        'max_tokens': 1000,
+        'messages': [{'role': 'user', 'content': prompt}]
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.anthropic.com/v1/messages',
+        data=data,
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'}
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        result = json.loads(resp.read().decode('utf-8'))
+        return result['content'][0]['text']
+
+@app.route('/second-admin-verify', methods=['POST'])
+def second_admin_verify():
+    data = request.get_json()
+    if data.get('password') == SECOND_ADMIN_PASSWORD and SECOND_ADMIN_PASSWORD:
+        return jsonify({'success': True})
+    return jsonify({'success': False})
+
+@app.route('/set-premium-code', methods=['POST'])
+def set_premium_code():
+    data = request.get_json()
+    if data.get('password') != SECOND_ADMIN_PASSWORD or not SECOND_ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    code = data.get('code', '').strip()
+    if not code or len(code) > 30:
+        return jsonify({'success': False, 'error': 'Invalid code'})
+    conn = get_db()
+    try:
+        conn.execute('INSERT OR REPLACE INTO premium_codes (code, created_at, redeemed) VALUES (?, ?, 0)',
+                     (code, int(time.time())))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/get-premium-code-status', methods=['POST'])
+def get_premium_code_status():
+    data = request.get_json()
+    if data.get('password') != SECOND_ADMIN_PASSWORD or not SECOND_ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    conn = get_db()
+    try:
+        codes = conn.execute('SELECT * FROM premium_codes ORDER BY created_at DESC LIMIT 1').fetchone()
+        if not codes:
+            return jsonify({'success': True, 'code': None})
+        return jsonify({'success': True, 'code': dict(codes)})
+    finally:
+        conn.close()
+
+@app.route('/redeem-premium', methods=['POST'])
+def redeem_premium():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    code = data.get('code', '').strip()
+    if not username or not code:
+        return jsonify({'success': False, 'error': 'Missing fields'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT username, is_premium FROM users WHERE username = ?', (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        if user['is_premium']:
+            return jsonify({'success': False, 'error': 'Already premium'})
+        row = conn.execute('SELECT * FROM premium_codes WHERE code = ? AND redeemed = 0', (code,)).fetchone()
+        if not row:
+            return jsonify({'success': False, 'error': 'Invalid or already used code'})
+        conn.execute('UPDATE premium_codes SET redeemed=1, redeemed_by=?, redeemed_at=? WHERE code=?',
+                     (username, int(time.time()), code))
+        conn.execute('UPDATE users SET is_premium=1 WHERE username=?', (username,))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/send-friend-request', methods=['POST'])
+def send_friend_request():
+    data = request.get_json()
+    from_user = data.get('from_user', '').strip()
+    to_user = data.get('to_user', '').strip()
+    if not from_user or not to_user or from_user == to_user:
+        return jsonify({'success': False, 'error': 'Invalid users'})
+    conn = get_db()
+    try:
+        target = conn.execute('SELECT username FROM users WHERE username = ?', (to_user,)).fetchone()
+        if not target:
+            return jsonify({'success': False, 'error': 'User not found — username is case-sensitive'})
+        existing = conn.execute(
+            '''SELECT 1 FROM friend_requests WHERE ((from_user=? AND to_user=?) OR (from_user=? AND to_user=?))
+               AND status != 'declined' ''',
+            (from_user, to_user, to_user, from_user)).fetchone()
+        if existing:
+            return jsonify({'success': False, 'error': 'Request already exists or already friends'})
+        count = conn.execute(
+            '''SELECT COUNT(*) FROM friend_requests WHERE (from_user=? OR to_user=?) AND status='accepted' ''',
+            (from_user, from_user)).fetchone()[0]
+        if count >= 20:
+            return jsonify({'success': False, 'error': 'Max 20 friends reached'})
+        conn.execute('INSERT INTO friend_requests (from_user, to_user, created_at) VALUES (?,?,?)',
+                     (from_user, to_user, int(time.time())))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/get-friends', methods=['POST'])
+def get_friends():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'friends': []})
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            '''SELECT CASE WHEN fr.from_user=? THEN fr.to_user ELSE fr.from_user END as friend_username,
+                      u.total_minutes, u.streak, u.happiness, u.equipped_cosmetic, u.is_premium
+               FROM friend_requests fr
+               JOIN users u ON u.username = CASE WHEN fr.from_user=? THEN fr.to_user ELSE fr.from_user END
+               WHERE (fr.from_user=? OR fr.to_user=?) AND fr.status='accepted'
+               ORDER BY fr.created_at DESC''',
+            (username, username, username, username)).fetchall()
+        return jsonify({'success': True, 'friends': [dict(r) for r in rows]})
+    finally:
+        conn.close()
+
+@app.route('/get-friend-requests', methods=['POST'])
+def get_friend_requests():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'requests': []})
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT id, from_user, created_at FROM friend_requests WHERE to_user=? AND status='pending'",
+            (username,)).fetchall()
+        return jsonify({'success': True, 'requests': [dict(r) for r in rows]})
+    finally:
+        conn.close()
+
+@app.route('/respond-friend-request', methods=['POST'])
+def respond_friend_request():
+    data = request.get_json()
+    req_id = data.get('request_id')
+    username = data.get('username', '').strip()
+    status = data.get('status', '')
+    if not req_id or status not in ('accepted', 'declined'):
+        return jsonify({'success': False})
+    conn = get_db()
+    try:
+        row = conn.execute('SELECT * FROM friend_requests WHERE id=? AND to_user=?', (req_id, username)).fetchone()
+        if not row:
+            return jsonify({'success': False, 'error': 'Request not found'})
+        if status == 'accepted':
+            count = conn.execute(
+                "SELECT COUNT(*) FROM friend_requests WHERE (from_user=? OR to_user=?) AND status='accepted'",
+                (username, username)).fetchone()[0]
+            if count >= 20:
+                return jsonify({'success': False, 'error': 'Max 20 friends reached'})
+        conn.execute('UPDATE friend_requests SET status=? WHERE id=?', (status, req_id))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/remove-friend', methods=['POST'])
+def remove_friend():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    friend = data.get('friend_username', '').strip()
+    if not username or not friend:
+        return jsonify({'success': False})
+    conn = get_db()
+    try:
+        conn.execute(
+            "DELETE FROM friend_requests WHERE ((from_user=? AND to_user=?) OR (from_user=? AND to_user=?)) AND status='accepted'",
+            (username, friend, friend, username))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/get-user-stats', methods=['POST'])
+def get_user_stats():
+    data = request.get_json()
+    requester = data.get('requester', '').strip()
+    target = data.get('target', '').strip()
+    if not requester or not target:
+        return jsonify({'success': False})
+    conn = get_db()
+    try:
+        are_friends = conn.execute(
+            "SELECT 1 FROM friend_requests WHERE ((from_user=? AND to_user=?) OR (from_user=? AND to_user=?)) AND status='accepted'",
+            (requester, target, target, requester)).fetchone()
+        if not are_friends:
+            return jsonify({'success': False, 'error': 'Not friends'})
+        user = conn.execute(
+            'SELECT username, total_minutes, streak, reborns, happiness, equipped_cosmetic, active_background, is_premium FROM users WHERE username=?',
+            (target,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        return jsonify({'success': True, 'user': dict(user)})
+    finally:
+        conn.close()
+
+@app.route('/start-chat-timer', methods=['POST'])
+def start_chat_timer():
+    data = request.get_json()
+    chat_id = data.get('chat_id', '').strip()
+    creator = data.get('creator', '').strip()
+    duration = int(data.get('duration_seconds', 0))
+    reward = min(max(int(data.get('reward_coins', 2)), 1), 20)
+    if not chat_id or not creator or duration < 60 or duration > 7200:
+        return jsonify({'success': False, 'error': 'Invalid fields'})
+    conn = get_db()
+    try:
+        member = conn.execute('SELECT 1 FROM chat_members WHERE chat_id=? AND username=?', (chat_id, creator)).fetchone()
+        if not member:
+            return jsonify({'success': False, 'error': 'Not a member'})
+        active = conn.execute('SELECT id FROM chat_timers WHERE chat_id=? AND completed=0', (chat_id,)).fetchone()
+        if active:
+            return jsonify({'success': False, 'error': 'Timer already active'})
+        cur = conn.execute(
+            'INSERT INTO chat_timers (chat_id, creator, duration_seconds, started_at, reward_coins) VALUES (?,?,?,?,?)',
+            (chat_id, creator, duration, int(time.time()), reward))
+        conn.commit()
+        return jsonify({'success': True, 'timer_id': cur.lastrowid})
+    finally:
+        conn.close()
+
+@app.route('/get-chat-timer', methods=['POST'])
+def get_chat_timer():
+    data = request.get_json()
+    chat_id = data.get('chat_id', '').strip()
+    username = data.get('username', '').strip()
+    if not chat_id or not username:
+        return jsonify({'success': False, 'timer': None})
+    conn = get_db()
+    try:
+        timer = conn.execute('SELECT * FROM chat_timers WHERE chat_id=? AND completed=0 ORDER BY started_at DESC LIMIT 1',
+                             (chat_id,)).fetchone()
+        if not timer:
+            return jsonify({'success': True, 'timer': None})
+        t = dict(timer)
+        now = int(time.time())
+        end_time = t['started_at'] + t['duration_seconds']
+        if now >= end_time and t['completed'] == 0:
+            conn.execute('UPDATE chat_timers SET completed=1 WHERE id=?', (t['id'],))
+            conn.commit()
+            t['completed'] = 1
+        t['server_time'] = now
+        return jsonify({'success': True, 'timer': t})
+    finally:
+        conn.close()
+
+@app.route('/ping-chat-presence', methods=['POST'])
+def ping_chat_presence():
+    data = request.get_json()
+    timer_id = data.get('timer_id')
+    username = data.get('username', '').strip()
+    if not timer_id or not username:
+        return jsonify({'success': False})
+    now = int(time.time())
+    conn = get_db()
+    try:
+        existing = conn.execute('SELECT first_ping FROM chat_timer_presence WHERE timer_id=? AND username=?',
+                                (timer_id, username)).fetchone()
+        if existing:
+            conn.execute('UPDATE chat_timer_presence SET last_ping=? WHERE timer_id=? AND username=?',
+                         (now, timer_id, username))
+        else:
+            conn.execute('INSERT INTO chat_timer_presence (timer_id, username, first_ping, last_ping) VALUES (?,?,?,?)',
+                         (timer_id, username, now, now))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/claim-chat-timer-reward', methods=['POST'])
+def claim_chat_timer_reward():
+    data = request.get_json()
+    timer_id = data.get('timer_id')
+    username = data.get('username', '').strip()
+    if not timer_id or not username:
+        return jsonify({'eligible': False})
+    conn = get_db()
+    try:
+        timer = conn.execute('SELECT * FROM chat_timers WHERE id=?', (timer_id,)).fetchone()
+        if not timer:
+            return jsonify({'eligible': False})
+        end_time = timer['started_at'] + timer['duration_seconds']
+        presence = conn.execute('SELECT first_ping, last_ping FROM chat_timer_presence WHERE timer_id=? AND username=?',
+                                (timer_id, username)).fetchone()
+        if not presence:
+            return jsonify({'eligible': False, 'reason': 'No presence recorded'})
+        joined_in_time = presence['first_ping'] <= timer['started_at'] + 300
+        was_present_at_end = presence['last_ping'] >= end_time - 300
+        if joined_in_time and was_present_at_end:
+            return jsonify({'eligible': True, 'reward_coins': timer['reward_coins']})
+        return jsonify({'eligible': False, 'reason': 'Not present long enough'})
+    finally:
+        conn.close()
+
+@app.route('/generate-study-plan', methods=['POST'])
+def generate_study_plan():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'error': 'No username'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT is_premium, total_minutes, streak, reborns FROM users WHERE username=?',
+                            (username,)).fetchone()
+        if not user or not user['is_premium']:
+            return jsonify({'success': False, 'error': 'Premium required'})
+        study_data = data.get('studyData', {})
+        prompt = f"""You are an expert study advisor analyzing a student named "{username}".
+
+Study Statistics:
+- Total minutes studied (all time): {study_data.get('totalMinutes', user['total_minutes'])}
+- Current streak: {study_data.get('streak', user['streak'])} days
+- Reborn count (dedication level): {study_data.get('reborns', user['reborns'])}
+- Daily minutes (last 7 days): {study_data.get('dailyMinutes', [])}
+- Subjects studied: {study_data.get('subjects', [])}
+- Pending tasks: {study_data.get('pendingTasks', [])}
+- Completed tasks: {study_data.get('completedTasks', 0)}
+
+Create a personalized, motivating study plan:
+1. Quick assessment of their current habits (2-3 sentences)
+2. Top 3 specific, actionable improvements
+3. Recommended weekly schedule
+4. Subject-specific tips if subjects are listed
+5. One motivational insight
+
+Keep it under 350 words. Be encouraging and specific."""
+
+        for api_key in [AI_API_ONE, AI_API_TWO]:
+            if not api_key:
+                continue
+            try:
+                result_text = call_ai(api_key, prompt)
+                return jsonify({'success': True, 'plan': result_text})
+            except Exception:
+                continue
+        return jsonify({'success': False, 'error': 'contact_owner'})
     finally:
         conn.close()
 
