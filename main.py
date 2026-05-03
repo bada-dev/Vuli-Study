@@ -9,8 +9,8 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
-AI_API_ONE = os.environ.get('AI_API_ONE')
-AI_API_TWO = os.environ.get('AI_API_TWO')
+GROQ_API_ONE = os.environ.get('GROQ_API_ONE')
+GROQ_API_TWO = os.environ.get('GROQ_API_TWO')
 
 def get_db():
     conn = sqlite3.connect('leaderboard.db')
@@ -97,7 +97,6 @@ def init_db():
 init_db()
 
 FEEDBACK_COOLDOWN = 48 * 60 * 60
-SYNC_COOLDOWN = 30
 SYNC_COOLDOWN = 5
 MAX_MINUTES = 50000
 MAX_STREAK = 5000
@@ -436,18 +435,21 @@ def call_ai(api_key, prompt):
     if not api_key:
         raise ValueError('No API key')
     data = json.dumps({
-        'model': 'claude-haiku-4-5-20251001',
+        "model": "llama-3.1-70b-versatile",
         'max_tokens': 1000,
         'messages': [{'role': 'user', 'content': prompt}]
     }).encode('utf-8')
     req = urllib.request.Request(
-        'https://api.anthropic.com/v1/messages',
+        "https://api.groq.com/openai/v1/chat/completions",
         data=data,
-        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'}
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
         result = json.loads(resp.read().decode('utf-8'))
-        return result['content'][0]['text']
+        return result['choices'][0]['message']['content']
 
 @app.route('/second-admin-verify', methods=['POST'])
 def second_admin_verify():
@@ -773,7 +775,7 @@ Create a personalized, motivating study plan:
 
 Keep it under 350 words. Be encouraging and specific."""
 
-        for api_key in [AI_API_ONE, AI_API_TWO]:
+        for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
             if not api_key:
                 continue
             try:
