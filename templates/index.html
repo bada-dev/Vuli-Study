@@ -13,7 +13,7 @@
 <!--
     Project: Study Buddy
     Author: ETHANTYAGI
-    Version: 5.1.2 (testing update button)
+    Version: 5.1.2
 	ALL RIGHTS RESERVED
 -->
 
@@ -2995,7 +2995,7 @@ button:disabled {
           <div class="setting-item" style="cursor: pointer;" id="forceUpdateBtn">
             <div>
               <div class="setting-label">🔄 Update App</div>
-              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Clear cache and force latest version</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Update to the latest version of this app.</div>
             </div>
             <div style="font-size:22px;opacity:0.4;">›</div>
           </div>
@@ -5691,6 +5691,33 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     saveState();
   }
 });
+
+document.getElementById('forceUpdateBtn').addEventListener('click', async () => {
+  const ok = confirm('If you press Continue, you will update this app to its latest version. Your data will be kept safe.');
+  if (!ok) return;
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.update();
+        await reg.unregister();
+      }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    alert('✅ Update prepared. Reloading now...');
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('v', Date.now().toString());
+    window.location.replace(nextUrl.toString());
+  } catch (e) {
+    console.error('Update failed:', e);
+    alert('❌ Update failed. Please check your connection and try again.');
+  }
+});
+
+
 
 function requestAlarmNotificationPermission() {
   if (!('Notification' in window)) return;
