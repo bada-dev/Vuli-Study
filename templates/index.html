@@ -6763,6 +6763,16 @@ document.getElementById('copyRawStatsBtn')?.addEventListener('click', () => {
 
 // === CHAT SYSTEM ===
 let currentChatId = null;
+let _modalStack = 2000;
+function openModal(id) {
+  _modalStack += 20;
+  const el = document.getElementById(id);
+  if (el) { el.style.zIndex = _modalStack; el.classList.add('active'); }
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('active'); _modalStack = Math.max(2000, _modalStack - 20); }
+}
 let currentChatOwner = null;
 let currentChatName = null;
 let chatPollInterval = null;
@@ -6915,7 +6925,7 @@ async function openChatMembers() {
   const addSection = document.getElementById('addMemberSection');
   membersList.innerHTML = '<div style="color:#6B7080;text-align:center;padding:12px;font-size:13px;">Loading...</div>';
   addSection.style.display = 'none';
-  document.getElementById('chatMembersModal').classList.add('active');
+  openModal('chatMembersModal');
   try {
     const res = await fetch('/chat-members', {
       method: 'POST',
@@ -6983,7 +6993,7 @@ document.getElementById('chatMessageInput').addEventListener('focus', (e) => { e
 document.getElementById('chatMessageInput').addEventListener('blur', (e) => { e.target.style.borderColor = '#E0E5F0'; });
 
 document.getElementById('closeMembersBtn').addEventListener('click', () => {
-  document.getElementById('chatMembersModal').classList.remove('active');
+  closeModal('chatMembersModal');
 });
 
 document.getElementById('leaveChatBtn').addEventListener('click', async () => {
@@ -7178,7 +7188,7 @@ async function openFriendStats(username) {
   const grid = document.getElementById('friendStatsGrid');
   nameEl.textContent = username;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#6B7080;padding:12px;">Loading...</div>';
-  modal.classList.add('active');
+  openModal('friendStatsModal');
   try {
     const res = await fetch('/get-user-stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requester:state.username,target:username})});
     const data = await res.json();
@@ -7221,7 +7231,7 @@ function showFriendRequests(requests) {
       list.appendChild(row);
     });
   }
-  document.getElementById('friendRequestsModal').classList.add('active');
+  openModal('friendRequestsModal');
 }
 
 document.getElementById('addFriendBtn').addEventListener('click', async () => {
@@ -7238,7 +7248,7 @@ document.getElementById('addFriendBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('closeFriendStatsBtn').addEventListener('click', () => {
-  document.getElementById('friendStatsModal').classList.remove('active');
+  closeModal('friendStatsModal');
 });
 document.getElementById('removeFriendBtn').addEventListener('click', async () => {
   if (!currentFriendTarget || !confirm(`Remove ${currentFriendTarget} from friends?`)) return;
@@ -7249,7 +7259,7 @@ document.getElementById('removeFriendBtn').addEventListener('click', async () =>
   } catch {}
 });
 document.getElementById('closeFriendRequestsBtn').addEventListener('click', () => {
-  document.getElementById('friendRequestsModal').classList.remove('active');
+  closeModal('friendRequestsModal');
 });
 
 // === CHAT TIMER SYSTEM ===
@@ -7664,7 +7674,7 @@ function showUserProfile(user, rank) {
       </div>
     </div>
   `;
-  document.getElementById('userProfileModal').classList.add('active');
+  openModal('userProfileModal');
 }
 
 function initUsername() {
@@ -7766,7 +7776,7 @@ document.getElementById('confirmRejoinBtn').addEventListener('click', async () =
 });
 
 document.getElementById('closeProfileBtn').addEventListener('click', () => {
-  document.getElementById('userProfileModal').classList.remove('active');
+  closeModal('userProfileModal');
 });
 
 document.getElementById('leaderboardBtn').addEventListener('click', async () => {
@@ -7887,7 +7897,35 @@ function applyCharOffset() {
     }
   });
 })();
-	
+
+// === SWIPE NAVIGATION ===
+(function() {
+  const container = document.querySelector('.pages-container');
+  let startX = 0, startY = 0;
+  container.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return; // too short or too vertical ykyk
+    if (state.isRunning) return; // dont switch mid-session
+    const dir = dx < 0 ? 1 : -1; // left = forward, right = back
+    const next = Math.max(0, Math.min(pages.length - 1, currentPageIndex + dir));
+    if (next === currentPageIndex) return;
+    document.getElementById(pages[currentPageIndex] + 'Page').classList.remove('active');
+    document.getElementById(pages[next] + 'Page').classList.add('active');
+    currentPageIndex = next;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll(`.nav-item[data-page="${pages[next]}"]`).forEach(i => i.classList.add('active'));
+    if (pages[next] === 'shop') renderShop();
+    if (pages[next] === 'stats') setTimeout(renderGraph, 230);
+  }, { passive: true });
+})();
+
+
+
 // === AUTO-SAVE ===
 setInterval(() => { saveState(); syncLeaderboard(); }, 120000);
 setInterval(saveState, 3000);
