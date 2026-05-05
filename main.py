@@ -435,7 +435,7 @@ def call_ai(api_key, prompt):
     if not api_key:
         raise ValueError('No API key')
     data = json.dumps({
-        "model": "llama-3.1-70b-versatile",
+        "model": "llama-3.3-70b-versatile",
         'max_tokens': 1000,
         'messages': [{'role': 'user', 'content': prompt}]
     }).encode('utf-8')
@@ -553,13 +553,17 @@ def get_friends():
     conn = get_db()
     try:
         rows = conn.execute(
-            '''SELECT CASE WHEN fr.from_user=? THEN fr.to_user ELSE fr.from_user END as friend_username,
-                      u.total_minutes, u.streak, u.happiness, u.equipped_cosmetic, u.is_premium
+            '''SELECT fr.to_user as friend_username, u.total_minutes, u.streak, u.happiness, u.equipped_cosmetic, u.is_premium, fr.created_at
                FROM friend_requests fr
-               JOIN users u ON u.username = CASE WHEN fr.from_user=? THEN fr.to_user ELSE fr.from_user END
-               WHERE (fr.from_user=? OR fr.to_user=?) AND fr.status='accepted'
-               ORDER BY fr.created_at DESC''',
-            (username, username, username, username)).fetchall()
+               JOIN users u ON u.username = fr.to_user
+               WHERE fr.from_user=? AND fr.status='accepted'
+               UNION ALL
+               SELECT fr.from_user as friend_username, u.total_minutes, u.streak, u.happiness, u.equipped_cosmetic, u.is_premium, fr.created_at
+               FROM friend_requests fr
+               JOIN users u ON u.username = fr.from_user
+               WHERE fr.to_user=? AND fr.status='accepted'
+               ORDER BY created_at DESC''',
+            (username, username)).fetchall()
         return jsonify({'success': True, 'friends': [dict(r) for r in rows]})
     finally:
         conn.close()
@@ -781,7 +785,8 @@ Keep it under 350 words. Be encouraging and specific."""
             try:
                 result_text = call_ai(api_key, prompt)
                 return jsonify({'success': True, 'plan': result_text})
-            except Exception:
+            except Exception as e:
+                print(f"[ExtremelyNiceErrorMessage!!] Here's the error message. GoodLuck!!!!!!: {e}")
                 continue
         return jsonify({'success': False, 'error': 'contact_owner'})
     finally:
