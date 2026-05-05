@@ -3523,6 +3523,9 @@ button:disabled {
     </div>
     <!-- CHATS TAB -->
     <div id="chatTabPanel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div style="padding:8px 16px 0;">
+        <input id="chatFilterInput" type="text" placeholder="Filter chats..." maxlength="30" style="width:100%;padding:10px 12px;border:1px solid #E0E5F0;border-radius:10px;font-size:13px;">
+      </div>
       <div id="chatListContainer" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:60px;"></div>
       <div id="chatListFooter" style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);display:flex;flex-direction:column;gap:8px;">
         <button class="modal-btn primary" id="createChatBtn" style="font-size:15px;">+ Create New Chat</button>
@@ -3531,6 +3534,9 @@ button:disabled {
     </div>
     <!-- FRIENDS TAB -->
     <div id="friendsTabPanel" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+      <div style="padding:8px 16px 0;">
+        <input id="friendFilterInput" type="text" placeholder="Filter friends..." maxlength="30" style="width:100%;padding:10px 12px;border:1px solid #E0E5F0;border-radius:10px;font-size:13px;">
+      </div>
       <div id="friendRequestsBanner" style="display:none;margin:10px 16px 0;background:rgba(107,207,127,0.1);border-radius:12px;padding:10px 14px;border:1px solid rgba(107,207,127,0.3);font-size:12px;color:#2D6B3A;font-weight:700;cursor:pointer;">
         📨 <span id="friendRequestCount">0</span> pending request(s) — tap to view
       </div>
@@ -6778,6 +6784,28 @@ let currentChatName = null;
 let chatPollInterval = null;
 let lastMessageId = 0;
 let chatSending = false;
+let cachedChats = [];
+let cachedFriends = [];
+
+function applyChatFilter() {
+  const q = (document.getElementById('chatFilterInput')?.value || '').trim().toLowerCase();
+  const list = document.getElementById('chatListContainer');
+  const items = !q ? cachedChats : cachedChats.filter(c => c.name.toLowerCase().includes(q));
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No matching chats.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(chat => {
+    const item = document.createElement('div');
+    item.style.cssText = 'background:rgba(255,255,255,0.6);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:transform 0.15s,box-shadow 0.15s;';
+    item.innerHTML = `<div style="width:44px;height:44px;background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(107,207,127,0.3);">💬</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#2D3142;">${chat.name}</div><div style="font-size:11px;color:#6B7080;font-weight:500;">${chat.member_count}/30 members${chat.owner === state.username ? ' &nbsp;·&nbsp; 👑 Owner' : ''}</div></div><div style="font-size:18px;opacity:0.25;flex-shrink:0;">›</div>`;
+    item.addEventListener('click', () => openChat(chat.id, chat.name, chat.owner));
+    item.addEventListener('mouseenter', () => { item.style.transform='scale(1.01)'; item.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; });
+    item.addEventListener('mouseleave', () => { item.style.transform='scale(1)'; item.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'; });
+    list.appendChild(item);
+  });
+}
 
 function openChatSystem() {
   if (!isOnline) { requiresInternet('Chat'); return; }
@@ -6805,27 +6833,13 @@ async function loadChatList() {
     });
     const data = await res.json();
     list.innerHTML = '';
-    if (countEl) countEl.textContent = data.chats ? `${data.chats.length}/7` : '0/7';
-    if (!data.chats || data.chats.length === 0) {
+    cachedChats = data.chats || [];
+    if (countEl) countEl.textContent = cachedChats ? `${cachedChats.length}/7` : '0/7';
+    if (!cachedChats || cachedChats.length === 0) {
       list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No chats yet.<br>Create one to start chatting! 💬</div>';
       return;
     }
-    data.chats.forEach(chat => {
-      const item = document.createElement('div');
-      item.style.cssText = 'background:rgba(255,255,255,0.6);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:transform 0.15s,box-shadow 0.15s;';
-      item.innerHTML = `
-        <div style="width:44px;height:44px;background:linear-gradient(135deg,#6BCF7F,#5ABF6F);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(107,207,127,0.3);">💬</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:15px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#2D3142;">${chat.name}</div>
-          <div style="font-size:11px;color:#6B7080;font-weight:500;">${chat.member_count}/30 members${chat.owner === state.username ? ' &nbsp;·&nbsp; 👑 Owner' : ''}</div>
-        </div>
-        <div style="font-size:18px;opacity:0.25;flex-shrink:0;">›</div>
-      `;
-      item.addEventListener('click', () => openChat(chat.id, chat.name, chat.owner));
-      item.addEventListener('mouseenter', () => { item.style.transform='scale(1.01)'; item.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; });
-      item.addEventListener('mouseleave', () => { item.style.transform='scale(1)'; item.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'; });
-      list.appendChild(item);
-    });
+    applyChatFilter();
   } catch {
     list.innerHTML = '<div style="text-align:center;color:#FF6B6B;padding:24px;font-size:14px;">Failed to load chats.</div>';
   }
@@ -7129,7 +7143,9 @@ function switchChatTab(tab) {
 
 document.getElementById('tabBtnChats').addEventListener('click', () => switchChatTab('chats'));
 document.getElementById('tabBtnFriends').addEventListener('click', () => switchChatTab('friends'));
-
+document.getElementById('chatFilterInput').addEventListener('input', applyChatFilter);
+document.getElementById('friendFilterInput').addEventListener('input', applyFriendFilter);
+// ggs
 async function loadFriends() {
   if (!state.username) return;
   const list = document.getElementById('friendsListContainer');
@@ -7154,31 +7170,38 @@ async function loadFriends() {
     const res = await fetch('/get-friends', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
     const data = await res.json();
     list.innerHTML = '';
-    if (countEl) countEl.textContent = data.friends ? `${data.friends.length}/20` : '0/20';
-    if (!data.friends || data.friends.length === 0) {
+    cachedFriends = data.friends || [];
+    if (countEl) countEl.textContent = cachedFriends ? `${cachedFriends.length}/20` : '0/20';
+    if (!cachedFriends || cachedFriends.length === 0) {
       list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No friends yet.<br>Add someone to get started! 👥</div>';
       return;
     }
-    data.friends.forEach(f => {
-      const cosmetics_map = {tophat:'🎩',wizard:'🧙',pirate:'🏴‍☠️'};
-      const icon = cosmetics_map[f.equipped_cosmetic] || '🐾';
-      const card = document.createElement('div');
-      card.className = 'friend-card';
-      card.innerHTML = `
-        <div style="font-size:32px;flex-shrink:0;">${icon}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:15px;color:#2D3142;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.friend_username}${f.is_premium?'<span style="font-size:11px;margin-left:4px;" class="premium-gold">✨</span>':''}</div>
-          <div style="font-size:11px;color:#6B7080;font-weight:500;">${f.total_minutes}m · ${f.streak}🔥 streak</div>
-        </div>
-        <button style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">Stats</button>
-      `;
-      card.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); openFriendStats(f.friend_username); });
-      list.appendChild(card);
-    });
+    applyFriendFilter();
   } catch {
     list.innerHTML = '<div style="text-align:center;color:#FF6B6B;padding:24px;font-size:14px;">Failed to load friends.</div>';
   }
 }
+
+function applyFriendFilter() {
+  const q = (document.getElementById('friendFilterInput')?.value || '').trim().toLowerCase();
+  const list = document.getElementById('friendsListContainer');
+  const items = !q ? cachedFriends : cachedFriends.filter(f => f.friend_username.toLowerCase().includes(q));
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:28px 16px;font-size:14px;line-height:1.6;">No matching friends.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(f => {
+    const cosmetics_map = {tophat:'🎩',wizard:'🧙',pirate:'🏴‍☠️'};
+    const icon = cosmetics_map[f.equipped_cosmetic] || '🐾';
+    const card = document.createElement('div');
+    card.className = 'friend-card';
+    card.innerHTML = `<div style="font-size:32px;flex-shrink:0;">${icon}</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;color:#2D3142;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.friend_username}${f.is_premium?'<span style="font-size:11px;margin-left:4px;" class="premium-gold">✨</span>':''}</div><div style="font-size:11px;color:#6B7080;font-weight:500;">${f.total_minutes}m · ${f.streak}🔥 streak</div></div><button style="background:rgba(0,0,0,0.07);border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">Stats</button>`;
+    card.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); openFriendStats(f.friend_username); });
+    list.appendChild(card);
+  });
+}
+
 
 async function openFriendStats(username) {
   currentFriendTarget = username;
