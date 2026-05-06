@@ -2337,6 +2337,9 @@ button:disabled {
 
 .lb-row:active { transform: scale(0.98); }
 .lb-row.is-you { background: rgba(107,207,127,0.15); border: 2px solid #6BCF7F; }
+.lb-tabs { display:flex; gap:8px; margin:10px 0 14px; }
+.lb-tab { flex:1; border:none; border-radius:999px; padding:8px 10px; font-weight:800; font-size:12px; background:rgba(0,0,0,0.08); color:#5a4a3f; cursor:pointer; }
+.lb-tab.active { background:linear-gradient(135deg,#ffd46b,#ff9f43); color:#3a2612; box-shadow:0 6px 18px rgba(255,159,67,0.35); }
 
 @keyframes crownBounce {
   0%, 100% { transform: translateY(0) rotate(-5deg); }
@@ -2700,6 +2703,10 @@ button:disabled {
 	<div class="modal" id="leaderboardModal">
 	  <div class="modal-content" style="max-width:380px;max-height:82vh;overflow-y:auto;padding:20px;">
 	    <div class="modal-title">🌍 World Leaderboard</div>
+      <div class="lb-tabs">
+        <button id="lbAllTimeTab" class="lb-tab active">All-Time</button>
+        <button id="lbWeeklyTab" class="lb-tab">Weekly</button>
+      </div>
 	    <div id="leaderboardList"></div>
 	    <button class="modal-btn primary" id="closeLeaderboardBtn" style="width:100%;margin-top:14px;">Close</button>
 	  </div>
@@ -7566,7 +7573,7 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
       output.textContent = data.plan;
       output.style.display = 'block';
     } else if (data.error === 'contact_owner') {
-      output.textContent = '⚠️ AI service is currently unavailable.\nPlease contact the StudyBuddy owner for assistance.';
+      output.textContent = 'I regret to inform you that the primary and backup AIs have failed. This is highly unlikely.\nI have notified myself, and I will review this situation immediately.';
       output.style.display = 'block';
     } else {
       alert(`❌ ${data.error||'Failed to generate plan.'}`);
@@ -7829,7 +7836,14 @@ document.getElementById('closeProfileBtn').addEventListener('click', () => {
   closeModal('userProfileModal');
 });
 
-document.getElementById('leaderboardBtn').addEventListener('click', async () => {
+let leaderboardPeriod = 'all';
+function setLeaderboardTab(period) {
+  leaderboardPeriod = period;
+  document.getElementById('lbAllTimeTab').classList.toggle('active', period === 'all');
+  document.getElementById('lbWeeklyTab').classList.toggle('active', period === 'weekly');
+}
+
+async function openLeaderboard() {
   if (!requiresInternet('Leaderboard')) return;
   const list = document.getElementById('leaderboardList');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:#6B7080;">Loading...</div>';
@@ -7837,7 +7851,7 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
   await syncLeaderboard();
 
   try {
-    const res = await fetch('/leaderboard');
+    const res = await fetch(`/leaderboard?period=${leaderboardPeriod}`);
     const users = await res.json();
 
     list.innerHTML = '';
@@ -7873,7 +7887,7 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
       col.innerHTML = `
           ${rank === 1 ? '<div style="font-size:22px;animation:crownBounce 1.2s ease-in-out infinite;">👑</div>' : '<div style="height:30px;"></div>'}
           <div style="${podiumNameStyle}">${user.username}${isYou ? ' 👤' : ''}${user.is_premium ? ' ✨' : ''}</div>
-          <div style="font-size:10px;color:#6B7080;">${user.total_minutes}m</div>
+          <div style="font-size:10px;color:#6B7080;">${leaderboardPeriod === 'weekly' ? `${user.weekly_minutes || 0}m this week` : `${user.total_minutes}m all-time`}</div>
           <div class="lb-podium-base" style="height:${height};background:${bg};animation:${glow};">${medal}</div>
         `;
         col.addEventListener('click', () => showUserProfile(user, rank));
@@ -7896,7 +7910,7 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
         <div style="font-size:15px;font-weight:700;width:24px;text-align:center;color:#6B7080;">${rank}</div>
         <div style="flex:1;min-width:0;">
           <div style="${rowNameStyle}">${user.username}${isYou ? ' 👤' : ''}${user.is_premium ? ' ✨' : ''}</div>
-          <div style="font-size:10px;color:#6B7080;">${user.total_minutes}m • ${user.streak}🔥 • ${user.reborns} reborns</div>
+          <div style="font-size:10px;color:#6B7080;">${leaderboardPeriod === 'weekly' ? `${user.weekly_minutes || 0}m this week` : `${user.total_minutes}m all-time`} • ${user.streak}🔥 • ${user.reborns} reborns</div>
         </div>
       `;
       row.addEventListener('click', () => showUserProfile(user, rank));
@@ -7906,7 +7920,11 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
   } catch {
     list.innerHTML = '<div style="text-align:center;padding:20px;color:#FF6B6B;">Failed to load leaderboard.</div>';
   }
-});
+}
+
+document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
+document.getElementById('lbAllTimeTab').addEventListener('click', async () => { setLeaderboardTab('all'); await openLeaderboard(); });
+document.getElementById('lbWeeklyTab').addEventListener('click', async () => { setLeaderboardTab('weekly'); await openLeaderboard(); });
 
 document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
   document.getElementById('leaderboardModal').classList.remove('active');
