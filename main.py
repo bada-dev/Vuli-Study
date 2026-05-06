@@ -5,6 +5,7 @@ import json
 import urllib.request
 import urllib.error
 from flask import Flask, render_template, request, jsonify
+from datetime import datetime, timezone, timedelta
 
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
@@ -86,6 +87,12 @@ def init_db():
         redeemed INTEGER DEFAULT 0,
         redeemed_by TEXT DEFAULT NULL,
         redeemed_at INTEGER DEFAULT NULL
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS weekly_study (
+        username TEXT NOT NULL,
+        week_start INTEGER NOT NULL,
+        minutes INTEGER DEFAULT 0,
+        PRIMARY KEY (username, week_start)
     )''')
     try:
         conn.execute('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0')
@@ -187,6 +194,19 @@ def sync_score():
                      (total_minutes, streak, reborns, equipped_cosmetic,
                       active_background, character_width, happiness,
                       int(time.time()), username))
+        gained = max(0, total_minutes - old_minutes)
+        if gained > 0:
+            now = datetime.now(timezone.utc)
+            week_start_dt = now - timedelta(days=now.weekday())
+            week_start_dt = week_start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            week_start_ts = int(week_start_dt.timestamp())
+            conn.execute(
+                '''INSERT INTO weekly_study (username, week_start, minutes)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(username, week_start)
+                   DO UPDATE SET minutes = minutes + excluded.minutes''',
+                (username, week_start_ts, gained)
+            )
         conn.commit()
         conn.commit()
         return jsonify({'success': True, 'correctedMinutes': total_minutes})
@@ -200,13 +220,30 @@ def leaderboard():
     conn.execute('UPDATE users SET is_active=0 WHERE last_active < ? AND last_active > 0',
                  (three_days_ago,))
     conn.commit()
-    users = conn.execute(
-        '''SELECT username, total_minutes, streak, reborns,
-           equipped_cosmetic, active_background, character_width, happiness,
-           last_active, is_active
-           FROM users WHERE is_active=1
-           ORDER BY total_minutes DESC LIMIT 20'''
-    ).fetchall()
+    period = request.args.get('period', 'all')
+    if period == 'weekly':
+        now = datetime.now(timezone.utc)
+        week_start_dt = now - timedelta(days=now.weekday())
+        week_start_dt = week_start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start_ts = int(week_start_dt.timestamp())
+        users = conn.execute(
+            '''SELECT u.username, u.total_minutes, u.streak, u.reborns,
+               u.equipped_cosmetic, u.active_background, u.character_width, u.happiness,
+               u.last_active, u.is_active, u.is_premium, COALESCE(w.minutes, 0) AS weekly_minutes
+               FROM users u
+               LEFT JOIN weekly_study w ON u.username = w.username AND w.week_start = ?
+               WHERE u.is_active=1
+               ORDER BY weekly_minutes DESC, u.total_minutes DESC LIMIT 20''',
+            (week_start_ts,)
+        ).fetchall()
+    else:
+        users = conn.execute(
+            '''SELECT username, total_minutes, streak, reborns,
+               equipped_cosmetic, active_background, character_width, happiness,
+               last_active, is_active, is_premium
+               FROM users WHERE is_active=1
+               ORDER BY total_minutes DESC LIMIT 20'''
+        ).fetchall()
     conn.close()
     return jsonify([dict(u) for u in users])
 
@@ -432,6 +469,7 @@ def admin_get_user():
         conn.close()
 
 def call_ai(api_key, prompt):
+    api_key = (api_key or '').strip().strip('"').strip("'")
     if not api_key:
         raise ValueError('No API key')
     data = json.dumps({
@@ -447,9 +485,16 @@ def call_ai(api_key, prompt):
             "Content-Type": "application/json"
         }
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        result = json.loads(resp.read().decode('utf-8'))
-        return result['choices'][0]['message']['content']
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            return result['choices'][0]['message']['content']
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='ignore')
+        raise RuntimeError(f'Groq HTTP {e.code}: {body[:240]}')
+
+
 
 @app.route('/second-admin-verify', methods=['POST'])
 def second_admin_verify():
