@@ -472,27 +472,42 @@ def call_ai(api_key, prompt):
     api_key = (api_key or '').strip().strip('"').strip("'")
     if not api_key:
         raise ValueError('No API key')
-    data = json.dumps({
-        "model": "llama-3.3-70b-versatile",
-        'max_tokens': 1000,
-        'messages': [{'role': 'user', 'content': prompt}]
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
-        data=data,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-    )
+    models = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768"
+    ]
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode('utf-8'))
-            return result['choices'][0]['message']['content']
-    except urllib.error.HTTPError as e:
-        body = e.read().decode('utf-8', errors='ignore')
-        raise RuntimeError(f'Groq HTTP {e.code}: {body[:240]}')
+    last_error = None
+    for model in models:
+        data = json.dumps({
+            "model": model,
+            'max_tokens': 1000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "StudyBuddy/1.0"
+            }
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                return result['choices'][0]['message']['content']
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', errors='ignore')
+            last_error = RuntimeError(f'Groq HTTP {e.code} [{model}]: {body[:240]}')
+            continue
+
+    if last_error:
+        raise last_error
+    raise RuntimeError('Groq request failed for all models')
 
 
 
