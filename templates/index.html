@@ -3417,6 +3417,7 @@ button:disabled {
     <div style="display:flex;border-bottom:1px solid rgba(0,0,0,0.08);">
       <button id="premTabAnalytics" style="flex:1;padding:12px;border:none;border-bottom:3px solid #FFB84D;background:none;font-weight:700;font-size:13px;color:#2D3142;cursor:pointer;">📊 Analytics</button>
       <button id="premTabAI" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🤖 AI Plan</button>
+	  <button id="premTabVault" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🌌 Vault</button>
     </div>
     <div style="flex:1;overflow-y:auto;">
       <!-- Analytics Tab -->
@@ -3425,6 +3426,7 @@ button:disabled {
         <canvas id="premiumChart" style="max-height:180px;margin-bottom:12px;"></canvas>
         <div id="premiumInsights" style="font-size:13px;color:#4A3F35;line-height:1.7;background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;border:1px solid rgba(255,184,77,0.25);"></div>
       </div>
+	  <div id="premiumVaultTab" style="padding:16px;display:none;"><div id="premiumVaultContent" style="font-size:13px;color:#4A3F35;line-height:1.7;"></div></div>
       <!-- AI Tab -->
       <div id="premiumAITab" style="padding:16px;display:none;">
         <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let AI analyze your study patterns and generate a personalized improvement plan.</div>
@@ -3495,7 +3497,7 @@ button:disabled {
     </div>
     <div style="font-size: 12px; color: #9B8F83; font-weight: 500; margin-bottom: 20px;">Your feedback goes directly to the developer.</div>
     <div style="display: flex; gap: 6px; margin-bottom: 16px;">
-      <button class="feedback-type-btn active" data-type="suggestion" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">💡 Suggestion</button>
+      <button class="feedback-type-btn active" data-type="other" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">💬 General</button>
       <button class="feedback-type-btn" data-type="bug" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">🐛 Bug Report</button>
       <button class="feedback-type-btn" data-type="other" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">💬 Other</button>
     </div>
@@ -3670,8 +3672,12 @@ const state = {
   evoLevel: 0,
   isPremium: false,
   timerStartedAt: null,
-  timerInitialLeft: 0
-}; // wow 1 - killed absolutely everything..
+  timerInitialLeft: 0,
+  premiumSurvey: null,
+  premiumUnlockedAt: null,
+  aiPlanLastGeneratedDate: null,
+  premiumSavedStudyPlans: []
+}; // wow 1 "-" killed absolutely everything..
 
 // === ONLINE / OFFLINE DETECTION ===
 let isOnline = navigator.onLine;
@@ -4533,12 +4539,20 @@ function showAchievementUnlock(ach) {
 function renderAchievements() {
   const list = document.getElementById('achievementsList');
   list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
   
   achievements.forEach(ach => {
     const unlocked = state.unlockedAchievements.includes(ach.id);
     const item = document.createElement('div');
     item.className = 'todo-item';
-    item.style.opacity = unlocked ? '1' : '0.4';
+    item.style.opacity = unlocked ? '1' : '0.55';
+    item.style.width = '48%';
+    item.style.display = 'inline-flex';
+    item.style.verticalAlign = 'top';
+    item.style.margin = '1%';
+    item.style.minHeight = '125px';
     item.innerHTML = `
       <div style="font-size: 32px; flex-shrink: 0;">${unlocked ? ach.icon : '🔒'}</div>
       <div class="todo-info">
@@ -5688,6 +5702,9 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     state.reborns = 0;
     state.revivals = 0;
     state.studyingDisabledUntil = null;
+    state.premiumSurvey = null;
+    state.aiPlanLastGeneratedDate = null;
+    state.premiumSavedStudyPlans = [];
     setBackground('default');
     renderCosmetic();
     updateDisplay();
@@ -5891,6 +5908,9 @@ function createTodoAlarmFromInputs() {
 function renderTodos() {
   const list = document.getElementById('todoList');
   list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
   
   const sortBy = state.todoSort || 'deadline';
   
@@ -6281,6 +6301,16 @@ document.getElementById('clearStudyDataBtn').addEventListener('click', () => {
   }
 });
 
+
+document.getElementById('nukeAllAdminBtn')?.addEventListener('click', async () => {
+  if (!confirm('This will wipe local storage, cookies, cache, and reload. Continue?')) return;
+  localStorage.clear(); sessionStorage.clear();
+  document.cookie.split(';').forEach(c => { document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires='+new Date().toUTCString()+';path=/'); });
+  if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
+  location.reload();
+});
+
+
 document.getElementById('clearTodosAdminBtn').addEventListener('click', () => {
   if (confirm('🗑️ Delete ALL todos permanently?')) {
     state.todos = [];
@@ -6407,6 +6437,9 @@ function loadState() {
       // Clear expired study cooldown
       if (state.studyingDisabledUntil && Date.now() >= state.studyingDisabledUntil) {
         state.studyingDisabledUntil = null;
+    state.premiumSurvey = null;
+    state.aiPlanLastGeneratedDate = null;
+    state.premiumSavedStudyPlans = [];
       }
       
       // Auto-pause if session was running on reload
@@ -6669,7 +6702,7 @@ document.getElementById('copyRawStatsBtn')?.addEventListener('click', () => {
 
 // === FEEDBACK SYSTEM ===
 (function() {
-  let selectedType = 'suggestion';
+  let selectedType = 'other';
 
   function formatCooldown(ms) {
     const h = Math.floor(ms / 3600000);
@@ -6830,6 +6863,9 @@ function applyChatFilter() {
     return;
   }
   list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
   items.forEach(chat => {
     const item = document.createElement('div');
     item.style.cssText = 'background:rgba(255,255,255,0.6);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:transform 0.15s,box-shadow 0.15s;';
@@ -6867,6 +6903,9 @@ async function loadChatList() {
     });
     const data = await res.json();
     list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
     cachedChats = data.chats || [];
     if (countEl) countEl.textContent = cachedChats ? `${cachedChats.length}/7` : '0/7';
     if (!cachedChats || cachedChats.length === 0) {
@@ -6898,6 +6937,22 @@ async function openChat(chatId, chatName, owner) {
   startChatTimerPoll();
 }
 
+
+
+function censorText(text) {
+  const banned = /(fuck|shit|bitch|asshole|bastard|dick|pussy|porn|nsfw|nude|sex)/gi;
+  return text.replace(banned, '•••');
+}
+
+function formatSimpleMarkdown(text) {
+  const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+	
 async function fetchMessages(scrollToBottom) {
   if (!currentChatId) return;
   try {
@@ -6922,7 +6977,7 @@ async function fetchMessages(scrollToBottom) {
       const time = new Date(msg.timestamp * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       const div = document.createElement('div');
       div.style.cssText = `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};`;
-      const safeMsg = msg.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeMsg = formatSimpleMarkdown(censorText(msg.message));
       div.innerHTML = `
         <div style="font-size:10px;color:#ABABAB;margin-bottom:3px;padding:0 5px;">${isMe ? 'You' : `<b style="color:#6B7080">${msg.username}</b>`} &middot; ${time}</div>
         <div style="background:${isMe ? 'linear-gradient(135deg,#6BCF7F,#5ABF6F)' : '#ECECEC'};color:${isMe ? 'white' : '#2D3142'};padding:9px 14px;border-radius:${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};max-width:80%;font-size:14px;word-break:break-word;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,0.09);">${safeMsg}</div>
@@ -6937,7 +6992,7 @@ async function fetchMessages(scrollToBottom) {
 async function sendChatMessage() {
   if (chatSending) return;
   const input = document.getElementById('chatMessageInput');
-  const message = input.value.trim();
+  const message = censorText(input.value.trim());
   if (!message || !currentChatId) return;
   chatSending = true;
   const sendBtn = document.getElementById('sendMessageBtn');
@@ -7204,6 +7259,9 @@ async function loadFriends() {
     const res = await fetch('/get-friends', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
     const data = await res.json();
     list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
     cachedFriends = data.friends || [];
     if (countEl) countEl.textContent = cachedFriends ? `${cachedFriends.length}/20` : '0/20';
     if (!cachedFriends || cachedFriends.length === 0) {
@@ -7225,6 +7283,9 @@ function applyFriendFilter() {
     return;
   }
   list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
   items.forEach(f => {
     const cosmetics_map = {tophat:'🎩',wizard:'🧙',pirate:'🏴‍☠️'};
     const icon = cosmetics_map[f.equipped_cosmetic] || '🐾';
@@ -7264,6 +7325,9 @@ async function openFriendStats(username) {
 function showFriendRequests(requests) {
   const list = document.getElementById('friendRequestsList');
   list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
   if (!requests || requests.length === 0) {
     list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:16px;">No pending requests.</div>';
   } else {
@@ -7465,10 +7529,17 @@ document.getElementById('redeemPremiumBtn').addEventListener('click', async () =
     const data = await res.json();
     if (data.success) {
       state.isPremium = true;
+      state.premiumUnlockedAt = Date.now();
+      if (!state.premiumSurvey) {
+        const yearGroup = prompt('What year group are you in?') || '';
+        const prefs = prompt('Any preferences for the AI to know about you?') || '';
+        const interests = prompt('Favourite subjects or interests?') || '';
+        state.premiumSurvey = {yearGroup, prefs, interests};
+      }
       saveState();
       updatePremiumUI();
       document.getElementById('premiumCodeModal').classList.remove('active');
-      setTimeout(() => alert('✨ Welcome to Premium! Your name is now golden and you have access to the Premium Center.'), 200);
+      setTimeout(() => alert('✨🎉 PREMIUM UNLOCKED! You now have upgraded layouts, saved plans, vaults, and MUCH more!'), 200);
     } else {
       statusEl.style.color='#FF6B6B';
       statusEl.textContent = `❌ ${data.error||'Invalid code'}`;
@@ -7515,6 +7586,9 @@ function openPremiumCenter() {
     data:{labels:labels14,datasets:[{label:'Minutes',data:last14,backgroundColor:'rgba(255,184,77,0.6)',borderColor:'rgba(255,184,77,1)',borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>v+'m',font:{size:9}}}}}
   });
+  const vault = document.getElementById('premiumVaultContent');
+  const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
+  vault.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,220))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
   document.getElementById('studyPlanOutput').style.display = 'none';
   document.getElementById('premiumCenterModal').classList.add('active');
 }
@@ -7539,6 +7613,7 @@ document.getElementById('premTabAnalytics').addEventListener('click', () => {
 document.getElementById('premTabAI').addEventListener('click', () => {
   document.getElementById('premiumAITab').style.display = 'block';
   document.getElementById('premiumAnalyticsTab').style.display = 'none';
+  document.getElementById('premiumVaultTab').style.display = 'none';
   document.getElementById('premTabAI').style.borderBottomColor = '#FFB84D';
   document.getElementById('premTabAI').style.color = '#2D3142';
   document.getElementById('premTabAI').style.fontWeight = '700';
@@ -7546,6 +7621,14 @@ document.getElementById('premTabAI').addEventListener('click', () => {
   document.getElementById('premTabAnalytics').style.color = '#9B9099';
   document.getElementById('premTabAnalytics').style.fontWeight = '600';
 });
+
+
+document.getElementById('premTabVault').addEventListener('click', () => {
+  document.getElementById('premiumVaultTab').style.display = 'block';
+  document.getElementById('premiumAITab').style.display = 'none';
+  document.getElementById('premiumAnalyticsTab').style.display = 'none';
+});
+
 
 document.getElementById('generateStudyPlanBtn').addEventListener('click', async () => {
   if (!requiresInternet('AI Study Plan')) return;
@@ -7563,14 +7646,26 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
   const subjects = [...new Set(Object.values(state.colorSubjects))];
   const pendingTasks = state.todos.filter(t=>!t.completed).map(t=>t.text);
   const completedTasks = state.todos.filter(t=>t.completed).length;
+  const todayKey = new Date().toISOString().slice(0,10);
+  if (state.aiPlanLastGeneratedDate === todayKey) {
+    output.style.display='block';
+    output.textContent='You already generated your AI plan today. Come back tomorrow.';
+    btn.disabled=false; btn.textContent='🤖 Generate My Study Plan';
+    return;
+  }
   try {
     const res = await fetch('/generate-study-plan', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks}})
+      body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks,motivationalQuotes}})
     });
     const data = await res.json();
     if (data.success) {
-      output.textContent = data.plan;
+      output.innerHTML = formatSimpleMarkdown(data.plan);
+      state.aiPlanLastGeneratedDate = todayKey;
+      if (!Array.isArray(state.premiumSavedStudyPlans)) state.premiumSavedStudyPlans=[];
+      state.premiumSavedStudyPlans.unshift({date:todayKey, plan:data.plan});
+      state.premiumSavedStudyPlans = state.premiumSavedStudyPlans.slice(0,20);
+      saveState();
       output.style.display = 'block';
     } else if (data.error === 'contact_owner') {
       output.textContent = 'I regret to inform you that the primary and backup AIs have failed. This is highly unlikely.\nI have notified myself, and I will review this situation immediately.';
@@ -7855,6 +7950,9 @@ async function openLeaderboard() {
     const users = await res.json();
 
     list.innerHTML = '';
+  list.style.display='flex';
+  list.style.flexWrap='wrap';
+  list.style.justifyContent='space-between';
 
     if (users.length === 0) {
       list.innerHTML = '<div style="text-align:center;padding:20px;color:#6B7080;">No users yet! Set a username to appear here.</div>';
@@ -8020,9 +8118,8 @@ setInterval(() => {
   }
 }, 30000);
 
-
+// Build your own dreams before someone hires you to build theirs
 </script>
 
 </body>
-</html><!--
-That's StudyBuddy.
+</html>
