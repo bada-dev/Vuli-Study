@@ -6,6 +6,7 @@ import urllib.request
 import urllib.error
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone, timedelta
+import re
 
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
@@ -819,6 +820,7 @@ def generate_study_plan():
         if not user or not user['is_premium']:
             return jsonify({'success': False, 'error': 'Premium required'})
         study_data = data.get('studyData', {})
+        quotes = study_data.get('motivationalQuotes', [])
         prompt = f"""You are an expert study advisor analyzing a student named "{username}".
 
 Study Statistics:
@@ -836,6 +838,10 @@ Create a personalized, motivating study plan:
 3. Recommended weekly schedule
 4. Subject-specific tips if subjects are listed
 5. One motivational insight
+
+Mandatory output formatting rules:
+- Use plain text only (no markdown symbols like ** or __).
+- Mention at least one quote verbatim from this list: {quotes}
 
 Keep it under 350 words. Be encouraging and specific."""
 
