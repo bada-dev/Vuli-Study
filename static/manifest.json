@@ -1,7 +1,7 @@
 {
-  "name": "Study Buddy",
-  "short_name": "StudyBuddy",
-  "id": "studybuddy-ethantyagi",
+  "name": "VuliStudy",
+  "short_name": "VuliStudy",
+  "id": "vulistudy-vuli",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "orientation": "portrait",
   "background_color": "#c4a07a",
   "theme_color": "#c4a07a",
-  "description": "A focus timer app to help you study better with a virtual buddy!",
+  "description": "VuliStudy by Vuli: a focus timer app to help you study better with a virtual buddy!",
   "lang": "en",
   "dir": "ltr",
   "categories": ["education", "productivity"],
@@ -18,7 +18,7 @@
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
-      "src": "/static/StudyBuddyImg.png",
+      "src": "/static/VuliStudyImg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -26,11 +26,11 @@
   ],
   "screenshots": [
     {
-      "src": "/static/StudyBuddyImg.png",
+      "src": "/static/VuliStudyImg.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Study Buddy home screen"
+      "label": "VuliStudy home screen"
     }
   ]
 }

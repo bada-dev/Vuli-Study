@@ -533,7 +533,7 @@ def call_ai(api_key, prompt):
             "model": model,
             'max_tokens': 1000,
             'messages': [
-                {'role': 'system', 'content': 'You are Study Buddy AI. You are speaking directly to the student. Give concrete study plans, not just descriptions. Keep tone natural and concise. Ask one helpful follow-up question at the end to improve the plan. Use quotes sparingly and only when they improve clarity.'},
+                {'role': 'system', 'content': 'You are VuliStudy AI. You are speaking directly to the student. Give concrete study plans, not just descriptions. Keep tone natural and concise. Ask one helpful follow-up question at the end to improve the plan. Use quotes sparingly and only when they improve clarity.'},
                 {'role': 'user', 'content': prompt}
             ]
         }).encode('utf-8')
@@ -543,7 +543,7 @@ def call_ai(api_key, prompt):
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "StudyBuddy/1.0"
+                "User-Agent": "VuliStudy/1.0"
             }
         )
 
@@ -875,7 +875,7 @@ def generate_study_plan():
         convo_text = ""
         if isinstance(convo, list) and convo:
             convo_text = "\\nConversation context (latest first):\\n" + "\\n".join([str(x)[:500] for x in convo[:6]])
-        prompt = f"""You are an expert study advisor analyzing a student using Vuli Study named "{username}".
+        prompt = f"""You are an expert study advisor analyzing a student using VuliStudy named "{username}".
 
 Study Statistics:
 - Total minutes studied (all time): {study_data.get('totalMinutes', user['total_minutes'])}
@@ -886,7 +886,7 @@ Study Statistics:
 - Pending tasks: {study_data.get('pendingTasks', [])}
 - Completed tasks: {study_data.get('completedTasks', 0)}
 
-If you see the username as "EthanGenius", then this means that the owner of Vuli Study is talking to you, testing. You will treat him with as much respect as you can, and call the fact that you know he made you.
+If you see the username as "EthanGenius", then this means that someone from Vuli, the company behind VuliStudy, is talking to you for testing. Treat him with respect and acknowledge that Vuli made you.
 
 Create a personalized, motivating study plan:
 1. Quick assessment of their current habits (2-3 sentences)

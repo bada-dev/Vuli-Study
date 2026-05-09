@@ -4,15 +4,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="icon" href="{{ url_for('static', filename='StudyBuddyImg.png') }}" type="image/png">
+<link rel="icon" href="{{ url_for('static', filename='VuliStudyImg.png') }}" type="image/png">
 <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 <meta name="theme-color" content="#c4a07a">
-<title>Study Buddy</title>
+<title>VuliStudy</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <!--
-    Project: Study Buddy
-    Author: ETHANTYAGI
+    Project: VuliStudy
+    Author: Vuli
     Version: 5.1.2 anothre test
 	ALL RIGHTS RESERVED
 -->
@@ -5844,7 +5844,7 @@ function notifyAlarmFinished(alarm) {
   const body = alarm.type === 'timer' ? 'Your task timer is over.' : 'Your scheduled alarm time is now.';
 
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, { body, icon: '/static/StudyBuddyImg.png' });
+    new Notification(title, { body, icon: '/static/VuliStudyImg.png' });
   }
 
   if (navigator.vibrate) navigator.vibrate([200, 150, 200, 150, 300]);
@@ -6491,7 +6491,7 @@ const achievements = [
 ];
 
 // === SAVE/LOAD SYSTEM ===
-const STORAGE_KEY = 'studyBuddyState';
+const STORAGE_KEY = 'vuliStudyState';
 
 function saveState() {
   const data = {
