@@ -1,7 +1,7 @@
-const CACHE_NAME = 'studybuddy-v3';
+const CACHE_NAME = 'vulistudy-v3';
 const SHELL_ASSETS = [
   '/',
-  '/static/StudyBuddyImg.png',
+  '/static/VuliStudyImg.png',
   '/static/manifest.json',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js'
 ];
