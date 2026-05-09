@@ -875,7 +875,7 @@ def generate_study_plan():
         convo_text = ""
         if isinstance(convo, list) and convo:
             convo_text = "\\nConversation context (latest first):\\n" + "\\n".join([str(x)[:500] for x in convo[:6]])
-        prompt = f"""You are an expert study advisor analyzing a student named "{username}".
+        prompt = f"""You are an expert study advisor analyzing a student using Vuli Study named "{username}".
 
 Study Statistics:
 - Total minutes studied (all time): {study_data.get('totalMinutes', user['total_minutes'])}
@@ -886,12 +886,14 @@ Study Statistics:
 - Pending tasks: {study_data.get('pendingTasks', [])}
 - Completed tasks: {study_data.get('completedTasks', 0)}
 
+If you see the username as "EthanGenius", then this means that the owner of Vuli Study is talking to you, testing. You will treat him with as much respect as you can, and call the fact that you know he made you.
+
 Create a personalized, motivating study plan:
 1. Quick assessment of their current habits (2-3 sentences)
 2. Top 3 specific, actionable improvements
 3. Recommended weekly schedule
 4. Subject-specific tips if subjects are listed
-5. One motivational insight
+5. One motivational insight, dont try  to explain the quote, just drop a quote somewhere where its relevant.
 
 Mandatory output formatting rules:
 - Use plain text only (no markdown symbols like ** or __).
