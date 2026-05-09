@@ -5664,32 +5664,12 @@ document.getElementById('gcalBtn').addEventListener('click', () => {
   if (pick === '2') window.location.href = 'calshow://';
   if (pick === '3') window.location.href = 'ms-outlook://calendar';
 });
-if (!document.getElementById('calendarQuickApps')) {
-  const quick = document.createElement('div');
-  quick.id = 'calendarQuickApps';
-  quick.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;';
-  quick.innerHTML = `
-    <button class="gcal-btn" id="quickGoogleCalBtn" style="margin:0;">Google Cal</button>
-    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">Apple Cal</button>
-    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">Outlook</button>
-  `;
-  document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick);
-  document.getElementById('quickGoogleCalBtn').addEventListener('click', () => { window.location.href = 'googlecalendar://'; });
-  document.getElementById('quickAppleCalBtn').addEventListener('click', () => { window.location.href = 'calshow://'; });
-  document.getElementById('quickOutlookCalBtn').addEventListener('click', () => { window.location.href = 'ms-outlook://calendar'; });
-}
 
 document.getElementById('graphRange')?.addEventListener('change', () => {
   renderGraph();
 });
 document.getElementById('refreshGraph')?.addEventListener('click', () => {
   renderGraph();
-});
-if (!document.getElementById('fullscreenStudyChartBtn')) {
-  document.getElementById('refreshGraph')?.insertAdjacentHTML('afterend', '<button id=\"fullscreenStudyChartBtn\" class=\"gcal-btn\" style=\"margin-top:8px;\">⛶ Fullscreen Chart</button>');
-}
-document.getElementById('fullscreenStudyChartBtn')?.addEventListener('click', () => {
-  document.getElementById('studyChart')?.requestFullscreen?.();
 });
 
 // Hamburger → Chat
@@ -7734,12 +7714,6 @@ function openPremiumCenter() {
     data:{labels:labels14,datasets:[{label:'Minutes',data:last14,backgroundColor:'rgba(255,184,77,0.6)',borderColor:'rgba(255,184,77,1)',borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>v+'m',font:{size:9}}}}}
   });
-  if (!document.getElementById('fullscreenPremiumChartBtn')) {
-    canvas.insertAdjacentHTML('afterend', '<button id="fullscreenPremiumChartBtn" class="gcal-btn" style="margin-bottom:10px;">⛶ Fullscreen Premium Chart</button>');
-    document.getElementById('fullscreenPremiumChartBtn').addEventListener('click', () => {
-      document.getElementById('premiumChart')?.requestFullscreen?.();
-    });
-  }
   const saves = document.getElementById('premiumSavesContent');
   const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
   saves.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,1200))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
@@ -8313,5 +8287,3 @@ setInterval(() => {
 </html>
 
 
-document.getElementById('studyChart')?.addEventListener('dblclick', () => { document.getElementById('studyChart').requestFullscreen?.(); });
-document.getElementById('premiumChart')?.addEventListener('dblclick', () => { document.getElementById('premiumChart').requestFullscreen?.(); });
