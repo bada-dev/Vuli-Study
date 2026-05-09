@@ -41,6 +41,10 @@ body {
   touch-action: pan-y;
   position: fixed;
 }
+body.premium-royalty {
+  background: linear-gradient(120deg, #2b1b45, #3a245f, #5b3b8d, #8b6bc6);
+  background-size: 400% 400%;
+}
 
 @keyframes brownFlow {
   0% { background-position: 0% 50%; }
@@ -2547,6 +2551,7 @@ button:disabled {
         </div>
 
         <div class="timer-area">
+          <button id="addTimerMinuteBtn" style="display:none;align-self:center;margin-bottom:8px;background:rgba(255,255,255,0.75);border:none;border-radius:999px;width:34px;height:34px;font-size:20px;font-weight:800;cursor:pointer;">＋</button>
           <div class="timer-display" id="timerDisplay">25:00</div>
           <div class="session-label" id="sessionLabel">Ready to focus</div>
         </div>
@@ -2554,7 +2559,7 @@ button:disabled {
         <div class="mode-tabs">
           <button class="mode-tab active" data-mode="focus">Focus</button>
           <button class="mode-tab" data-mode="stopwatch">Stopwatch</button>
-          <button class="mode-tab" data-mode="long">Long Break</button>
+          <button class="mode-tab" data-mode="long">Breaks</button>
         </div>
 
         <div class="action-buttons">
@@ -2865,6 +2870,7 @@ button:disabled {
         <div class="shop-tabs-grid">
           <button class="shop-tab active" data-category="items">Items</button>
           <button class="shop-tab" data-category="cosmetics">Cosmetics</button>
+          <button class="shop-tab" data-category="premium-cosmetics" id="premiumCosmeticsTab" style="display:none;">Premium Free</button>
           <button class="shop-tab" data-category="emotes">Emotes</button>
           <button class="shop-tab" data-category="backgrounds">Backgrounds</button>
         </div>
@@ -2969,7 +2975,7 @@ button:disabled {
           </div>
 
           <div class="setting-item" id="longBreakSetting">
-            <div class="setting-label">Long Break</div>
+            <div class="setting-label">Breaks</div>
             <div class="setting-value" id="longBreakValue">15 min</div>
           </div>
         </div>
@@ -3250,7 +3256,10 @@ button:disabled {
         <button style="width:100%;background:linear-gradient(135deg,#6BCF7F,#5ABF6F);color:white;border:none;border-radius:13px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;" id="reviveBuddyAdminBtn">✨ Instant Revive</button>
         <button class="modal-btn secondary" id="clearStudyDataBtn" style="width:100%;color:#FF6B6B;">🗑️ Clear Study History</button>
         <button class="modal-btn secondary" id="clearTodosAdminBtn" style="width:100%;color:#FF6B6B;">🗑️ Clear All Todos</button>
+        <button class="modal-btn secondary" id="clearDeviceAdminBtn" style="width:100%;color:#FF6B6B;">🧹 Clear This Device (cache + username)</button>
         <button class="modal-btn secondary" id="rawStatsBtnAdmin" style="width:100%;">🔧 View Raw Stats</button>
+        <button class="modal-btn secondary" id="exportDbAdminBtn" style="width:100%;">📦 Export Raw Database</button>
+        <button class="modal-btn secondary" id="importDbAdminBtn" style="width:100%;">📥 Import Raw Database</button>
       </div>
     </div>
 	<!-- PREMIUM ADMIN TAB -->
@@ -3417,7 +3426,7 @@ button:disabled {
     <div style="display:flex;border-bottom:1px solid rgba(0,0,0,0.08);">
       <button id="premTabAnalytics" style="flex:1;padding:12px;border:none;border-bottom:3px solid #FFB84D;background:none;font-weight:700;font-size:13px;color:#2D3142;cursor:pointer;">📊 Analytics</button>
       <button id="premTabAI" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🤖 AI Plan</button>
-	  <button id="premTabVault" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🌌 Vault</button>
+	  <button id="premTabSaves" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🌌 Saves</button>
     </div>
     <div style="flex:1;overflow-y:auto;">
       <!-- Analytics Tab -->
@@ -3426,7 +3435,7 @@ button:disabled {
         <canvas id="premiumChart" style="max-height:180px;margin-bottom:12px;"></canvas>
         <div id="premiumInsights" style="font-size:13px;color:#4A3F35;line-height:1.7;background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;border:1px solid rgba(255,184,77,0.25);"></div>
       </div>
-	  <div id="premiumVaultTab" style="padding:16px;display:none;"><div id="premiumVaultContent" style="font-size:13px;color:#4A3F35;line-height:1.7;"></div></div>
+	  <div id="premiumSavesTab" style="padding:16px;display:none;"><div id="premiumSavesContent" style="font-size:13px;color:#4A3F35;line-height:1.7;"></div></div>
       <!-- AI Tab -->
       <div id="premiumAITab" style="padding:16px;display:none;">
         <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let AI analyze your study patterns and generate a personalized improvement plan.</div>
@@ -4049,8 +4058,8 @@ function startHappyDecay() {
       const now = Date.now();
       const hoursPassed = (now - state.lastHappyDecay) / (1000 * 60 * 60);
       
-      if (hoursPassed >= 1) {
-        state.happiness = Math.max(0, state.happiness - 10);
+      if (hoursPassed >= 0.5) {
+        state.happiness = Math.max(0, state.happiness - 15);
         state.lastHappyDecay = now;
         
         if (state.happiness === 0) {
@@ -4289,6 +4298,8 @@ function formatTime(seconds) {
 
 function updateDisplay() {
   timerDisplay.textContent = state.mode === 'stopwatch' ? formatTime(state.stopwatchTime) : formatTime(state.timeLeft);
+  const addBtn = document.getElementById('addTimerMinuteBtn');
+  if (addBtn) addBtn.style.display = (state.mode !== 'stopwatch' && (state.isRunning || state.isPaused)) ? 'inline-flex' : 'none';
   happyFill.style.width = `${state.happiness}%`;
   happyPercent.textContent = Math.floor(state.happiness);
   character.style.width = `${state.characterWidth}px`;
@@ -4793,7 +4804,7 @@ function startTimer() {
   actionBtn.className = 'action-btn pause';
   stopBtn.style.display = 'block';
   
-  if (state.mode === 'focus') {
+  if (state.mode === 'focus' || state.mode === 'stopwatch') {
     startFloatingEmojis();
     updateCharacterAppearance();
     renderBook();
@@ -4812,6 +4823,10 @@ function startTimer() {
       state.stopwatchTime = state.timerInitialLeft + elapsed;
     } else {
       state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
+    }
+    if (state.mode === 'stopwatch') {
+      updateCharacterAppearance();
+      renderBook();
     }
     updateDisplay();
     if (state.mode !== 'stopwatch' && state.timeLeft <= 0) {
@@ -4861,6 +4876,7 @@ function resumeTimer() {
 }
 
 function stopTimer() {
+  if (!confirm('Stop this session now? Your progress so far can still be counted if eligible.')) return;
   state.isRunning = false;
   state.isPaused = false;
   clearInterval(state.timerInterval);
@@ -4886,13 +4902,24 @@ function stopTimer() {
     } else {
     alert(`⏱️ Stopwatch stopped at ${duration} minutes. Study 5+ minutes to earn coins!`);
     }
+    if (duration >= 1 && confirm('Save this stopwatch session to your study graph/tags?')) {
+      showColorSelection(duration);
+    }
     
     state.stopwatchTime = 0;
   } else {
+    const elapsedMins = Math.max(0, Math.floor((state.timerInitialLeft - state.timeLeft) / 60));
+    if (elapsedMins >= 5) {
+      const todayStr = getTodayDateString();
+      state.studyMinutes[todayStr] = (state.studyMinutes[todayStr] || 0) + elapsedMins;
+      if (elapsedMins > state.longestSession) state.longestSession = elapsedMins;
+      const coinsEarned = Math.floor(elapsedMins / 5) * 2;
+      if (coinsEarned > 0) gainReward(coinsEarned);
+    }
     state.timeLeft = state.durations[state.mode] * 60;
     const penalty = Math.floor(Math.random() * 11) + 5;
     updateHappiness(-penalty);
-    alert(`❌ Stopped mid-session! Lost ${penalty}% happiness`);
+    alert(`❌ Stopped mid-session! Lost ${penalty}% happiness${elapsedMins >= 5 ? `, but you still got credit for ${elapsedMins}m studied.` : ''}`);
   }
   
   sessionLabel.textContent = 'Ready to focus';
@@ -5153,7 +5180,7 @@ document.getElementById('focusDurationSetting').addEventListener('click', () => 
 
 document.getElementById('longBreakSetting').addEventListener('click', () => {
   editingTimer = 'long';
-  document.getElementById('timeModalTitle').textContent = 'Set Long Break';
+  document.getElementById('timeModalTitle').textContent = 'Set Breaks';
   document.getElementById('minutesInput').value = state.durations.long;
   document.getElementById('timeModal').classList.add('active');
 });
@@ -5521,12 +5548,47 @@ function renderShop() {
       container.appendChild(el);
     });
     
+  } else if (currentShopCategory === 'premium-cosmetics') {
+    if (!state.isPremium) {
+      container.innerHTML = '<div style="padding:12px;border-radius:12px;background:rgba(255,184,77,0.12);font-weight:700;">Premium required for this tab.</div>';
+      return;
+    }
+    const premiumFree = [
+      {id:'premium-crown',name:'Royal Crown',icon:'👑'},
+      {id:'premium-glow',name:'Golden Aura',icon:'✨'},
+      {id:'premium-shades',name:'Elite Shades',icon:'🕶️'}
+    ];
+    premiumFree.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'shop-item owned';
+      const equipped = state.equippedCosmetic === item.id;
+      if (equipped) el.classList.add('equipped');
+      el.innerHTML = `
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-price">${equipped ? 'Equipped' : 'Equip (Free)'}</div>
+      `;
+      el.addEventListener('click', () => {
+        state.equippedCosmetic = state.equippedCosmetic === item.id ? null : item.id;
+        renderCosmetic();
+        saveState();
+        renderShop();
+      });
+      container.appendChild(el);
+    });
+
   } else if (currentShopCategory === 'backgrounds') {
     backgrounds.forEach(bg => {
       const el = document.createElement('div');
       el.className = 'bg-item';
       el.style.background = bg.gradient;
       el.style.backgroundSize = '200% 200%';
+      if (bg.price >= 120) {
+        el.style.backgroundImage = `${bg.gradient}, radial-gradient(circle at 20% 20%, rgba(255,255,255,0.22), transparent 40%), repeating-linear-gradient(45deg, rgba(255,215,0,0.08) 0 10px, rgba(0,0,0,0.05) 10px 20px)`;
+        el.style.boxShadow = '0 10px 22px rgba(0,0,0,0.22), inset 0 0 24px rgba(255,215,0,0.2)';
+      } else if (bg.price >= 60) {
+        el.style.backgroundImage = `${bg.gradient}, repeating-linear-gradient(135deg, rgba(255,255,255,0.10) 0 12px, rgba(0,0,0,0.03) 12px 24px)`;
+      }
       
       const discountedPrice = Math.floor(bg.price * (1 - bgDiscount));
       const canAfford = state.coins >= discountedPrice;
@@ -5596,20 +5658,38 @@ document.getElementById('nextMonth').addEventListener('click', () => {
 });
 
 document.getElementById('gcalBtn').addEventListener('click', () => {
-  // Try to open app first, fallback to web
-  window.location.href = 'googlecalendar://';
-  
-  // Fallback to web after 500ms if app doesn't open
-  setTimeout(() => {
-    window.open('https://calendar.google.com', '_blank');
-  }, 500);
+  window.open('https://calendar.google.com', '_blank');
+  const pick = prompt('Open calendar app quickly:\\n1 = Google Calendar\\n2 = Apple Calendar\\n3 = Outlook Calendar\\n(leave blank to stay on web)');
+  if (pick === '1') window.location.href = 'googlecalendar://';
+  if (pick === '2') window.location.href = 'calshow://';
+  if (pick === '3') window.location.href = 'ms-outlook://calendar';
 });
+if (!document.getElementById('calendarQuickApps')) {
+  const quick = document.createElement('div');
+  quick.id = 'calendarQuickApps';
+  quick.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;';
+  quick.innerHTML = `
+    <button class="gcal-btn" id="quickGoogleCalBtn" style="margin:0;">Google Cal</button>
+    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">Apple Cal</button>
+    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">Outlook</button>
+  `;
+  document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick);
+  document.getElementById('quickGoogleCalBtn').addEventListener('click', () => { window.location.href = 'googlecalendar://'; });
+  document.getElementById('quickAppleCalBtn').addEventListener('click', () => { window.location.href = 'calshow://'; });
+  document.getElementById('quickOutlookCalBtn').addEventListener('click', () => { window.location.href = 'ms-outlook://calendar'; });
+}
 
 document.getElementById('graphRange')?.addEventListener('change', () => {
   renderGraph();
 });
 document.getElementById('refreshGraph')?.addEventListener('click', () => {
   renderGraph();
+});
+if (!document.getElementById('fullscreenStudyChartBtn')) {
+  document.getElementById('refreshGraph')?.insertAdjacentHTML('afterend', '<button id=\"fullscreenStudyChartBtn\" class=\"gcal-btn\" style=\"margin-top:8px;\">⛶ Fullscreen Chart</button>');
+}
+document.getElementById('fullscreenStudyChartBtn')?.addEventListener('click', () => {
+  document.getElementById('studyChart')?.requestFullscreen?.();
 });
 
 // Hamburger → Chat
@@ -6190,6 +6270,16 @@ document.getElementById('addCoins100Btn').addEventListener('click', () => {
   saveState();
 });
 
+document.getElementById('addTimerMinuteBtn')?.addEventListener('click', () => {
+  if (state.mode === 'stopwatch') return;
+  state.timeLeft += 60;
+  if (state.isRunning || state.isPaused) {
+    state.timerInitialLeft += 60;
+  }
+  updateDisplay();
+  saveState();
+});
+
 document.getElementById('addCarrots5Btn').addEventListener('click', () => {
   state.carrots += 5;
   document.getElementById('carrotsInput').value = state.carrots;
@@ -6321,6 +6411,47 @@ document.getElementById('clearTodosAdminBtn').addEventListener('click', () => {
   }
 });
 
+document.getElementById('clearDeviceAdminBtn')?.addEventListener('click', async () => {
+  if (!confirm('Clear all data/cache on THIS device only and remove username?')) return;
+  localStorage.clear();
+  sessionStorage.clear();
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  }
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+  }
+  alert('✅ Device data cleared. App will reload.');
+  location.reload();
+});
+
+document.getElementById('exportDbAdminBtn')?.addEventListener('click', async () => {
+  const password = document.getElementById('adminPassword').value || prompt('Re-enter admin password to export DB:');
+  if (!password) return;
+  const res = await fetch('/admin-export-db', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password}) });
+  const data = await res.json();
+  if (!data.success) return alert(`❌ ${data.error || 'Export failed'}`);
+  const raw = JSON.stringify(data.dump);
+  await navigator.clipboard.writeText(raw);
+  alert(`✅ Database copied to clipboard (${raw.length} chars). Save this text safely.`);
+});
+
+document.getElementById('importDbAdminBtn')?.addEventListener('click', async () => {
+  const password = document.getElementById('adminPassword').value || prompt('Re-enter admin password to import DB:');
+  if (!password) return;
+  const raw = prompt('Paste the raw exported database JSON:');
+  if (!raw) return;
+  let dump;
+  try { dump = JSON.parse(raw); } catch { return alert('❌ Invalid JSON'); }
+  const res = await fetch('/admin-import-db', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password, dump}) });
+  const data = await res.json();
+  if (!data.success) return alert(`❌ ${data.error || 'Import failed'}`);
+  alert('✅ Database imported. Reloading app.');
+  location.reload();
+});
+
 // Death modal
 document.getElementById('okDeathBtn').addEventListener('click', () => {
   document.getElementById('deathModal').classList.remove('active');
@@ -6405,11 +6536,12 @@ function saveState() {
     currentCalendarMonth: state.currentCalendarMonth,
     currentCalendarYear: state.currentCalendarYear,
     studyingDisabledUntil: state.studyingDisabledUntil,
-	studyingDisabledUntil: state.studyingDisabledUntil,
     charOffsetX: state.charOffsetX || 0,
     charOffsetY: state.charOffsetY || 0,
     isRunning: state.isRunning,
     isPaused: state.isPaused,
+    timerStartedAt: state.timerStartedAt,
+    timerInitialLeft: state.timerInitialLeft,
     mode: state.mode,
     timeLeft: state.timeLeft,
     stopwatchTime: state.stopwatchTime,
@@ -6437,13 +6569,22 @@ function loadState() {
       // Clear expired study cooldown
       if (state.studyingDisabledUntil && Date.now() >= state.studyingDisabledUntil) {
         state.studyingDisabledUntil = null;
-    state.premiumSurvey = null;
-    state.aiPlanLastGeneratedDate = null;
-    state.premiumSavedStudyPlans = [];
       }
       
       // Auto-pause if session was running on reload
       if (state.isRunning && !state.isPaused) {
+        if (state.timerStartedAt && state.timerInitialLeft !== null && state.timerInitialLeft !== undefined) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - state.timerStartedAt) / 1000));
+          if (state.mode === 'stopwatch') {
+            state.stopwatchTime = state.timerInitialLeft + elapsed;
+          } else {
+            state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
+            if (state.timeLeft === 0) {
+              completeSession();
+              return;
+            }
+          }
+        }
         state.isPaused = true;
         state.isRunning = false;
         
@@ -6588,7 +6729,7 @@ document.getElementById('rawStatsBtnAdmin')?.addEventListener('click', () => {
   output += `├─ Stopwatch Time: ${state.stopwatchTime}s\n`;
   output += `├─ Pause Elapsed: ${state.pauseElapsed}s\n`;
   output += `├─ Focus Duration: ${state.durations.focus} min\n`;
-  output += `├─ Long Break Duration: ${state.durations.long} min\n`;
+  output += `├─ Breaks Duration: ${state.durations.long} min\n`;
   output += `└─ Studying Disabled Until: ${state.studyingDisabledUntil ? new Date(state.studyingDisabledUntil).toLocaleTimeString() : 'Not disabled'}\n\n`;
   
   // Settings
@@ -7499,11 +7640,18 @@ function updatePremiumUI() {
     if (centerBtn) centerBtn.style.display = 'block';
     if (statsBtn) statsBtn.style.display = 'block';
     if (nameLabel && state.username) nameLabel.classList.add('premium-gold');
+    document.body.classList.add('premium-royalty');
+    const premiumShopTab = document.getElementById('premiumCosmeticsTab');
+    if (premiumShopTab) premiumShopTab.style.display = 'inline-block';
   } else {
     if (settingsBtn) settingsBtn.style.display = state.username ? 'block' : 'none';
     if (centerBtn) centerBtn.style.display = 'none';
     if (statsBtn) statsBtn.style.display = 'none';
     if (nameLabel) nameLabel.classList.remove('premium-gold');
+    document.body.classList.remove('premium-royalty');
+    const premiumShopTab = document.getElementById('premiumCosmeticsTab');
+    if (premiumShopTab) premiumShopTab.style.display = 'none';
+    if (currentShopCategory === 'premium-cosmetics') { currentShopCategory = 'cosmetics'; }
   }
 }
 
@@ -7539,7 +7687,7 @@ document.getElementById('redeemPremiumBtn').addEventListener('click', async () =
       saveState();
       updatePremiumUI();
       document.getElementById('premiumCodeModal').classList.remove('active');
-      setTimeout(() => alert('✨🎉 PREMIUM UNLOCKED! You now have upgraded layouts, saved plans, vaults, and MUCH more!'), 200);
+      setTimeout(() => alert('✨🎉 PREMIUM UNLOCKED! You now have upgraded layouts, saved plans, savess, and MUCH more!'), 200);
     } else {
       statusEl.style.color='#FF6B6B';
       statusEl.textContent = `❌ ${data.error||'Invalid code'}`;
@@ -7586,9 +7734,15 @@ function openPremiumCenter() {
     data:{labels:labels14,datasets:[{label:'Minutes',data:last14,backgroundColor:'rgba(255,184,77,0.6)',borderColor:'rgba(255,184,77,1)',borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>v+'m',font:{size:9}}}}}
   });
-  const vault = document.getElementById('premiumVaultContent');
+  if (!document.getElementById('fullscreenPremiumChartBtn')) {
+    canvas.insertAdjacentHTML('afterend', '<button id="fullscreenPremiumChartBtn" class="gcal-btn" style="margin-bottom:10px;">⛶ Fullscreen Premium Chart</button>');
+    document.getElementById('fullscreenPremiumChartBtn').addEventListener('click', () => {
+      document.getElementById('premiumChart')?.requestFullscreen?.();
+    });
+  }
+  const saves = document.getElementById('premiumSavesContent');
   const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
-  vault.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,220))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
+  saves.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,1200))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
   document.getElementById('studyPlanOutput').style.display = 'none';
   document.getElementById('premiumCenterModal').classList.add('active');
 }
@@ -7599,9 +7753,18 @@ document.getElementById('closePremiumCenterBtn').addEventListener('click', () =>
   document.getElementById('premiumCenterModal').classList.remove('active');
 });
 
+function showPremiumTab(tabId) {
+  ['premiumAnalyticsTab','premiumAITab','premiumSavesTab'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.transition = 'opacity 0.22s ease';
+    el.style.opacity = (id === tabId) ? '1' : '0';
+    el.style.display = (id === tabId) ? 'block' : 'none';
+  });
+}
+
 document.getElementById('premTabAnalytics').addEventListener('click', () => {
-  document.getElementById('premiumAnalyticsTab').style.display = 'block';
-  document.getElementById('premiumAITab').style.display = 'none';
+  showPremiumTab('premiumAnalyticsTab');
   document.getElementById('premTabAnalytics').style.borderBottomColor = '#FFB84D';
   document.getElementById('premTabAnalytics').style.color = '#2D3142';
   document.getElementById('premTabAnalytics').style.fontWeight = '700';
@@ -7611,9 +7774,7 @@ document.getElementById('premTabAnalytics').addEventListener('click', () => {
 });
 
 document.getElementById('premTabAI').addEventListener('click', () => {
-  document.getElementById('premiumAITab').style.display = 'block';
-  document.getElementById('premiumAnalyticsTab').style.display = 'none';
-  document.getElementById('premiumVaultTab').style.display = 'none';
+  showPremiumTab('premiumAITab');
   document.getElementById('premTabAI').style.borderBottomColor = '#FFB84D';
   document.getElementById('premTabAI').style.color = '#2D3142';
   document.getElementById('premTabAI').style.fontWeight = '700';
@@ -7623,10 +7784,8 @@ document.getElementById('premTabAI').addEventListener('click', () => {
 });
 
 
-document.getElementById('premTabVault').addEventListener('click', () => {
-  document.getElementById('premiumVaultTab').style.display = 'block';
-  document.getElementById('premiumAITab').style.display = 'none';
-  document.getElementById('premiumAnalyticsTab').style.display = 'none';
+document.getElementById('premTabSaves').addEventListener('click', () => {
+  showPremiumTab('premiumSavesTab');
 });
 
 
@@ -7647,9 +7806,9 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
   const pendingTasks = state.todos.filter(t=>!t.completed).map(t=>t.text);
   const completedTasks = state.todos.filter(t=>t.completed).length;
   const todayKey = new Date().toISOString().slice(0,10);
-  if (state.aiPlanLastGeneratedDate === todayKey) {
+  if (state.aiConversationUsed || state.aiPlanLastGeneratedDate === todayKey) {
     output.style.display='block';
-    output.textContent='You already generated your AI plan today. Come back tomorrow.';
+    output.textContent='You already used your one AI conversation this session.';
     btn.disabled=false; btn.textContent='🤖 Generate My Study Plan';
     return;
   }
@@ -7662,8 +7821,24 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
     if (data.success) {
       output.innerHTML = formatSimpleMarkdown(data.plan);
       state.aiPlanLastGeneratedDate = todayKey;
+      if (!Array.isArray(state.aiConversationMessages)) state.aiConversationMessages = [];
+      state.aiConversationMessages.push(`AI: ${data.plan}`);
+      const followUp = prompt('Reply once to refine your plan (e.g., What times are you free?):') || '';
+      if (followUp.trim()) {
+        state.aiConversationMessages.push(`User: ${followUp.trim()}`);
+        const res2 = await fetch('/generate-study-plan', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks,motivationalQuotes,conversation:state.aiConversationMessages}})
+        });
+        const data2 = await res2.json();
+        if (data2.success) {
+          output.innerHTML = formatSimpleMarkdown(data2.plan);
+          state.aiConversationMessages.push(`AI: ${data2.plan}`);
+        }
+      }
+      state.aiConversationUsed = true;
       if (!Array.isArray(state.premiumSavedStudyPlans)) state.premiumSavedStudyPlans=[];
-      state.premiumSavedStudyPlans.unshift({date:todayKey, plan:data.plan});
+      state.premiumSavedStudyPlans.unshift({date:todayKey, plan: output.textContent || data.plan});
       state.premiumSavedStudyPlans = state.premiumSavedStudyPlans.slice(0,20);
       saveState();
       output.style.display = 'block';
@@ -7932,13 +8107,14 @@ document.getElementById('closeProfileBtn').addEventListener('click', () => {
 });
 
 let leaderboardPeriod = 'all';
+let leaderboardCache = { all: null, weekly: null, ts: 0 };
 function setLeaderboardTab(period) {
   leaderboardPeriod = period;
   document.getElementById('lbAllTimeTab').classList.toggle('active', period === 'all');
   document.getElementById('lbWeeklyTab').classList.toggle('active', period === 'weekly');
 }
 
-async function openLeaderboard() {
+async function openLeaderboard(forceRefresh = false) {
   if (!requiresInternet('Leaderboard')) return;
   const list = document.getElementById('leaderboardList');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:#6B7080;">Loading...</div>';
@@ -7946,8 +8122,16 @@ async function openLeaderboard() {
   await syncLeaderboard();
 
   try {
-    const res = await fetch(`/leaderboard?period=${leaderboardPeriod}`);
-    const users = await res.json();
+    const key = leaderboardPeriod === 'weekly' ? 'weekly' : 'all';
+    let users;
+    if (!forceRefresh && leaderboardCache[key] && (Date.now() - leaderboardCache.ts) < (10 * 60 * 1000)) {
+      users = leaderboardCache[key];
+    } else {
+      const res = await fetch(`/leaderboard?period=${leaderboardPeriod}`);
+      users = await res.json();
+      leaderboardCache[key] = users;
+      leaderboardCache.ts = Date.now();
+    }
 
     list.innerHTML = '';
   list.style.display='flex';
@@ -8099,6 +8283,10 @@ window.addEventListener('beforeunload', saveState);
 window.addEventListener('pagehide', saveState);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saveState();
+  if (!document.hidden) {
+    const modal = document.getElementById('leaderboardModal');
+    if (modal && modal.classList.contains('active')) openLeaderboard(true);
+  }
 });
 
 // === KEEP-AWAKE ===
@@ -8123,3 +8311,7 @@ setInterval(() => {
 
 </body>
 </html>
+
+
+document.getElementById('studyChart')?.addEventListener('dblclick', () => { document.getElementById('studyChart').requestFullscreen?.(); });
+document.getElementById('premiumChart')?.addEventListener('dblclick', () => { document.getElementById('premiumChart').requestFullscreen?.(); });
