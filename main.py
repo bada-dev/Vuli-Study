@@ -871,6 +871,10 @@ def generate_study_plan():
             return jsonify({'success': False, 'error': 'Premium required'})
         study_data = data.get('studyData', {})
         quotes = study_data.get('motivationalQuotes', [])
+        convo = study_data.get('conversation', [])
+        convo_text = ""
+        if isinstance(convo, list) and convo:
+            convo_text = "\\nConversation context (latest first):\\n" + "\\n".join([str(x)[:500] for x in convo[:6]])
         prompt = f"""You are an expert study advisor analyzing a student named "{username}".
 
 Study Statistics:
@@ -891,9 +895,9 @@ Create a personalized, motivating study plan:
 
 Mandatory output formatting rules:
 - Use plain text only (no markdown symbols like ** or __).
-- Mention at least one quote verbatim from this list: {quotes}
 
-Keep it under 350 words. Be encouraging and specific."""
+Keep it under 350 words. Be encouraging and specific.
+{convo_text}"""
 
         for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
             if not api_key:
