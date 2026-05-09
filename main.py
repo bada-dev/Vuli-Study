@@ -469,6 +469,53 @@ def admin_get_user():
     finally:
         conn.close()
 
+
+@app.route('/admin-export-db', methods=['POST'])
+def admin_export_db():
+    data = request.get_json()
+    if data.get('password') != ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    conn = get_db()
+    try:
+        tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()]
+        dump = {}
+        for t in tables:
+            rows = conn.execute(f'SELECT * FROM {t}').fetchall()
+            dump[t] = [dict(r) for r in rows]
+        return jsonify({'success': True, 'dump': dump, 'exported_at': int(time.time())})
+    finally:
+        conn.close()
+
+@app.route('/admin-import-db', methods=['POST'])
+def admin_import_db():
+    data = request.get_json()
+    if data.get('password') != ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    dump = data.get('dump')
+    if not isinstance(dump, dict):
+        return jsonify({'success': False, 'error': 'Invalid dump'})
+    conn = get_db()
+    try:
+        conn.execute('PRAGMA foreign_keys=OFF')
+        for table, rows in dump.items():
+            if not isinstance(rows, list):
+                continue
+            conn.execute(f'DELETE FROM {table}')
+            for row in rows:
+                if not isinstance(row, dict) or not row:
+                    continue
+                cols = list(row.keys())
+                vals = [row[c] for c in cols]
+                q = ','.join('?' for _ in cols)
+                conn.execute(f"INSERT INTO {table} ({','.join(cols)}) VALUES ({q})", vals)
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        conn.close()
+
 def call_ai(api_key, prompt):
     api_key = (api_key or '').strip().strip('"').strip("'")
     if not api_key:
@@ -485,7 +532,10 @@ def call_ai(api_key, prompt):
         data = json.dumps({
             "model": model,
             'max_tokens': 1000,
-            'messages': [{'role': 'user', 'content': prompt}]
+            'messages': [
+                {'role': 'system', 'content': 'You are Study Buddy AI. You are speaking directly to the student. Give concrete study plans, not just descriptions. Keep tone natural and concise. Ask one helpful follow-up question at the end to improve the plan. Use quotes sparingly and only when they improve clarity.'},
+                {'role': 'user', 'content': prompt}
+            ]
         }).encode('utf-8')
         req = urllib.request.Request(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -821,6 +871,10 @@ def generate_study_plan():
             return jsonify({'success': False, 'error': 'Premium required'})
         study_data = data.get('studyData', {})
         quotes = study_data.get('motivationalQuotes', [])
+        convo = study_data.get('conversation', [])
+        convo_text = ""
+        if isinstance(convo, list) and convo:
+            convo_text = "\\nConversation context (latest first):\\n" + "\\n".join([str(x)[:500] for x in convo[:6]])
         prompt = f"""You are an expert study advisor analyzing a student named "{username}".
 
 Study Statistics:
@@ -841,9 +895,9 @@ Create a personalized, motivating study plan:
 
 Mandatory output formatting rules:
 - Use plain text only (no markdown symbols like ** or __).
-- Mention at least one quote verbatim from this list: {quotes}
 
-Keep it under 350 words. Be encouraging and specific."""
+Keep it under 350 words. Be encouraging and specific.
+{convo_text}"""
 
         for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
             if not api_key:
