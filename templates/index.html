@@ -7737,7 +7737,10 @@ function openPremiumCenter() {
   if (!document.getElementById('fullscreenPremiumChartBtn')) {
     canvas.insertAdjacentHTML('afterend', '<button id="fullscreenPremiumChartBtn" class="gcal-btn" style="margin-bottom:10px;">⛶ Fullscreen Premium Chart</button>');
     document.getElementById('fullscreenPremiumChartBtn').addEventListener('click', () => {
-    
+      document.getElementById('premiumChart').requestFullscreen?.();
+    });
+  }
+
   const saves = document.getElementById('premiumSavesContent');
   const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
   saves.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,1200))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
