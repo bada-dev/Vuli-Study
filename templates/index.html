@@ -6540,6 +6540,8 @@ function saveState() {
     charOffsetY: state.charOffsetY || 0,
     isRunning: state.isRunning,
     isPaused: state.isPaused,
+    timerStartedAt: state.timerStartedAt,
+    timerInitialLeft: state.timerInitialLeft,
     mode: state.mode,
     timeLeft: state.timeLeft,
     stopwatchTime: state.stopwatchTime,
@@ -6571,6 +6573,18 @@ function loadState() {
       
       // Auto-pause if session was running on reload
       if (state.isRunning && !state.isPaused) {
+        if (state.timerStartedAt && state.timerInitialLeft !== null && state.timerInitialLeft !== undefined) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - state.timerStartedAt) / 1000));
+          if (state.mode === 'stopwatch') {
+            state.stopwatchTime = state.timerInitialLeft + elapsed;
+          } else {
+            state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
+            if (state.timeLeft === 0) {
+              completeSession();
+              return;
+            }
+          }
+        }
         state.isPaused = true;
         state.isRunning = false;
         
