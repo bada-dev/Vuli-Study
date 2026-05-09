@@ -5660,6 +5660,20 @@ document.getElementById('gcalBtn').addEventListener('click', () => {
   if (pick === '2') window.location.href = 'calshow://';
   if (pick === '3') window.location.href = 'ms-outlook://calendar';
 });
+if (!document.getElementById('calendarQuickApps')) {
+  const quick = document.createElement('div');
+  quick.id = 'calendarQuickApps';
+  quick.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;';
+  quick.innerHTML = `
+    <button class="gcal-btn" id="quickGoogleCalBtn" style="margin:0;">Google Cal</button>
+    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">Apple Cal</button>
+    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">Outlook</button>
+  `;
+  document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick);
+  document.getElementById('quickGoogleCalBtn').addEventListener('click', () => { window.location.href = 'googlecalendar://'; });
+  document.getElementById('quickAppleCalBtn').addEventListener('click', () => { window.location.href = 'calshow://'; });
+  document.getElementById('quickOutlookCalBtn').addEventListener('click', () => { window.location.href = 'ms-outlook://calendar'; });
+}
 
 document.getElementById('graphRange')?.addEventListener('change', () => {
   renderGraph();
