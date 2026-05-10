@@ -5672,8 +5672,7 @@ if (!document.getElementById('calendarQuickApps')) {
     <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">🍎 Open Apple Calendar</button>
     <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">📄 Open Outlook Calendar</button>
   `;
-  document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick);
-  document.getElementById('quickGoogleCalBtn').addEventListener('click', () => { window.location.href = 'googlecalendar://'; });
+  document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick); // damn..
   document.getElementById('quickAppleCalBtn').addEventListener('click', () => { window.location.href = 'calshow://'; });
   document.getElementById('quickOutlookCalBtn').addEventListener('click', () => { window.location.href = 'ms-outlook://calendar'; });
 }
