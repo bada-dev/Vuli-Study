@@ -5659,7 +5659,7 @@ document.getElementById('nextMonth').addEventListener('click', () => {
 
 document.getElementById('gcalBtn').addEventListener('click', () => {
   window.open('https://calendar.google.com', '_blank');
-  const pick = prompt('Open calendar app quickly:\\n1 = Google Calendar\\n2 = Apple Calendar\\n3 = Outlook Calendar\\n(leave blank to stay on web)');
+  const pick = prompt('Open calendar app quickly:\\n1 = Google Calendar\\n2 = Apple Calendar\\n3 = Outlook Calendar\\n(leave blank to stay on web)'); // google calendar  buttons
   if (pick === '1') window.location.href = 'googlecalendar://';
   if (pick === '2') window.location.href = 'calshow://';
   if (pick === '3') window.location.href = 'ms-outlook://calendar';
@@ -5669,9 +5669,8 @@ if (!document.getElementById('calendarQuickApps')) {
   quick.id = 'calendarQuickApps';
   quick.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;';
   quick.innerHTML = `
-    <button class="gcal-btn" id="quickGoogleCalBtn" style="margin:0;">Google Cal</button>
-    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">Apple Cal</button>
-    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">Outlook</button>
+    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">🍎 Open Apple Calendar</button>
+    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">📄 Open Outlook Calendar</button>
   `;
   document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick);
   document.getElementById('quickGoogleCalBtn').addEventListener('click', () => { window.location.href = 'googlecalendar://'; });
