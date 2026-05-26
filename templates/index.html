@@ -350,6 +350,7 @@ body.premium-royalty {
   height: 100%;
   background: linear-gradient(135deg, #B8865C 0%, #A87652 50%, #986652 100%);
   position: relative;
+  z-index: 2;
   box-shadow: 0 10px 28px rgba(0,0,0,0.2);
   transition: all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
   border-radius: 48% 52% 48% 52% / 52% 55% 45% 48%;
@@ -1353,35 +1354,65 @@ body.premium-royalty {
 }
 
 .shop-tabs-grid {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 4px 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 0;
 }
-.shop-tabs-grid::-webkit-scrollbar { display: none; }
 
 .shop-tabs-grid .shop-tab {
-  flex: 0 0 auto;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  background: rgba(255,255,255,0.4);
+  padding: 14px 8px 12px;
+  border-radius: 18px;
+  font-size: 12.5px;
+  font-weight: 800;
+  background: linear-gradient(155deg, rgba(255,255,255,0.7), rgba(255,255,255,0.42));
   color: #5B4A3A;
-  border: 2px solid rgba(255,255,255,0.55);
+  border: 2px solid rgba(255,255,255,0.65);
   white-space: nowrap;
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+  min-height: 70px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  cursor: pointer;
+  letter-spacing: 0.2px;
 }
-
+.shop-tabs-grid .shop-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.4), transparent 60%);
+  pointer-events: none;
+}
 .shop-tabs-grid .shop-tab.active {
-  background: linear-gradient(135deg, #2D3142 0%, #4a4f63 100%);
+  background: linear-gradient(155deg, #2D3142 0%, #4a4f63 100%);
   color: #fff;
   border-color: #2D3142;
-  box-shadow: 0 4px 14px rgba(45,49,66,0.35);
+  box-shadow: 0 6px 20px rgba(45,49,66,0.45);
+  transform: translateY(-2px);
+}
+.shop-tabs-grid .shop-tab.active::before {
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18), transparent 60%);
+}
+.shop-tabs-grid .shop-tab:active {
+  transform: scale(0.96);
+}
+.shop-tabs-grid .shop-tab.premium-tab {
+  background: linear-gradient(155deg, #FFD700 0%, #FF8C00 50%, #FFD700 100%);
+  background-size: 200% 200%;
+  animation: goldShimmer 3.5s linear infinite;
+  border-color: rgba(255,215,0,0.7);
+  color: #3D1F00;
+}
+.shop-tabs-grid .shop-tab.premium-tab.active {
+  background: linear-gradient(155deg, #c8800a 0%, #8b5a0f 100%);
+  color: #fff;
+  animation: none;
 }
 
 .shop-tab {
@@ -3120,7 +3151,224 @@ button:disabled {
   height: 100%;
   background: linear-gradient(90deg, #FFD700, #FF8C00);
   border-radius: 999px;
-  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.premium-progress-fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  animation: progressShine 2.4s ease-in-out infinite;
+}
+@keyframes progressShine {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Smooth tab fade in premium center */
+#premiumAnalyticsTab, #premiumAITab, #premiumSavesTab {
+  animation: premPanelIn 0.32s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes premPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Animated counter pop */
+.premium-stat-value {
+  display: inline-block;
+  animation: statPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes statPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Heatmap (last 28 days as colored squares) */
+.premium-heatmap {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+}
+.premium-heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+  position: relative;
+  transition: transform 0.18s ease;
+}
+.premium-heatmap-cell:hover { transform: scale(1.4); z-index: 2; }
+.premium-heatmap-cell.lvl-1 { background: rgba(255,184,77,0.25); }
+.premium-heatmap-cell.lvl-2 { background: rgba(255,184,77,0.45); }
+.premium-heatmap-cell.lvl-3 { background: rgba(255,140,0,0.7); }
+.premium-heatmap-cell.lvl-4 { background: linear-gradient(135deg, #FFD700, #FF8C00); box-shadow: 0 0 6px rgba(255,165,0,0.5); }
+.premium-heatmap-cell.today { outline: 2px solid #2D3142; }
+
+/* ============================================
+   LIVENESS — micro-interactions and idle behaviors
+   ============================================ */
+
+/* Buddy looks around occasionally */
+.eye::after {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.character.look-left .eye::after  { transform: translate(-3px, 0); }
+.character.look-right .eye::after { transform: translate(3px, 0); }
+.character.look-up .eye::after    { transform: translate(0, -2px); }
+.character.look-down .eye::after  { transform: translate(0, 2px); }
+
+/* Buddy yawn when bored / low happiness */
+.character.yawning .character-mouth {
+  width: 24px !important; height: 28px !important;
+  border-radius: 50% !important;
+  background: #2D3142;
+  border: none !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  bottom: 50px !important;
+  transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Start button pulses gently when idle, inviting press */
+.action-btn:not(.pause):not(.stop):not(:disabled) {
+  animation: startPulse 2.8s ease-in-out infinite;
+}
+@keyframes startPulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(107,207,127,0.4); }
+  50%      { box-shadow: 0 8px 28px rgba(107,207,127,0.7), 0 0 0 6px rgba(107,207,127,0.12); }
+}
+.action-btn.pause { animation: none !important; }
+
+/* Timer display gently breathes while running */
+.timer-display { transition: text-shadow 0.4s ease, color 0.4s ease; }
+.timer-area.running .timer-display {
+  animation: timerBreath 4s ease-in-out infinite;
+}
+@keyframes timerBreath {
+  0%, 100% { text-shadow: 0 3px 12px rgba(0,0,0,0.15); }
+  50%      { text-shadow: 0 4px 24px rgba(107,207,127,0.45), 0 3px 12px rgba(0,0,0,0.15); }
+}
+
+/* Mode tab active gradient sweep */
+.mode-tab.active {
+  position: relative;
+  overflow: hidden;
+}
+.mode-tab.active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: modeTabShine 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes modeTabShine {
+  0%   { transform: translateX(-110%); }
+  60%  { transform: translateX(110%); }
+  100% { transform: translateX(110%); }
+}
+
+/* Nav item subtle scale-in on activation */
+.nav-item .nav-icon { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.nav-item:not(.active) .nav-icon { opacity: 0.78; }
+
+/* Stat cards animate in on stats page open */
+.stat-card {
+  animation: statCardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.stats-grid .stat-card:nth-child(1) { animation-delay: 0.04s; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: 0.10s; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: 0.16s; }
+.stats-grid .stat-card:nth-child(4) { animation-delay: 0.22s; }
+@keyframes statCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Todo item completion satisfaction */
+.todo-item.just-completed {
+  animation: todoCompleted 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes todoCompleted {
+  0%   { transform: scale(1); background: rgba(255,255,255,0.35); }
+  30%  { transform: scale(1.04); background: rgba(107,207,127,0.4); box-shadow: 0 8px 22px rgba(107,207,127,0.4); }
+  100% { transform: scale(1); background: rgba(255,255,255,0.35); }
+}
+.todo-checkbox { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease; }
+.todo-item.completed .todo-checkbox::after { animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes checkPop {
+  0%   { transform: translate(-50%, -50%) scale(0); }
+  60%  { transform: translate(-50%, -50%) scale(1.3); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Confetti */
+.confetti-piece {
+  position: fixed;
+  width: 10px; height: 14px;
+  pointer-events: none;
+  z-index: 99998;
+  border-radius: 2px;
+  animation: confettiFall var(--dur, 2s) cubic-bezier(0.2, 0.6, 0.6, 1) forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx, 0), 110vh) rotate(var(--rot, 720deg)); opacity: 0; }
+}
+
+/* Achievement popup — make it a real celebration */
+.reward-popup {
+  animation: rewardPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes rewardPopIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Page slide-in (direction-aware) */
+.page.active.slide-from-right { animation: slideFromRight 0.32s cubic-bezier(0.4,0,0.2,1); }
+.page.active.slide-from-left  { animation: slideFromLeft  0.32s cubic-bezier(0.4,0,0.2,1); }
+@keyframes slideFromRight { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideFromLeft  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Currency bump when coins/carrots change */
+.currency-item.bumping {
+  animation: currencyBump 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes currencyBump {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.18); box-shadow: 0 4px 14px rgba(255,184,77,0.5); }
+}
+
+/* Empty state illustrations */
+.empty-state {
+  text-align: center;
+  padding: 32px 20px;
+  color: #6B7080;
+}
+.empty-state-art {
+  font-size: 52px;
+  margin-bottom: 12px;
+  display: inline-block;
+  animation: emptyFloat 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.1));
+}
+@keyframes emptyFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-8px) rotate(-3deg); }
+}
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #2D3142;
+  margin-bottom: 4px;
+}
+.empty-state-text {
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Toast notification system */
@@ -3561,11 +3809,11 @@ button:disabled {
 
         <div id="shopDiscountBanner" style="margin-bottom:10px;"></div>
         <div class="shop-tabs-grid">
-          <button class="shop-tab active" data-category="items">🎒 Items</button>
-          <button class="shop-tab" data-category="cosmetics">🎩 Cosmetics</button>
-          <button class="shop-tab" data-category="premium-cosmetics" id="premiumCosmeticsTab" style="display:none;">✨ Premium</button>
-          <button class="shop-tab" data-category="emotes">😄 Emotes</button>
-          <button class="shop-tab" data-category="backgrounds">🌌 Backgrounds</button>
+          <button class="shop-tab active" data-category="items"><span style="font-size:22px;line-height:1;">🎒</span><span>Items</span></button>
+          <button class="shop-tab" data-category="cosmetics"><span style="font-size:22px;line-height:1;">🎩</span><span>Cosmetics</span></button>
+          <button class="shop-tab premium-tab" data-category="premium-cosmetics" id="premiumCosmeticsTab" style="display:none;"><span style="font-size:22px;line-height:1;">✨</span><span>Premium</span></button>
+          <button class="shop-tab" data-category="emotes"><span style="font-size:22px;line-height:1;">😄</span><span>Emotes</span></button>
+          <button class="shop-tab" data-category="backgrounds"><span style="font-size:22px;line-height:1;">🌌</span><span>Backgrounds</span></button>
         </div>
 
         <div class="shop-items" id="shopItems"></div>
@@ -4137,6 +4385,12 @@ button:disabled {
         <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let our AI analyze your study patterns and write you a personalised improvement plan.</div>
         <button class="modal-btn primary premium-btn-gold" id="generateStudyPlanBtn" style="width:100%;margin-bottom:14px;">Generate My Study Plan</button>
         <div id="studyPlanOutput" style="font-size:13px;line-height:1.8;color:#2D3142;white-space:pre-wrap;background:rgba(255,184,77,0.08);border:1px solid rgba(255,184,77,0.25);border-radius:14px;padding:14px;min-height:60px;display:none;"></div>
+        <div id="aiReplyBox" style="display:none;margin-top:14px;">
+          <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#8B5A0F;text-transform:uppercase;margin-bottom:6px;">One reply allowed</div>
+          <textarea id="aiReplyInput" maxlength="280" placeholder="Tell the AI what to adjust — your one shot..." style="width:100%;min-height:70px;padding:10px 12px;border:2px solid rgba(255,184,77,0.4);border-radius:12px;font-family:inherit;font-size:13px;background:#fffdf7;resize:none;outline:none;"></textarea>
+          <button class="modal-btn primary premium-btn-gold" id="aiReplySendBtn" style="width:100%;margin-top:8px;">Send Reply</button>
+        </div>
+        <div id="aiReplyDone" style="display:none;margin-top:10px;font-size:12px;color:#6B7080;text-align:center;font-style:italic;">You've used your reply for this plan.</div>
       </div>
     </div>
     <div style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);background:#fffdf7;">
@@ -4168,6 +4422,19 @@ button:disabled {
   <div class="reward-text">You earned:</div>
   <div class="reward-amount" id="rewardAmount">+2 🪙</div>
 </div>
+<!-- Stop Confirmation — single modal that shows credit + happiness impact -->
+<div class="modal" id="stopConfirmModal">
+  <div class="modal-content" style="max-width:340px;">
+    <div class="modal-title" id="stopConfirmTitle">Stop session?</div>
+    <div class="modal-text" id="stopConfirmText" style="line-height:1.6;">Your progress will be locked in now.</div>
+    <div id="stopConfirmDetails" style="background:rgba(0,0,0,0.04);border-radius:14px;padding:14px;margin-bottom:18px;text-align:left;font-size:13px;line-height:1.7;"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="stopConfirmCancel">Keep going</button>
+      <button class="modal-btn primary" id="stopConfirmOk" style="background:linear-gradient(135deg,#FF6B6B,#FF5B5B);">Stop now</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="sessionCompleteModal">
   <div class="modal-content">
     <div class="modal-title">🎉 Session Complete!</div>
@@ -4409,6 +4676,103 @@ function requiresInternet(featureName) {
     return false;
   }
   return true;
+}
+
+// === LIVENESS HELPERS ===
+
+// Buddy idle behaviors — look around occasionally, yawn when bored.
+let _idleInterval = null;
+function startBuddyIdleBehaviors() {
+  if (_idleInterval) clearInterval(_idleInterval);
+  _idleInterval = setInterval(() => {
+    if (!character || state.isDead || state.isReborning || state.isReviving) return;
+    // Don't override the focused mouth-line during sessions.
+    if (state.isRunning && (state.mode === 'focus' || state.mode === 'stopwatch')) return;
+
+    const action = Math.random();
+    if (action < 0.55) {
+      // Look in a random direction briefly
+      const dirs = ['look-left', 'look-right', 'look-up', 'look-down'];
+      const dir = dirs[Math.floor(Math.random() * dirs.length)];
+      character.classList.add(dir);
+      setTimeout(() => character.classList.remove(dir), 1100 + Math.random() * 800);
+    } else if (action < 0.75 && state.happiness < 60) {
+      // Bored yawn
+      character.classList.add('yawning');
+      setTimeout(() => character.classList.remove('yawning'), 1400);
+    }
+  }, 5500);
+}
+
+// Eye-tracking for the carrot being dragged.
+function pointEyesAt(clientX, clientY) {
+  if (!character) return;
+  const rect = character.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  character.classList.remove('look-left', 'look-right', 'look-up', 'look-down');
+  if (Math.abs(dx) > Math.abs(dy)) {
+    character.classList.add(dx < 0 ? 'look-left' : 'look-right');
+  } else {
+    character.classList.add(dy < 0 ? 'look-up' : 'look-down');
+  }
+}
+function clearEyeDirection() {
+  if (!character) return;
+  character.classList.remove('look-left', 'look-right', 'look-up', 'look-down');
+}
+
+// Confetti burst
+function confetti(intensity = 40) {
+  const colors = ['#FF6B6B', '#FFD700', '#6BCF7F', '#5096eb', '#9b59b6', '#FF8C42'];
+  for (let i = 0; i < intensity; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = `${30 + Math.random() * 40}%`;
+    p.style.top = `${30 + Math.random() * 20}%`;
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.setProperty('--dx', `${(Math.random() - 0.5) * 400}px`);
+    p.style.setProperty('--rot', `${360 + Math.random() * 720}deg`);
+    p.style.setProperty('--dur', `${1.4 + Math.random() * 1.6}s`);
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3200);
+  }
+}
+
+// Animated count-up for numbers (returns when complete).
+function countUp(el, target, duration = 700) {
+  if (!el) return;
+  const start = parseFloat(el.textContent) || 0;
+  if (start === target) { el.textContent = target; return; }
+  const startTime = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const val = Math.round(start + (target - start) * eased);
+    el.textContent = val;
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+// Bump currency display when value changes
+let _lastCoins = null, _lastCarrots = null;
+function maybeBumpCurrency() {
+  if (_lastCoins !== null && state.coins !== _lastCoins) {
+    document.querySelectorAll('.currency-item').forEach(el => {
+      if (el.querySelector('#coinsDisplay, #coinsDisplay2, #coinsDisplay3, #coinsDisplay4, #coinsDisplay5')) {
+        el.classList.remove('bumping');
+        void el.offsetWidth; // restart animation
+        el.classList.add('bumping');
+        setTimeout(() => el.classList.remove('bumping'), 600);
+      }
+    });
+  }
+  _lastCoins = state.coins;
+  _lastCarrots = state.carrots;
 }
 
 // === TOAST NOTIFICATION SYSTEM ===
@@ -5058,6 +5422,10 @@ function updateDisplay() {
   happyPercent.textContent = Math.floor(state.happiness);
   character.style.width = `${state.characterWidth}px`;
   document.querySelector('.character-shadow').style.width = `${Math.min(state.characterWidth * 0.7, 180)}px`;
+  // Timer-area breath while running
+  const timerArea = document.querySelector('.timer-area');
+  if (timerArea) timerArea.classList.toggle('running', !!(state.isRunning && !state.isPaused));
+  maybeBumpCurrency();
   updateCurrencyDisplays();
   updateStats();
   updateCharacterAppearance();
@@ -5289,12 +5657,14 @@ function showAchievementUnlock(ach) {
   const popup = document.createElement('div');
   popup.className = 'reward-popup show';
   popup.innerHTML = `
-    <div class="reward-title">Achievement Unlocked!</div>
+    <div class="reward-title">Achievement Unlocked</div>
     <div style="font-size: 48px; margin: 10px 0;">${ach.icon}</div>
     <div class="reward-text" style="font-weight: 700; font-size: 16px;">${ach.name}</div>
     <div class="reward-amount" style="font-size: 13px; color: #6B7080;">${ach.desc}</div>
   `;
   document.body.appendChild(popup);
+  // Confetti celebration
+  confetti(50);
   setTimeout(() => {
     popup.classList.remove('show');
     setTimeout(() => popup.remove(), 500);
@@ -5631,54 +6001,93 @@ function resumeTimer() {
 }
 
 function stopTimer() {
-  if (!confirm('Stop this session now? Your progress so far can still be counted if eligible.')) return;
+  // Compute preview of what will happen so we can show it in the confirm modal.
+  let elapsedMins = 0;
+  if (state.mode === 'stopwatch') {
+    elapsedMins = Math.floor(state.stopwatchTime / 60);
+  } else {
+    elapsedMins = Math.max(0, Math.floor((state.timerInitialLeft - state.timeLeft) / 60));
+  }
+
+  // Penalty only applies to focus sessions — breaks are never punished.
+  const isFocusLike = state.mode === 'focus' || state.mode === 'stopwatch';
+  const penalty = isFocusLike ? (Math.floor(Math.random() * 11) + 5) : 0;
+  let coinsEarned = elapsedMins >= 5 ? Math.floor(elapsedMins / 5) * 2 : 0;
+  if (coinsEarned > 0 && state.hasBook) coinsEarned = Math.floor(coinsEarned * 1.5);
+
+  // Build the consequences summary
+  const lines = [];
+  if (state.mode === 'long') {
+    lines.push('<div>Ending your break early — no penalty.</div>');
+  } else {
+    if (elapsedMins >= 5) {
+      lines.push(`<div><strong style="color:#2D6B3A;">+${elapsedMins} min</strong> credited to today's study time</div>`);
+      if (coinsEarned > 0) lines.push(`<div><strong style="color:#8B5A1B;">+${coinsEarned} 🪙</strong> earned${state.hasBook ? ' (Study Book bonus applied)' : ''}</div>`);
+    } else {
+      lines.push(`<div style="color:#6B7080;">No coins this time — focus 5+ minutes to earn rewards.</div>`);
+    }
+    if (penalty > 0) lines.push(`<div><strong style="color:#C04848;">−${penalty}%</strong> happiness for stopping early</div>`);
+  }
+  document.getElementById('stopConfirmTitle').textContent = state.mode === 'long' ? 'End break now?' : 'Stop session now?';
+  document.getElementById('stopConfirmText').textContent = state.mode === 'long'
+    ? 'You can start a focus session right after.'
+    : 'Here\'s what you\'ll lock in:';
+  document.getElementById('stopConfirmDetails').innerHTML = lines.join('');
+  document.getElementById('stopConfirmModal').classList.add('active');
+
+  // One-shot handlers
+  const okBtn = document.getElementById('stopConfirmOk');
+  const cancelBtn = document.getElementById('stopConfirmCancel');
+  const close = () => document.getElementById('stopConfirmModal').classList.remove('active');
+  const onCancel = () => { close(); cleanup(); };
+  const onOk = () => {
+    close(); cleanup();
+    finalizeStop(elapsedMins, coinsEarned, penalty);
+  };
+  function cleanup() {
+    okBtn.removeEventListener('click', onOk);
+    cancelBtn.removeEventListener('click', onCancel);
+  }
+  okBtn.addEventListener('click', onOk);
+  cancelBtn.addEventListener('click', onCancel);
+}
+
+function finalizeStop(elapsedMins, coinsEarned, penalty) {
   state.isRunning = false;
   state.isPaused = false;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
-  
+
   if (state.mode === 'stopwatch') {
-    const duration = Math.floor(state.stopwatchTime / 60);
-    
-    if (duration >= 5) {
-    let coinsEarned = Math.floor(duration / 5) * 2;
-    if (state.hasBook) {
-        coinsEarned = Math.floor(coinsEarned * 1.5);
-        state.hasBook = false;
+    if (elapsedMins >= 5) {
+      if (state.hasBook) state.hasBook = false;
+      const todayStr = getTodayDateString();
+      state.studyMinutes[todayStr] = (state.studyMinutes[todayStr] || 0) + elapsedMins;
+      if (elapsedMins > state.longestSession) state.longestSession = elapsedMins;
+      gainReward(coinsEarned);
     }
-    const todayStr = getTodayDateString();
-    state.studyMinutes[todayStr] = (state.studyMinutes[todayStr] || 0) + duration;
-  
-    if (duration > state.longestSession) {
-        state.longestSession = duration;
+    if (elapsedMins >= 1) {
+      // Skip the second confirm — go straight to color tag picker
+      showColorSelection(elapsedMins);
     }
-  
-    gainReward(coinsEarned); // Popup shows reward, no alert needed
-    } else {
-    alert(`⏱️ Stopwatch stopped at ${duration} minutes. Study 5+ minutes to earn coins!`);
-    }
-    if (duration >= 1 && confirm('Save this stopwatch session to your study graph/tags?')) {
-      showColorSelection(duration);
-    }
-    
     state.stopwatchTime = 0;
-  } else {
-    const elapsedMins = Math.max(0, Math.floor((state.timerInitialLeft - state.timeLeft) / 60));
+  } else if (state.mode === 'focus') {
     if (elapsedMins >= 5) {
       const todayStr = getTodayDateString();
       state.studyMinutes[todayStr] = (state.studyMinutes[todayStr] || 0) + elapsedMins;
       if (elapsedMins > state.longestSession) state.longestSession = elapsedMins;
-      const coinsEarned = Math.floor(elapsedMins / 5) * 2;
       if (coinsEarned > 0) gainReward(coinsEarned);
+      if (state.hasBook) state.hasBook = false;
     }
     state.timeLeft = state.durations[state.mode] * 60;
-    const penalty = Math.floor(Math.random() * 11) + 5;
-    updateHappiness(-penalty);
-    alert(`❌ Stopped mid-session! Lost ${penalty}% happiness${elapsedMins >= 5 ? `, but you still got credit for ${elapsedMins}m studied.` : ''}`);
+    if (penalty > 0) updateHappiness(-penalty);
+  } else {
+    // Break: no credit, no penalty, just reset
+    state.timeLeft = state.durations[state.mode] * 60;
   }
-  
-  sessionLabel.textContent = 'Ready to focus';
-  actionBtn.textContent = 'Start Focus';
+
+  sessionLabel.textContent = state.mode === 'long' ? 'Ready to relax' : 'Ready to focus';
+  actionBtn.textContent = state.mode === 'long' ? 'Start Break' : state.mode === 'stopwatch' ? 'Start Stopwatch' : 'Start Focus';
   actionBtn.className = 'action-btn';
   stopBtn.style.display = 'none';
 
@@ -5686,9 +6095,10 @@ function stopTimer() {
     tab.style.pointerEvents = 'auto';
     tab.style.opacity = '1';
   });
-  
+
   updateDisplay();
   renderBook();
+  saveState();
 }
 
 function completeSession() {
@@ -5886,22 +6296,26 @@ function startDrag(e) {
     const touch = e.touches ? e.touches[0] : e;
     draggedCarrot.style.left = `${touch.clientX - 16}px`;
     draggedCarrot.style.top = `${touch.clientY - 16}px`;
+    // Buddy watches the carrot
+    pointEyesAt(touch.clientX, touch.clientY);
   }
-  
+
   function onEnd(e) {
     const touch = e.changedTouches ? e.changedTouches[0] : e;
     const charRect = character.getBoundingClientRect();
-    
+
     if (touch.clientX >= charRect.left && touch.clientX <= charRect.right &&
         touch.clientY >= charRect.top && touch.clientY <= charRect.bottom) {
       feedCarrot();
     }
-    
+
+    clearEyeDirection();
+
     if (draggedCarrot) {
       draggedCarrot.remove();
       draggedCarrot = null;
     }
-    
+
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onEnd);
     document.removeEventListener('touchmove', onMove);
@@ -6019,9 +6433,15 @@ document.querySelectorAll('.nav-item[data-page]').forEach((item) => {
     const newIndex = pages.indexOf(page);
     if (newIndex === currentPageIndex) return;
 
-    // Immediately deactivate current, activate new — opacity handles the crossfade
-    document.getElementById(pages[currentPageIndex] + 'Page').classList.remove('active');
-    document.getElementById(page + 'Page').classList.add('active');
+    const direction = newIndex > currentPageIndex ? 'right' : 'left';
+    const oldEl = document.getElementById(pages[currentPageIndex] + 'Page');
+    const newEl = document.getElementById(page + 'Page');
+    oldEl.classList.remove('active', 'slide-from-right', 'slide-from-left');
+    newEl.classList.remove('slide-from-right', 'slide-from-left');
+    newEl.classList.add('active');
+    // Force animation restart
+    void newEl.offsetWidth;
+    newEl.classList.add(direction === 'right' ? 'slide-from-right' : 'slide-from-left');
 
     currentPageIndex = newIndex;
 
@@ -6445,61 +6865,50 @@ document.getElementById('saveOpacityBtn').addEventListener('click', () => {
   document.getElementById('opacityModal').classList.remove('active');
 });
 
-document.getElementById('resetBtn').addEventListener('click', () => {
-  if (confirm('This will reset ALL data!!! ONLY do this when you know what yor doing')) {
-    if (state.happyDecayInterval) clearInterval(state.happyDecayInterval);
-    if (state.timerInterval) clearInterval(state.timerInterval);
-    if (state.todoAlarmInterval) clearInterval(state.todoAlarmInterval);
-    if (state.emojiInterval) clearInterval(state.emojiInterval);
-    if (state.rebornInterval) clearInterval(state.rebornInterval);
-    if (state.pauseInterval) clearInterval(state.pauseInterval);
-    state.coins = 0;
-    state.carrots = 0;
-    state.happiness = 100;
-    state.longestSession = 0;
-    state.longestBreak = 0;
-    state.highestCoins = 0;
-    state.carrotsFed = 0;
-    state.characterWidth = 140;
-    state.studyMinutes = {};
-    state.breakMinutes = {};
-    state.sessionColors = {};
-    state.colorSubjects = {};
-    state.todos = [];
-    state.todoAlarms = [];
-    state.todoAlarmHistory = [];
-    state.ownedCosmetics = [];
-    state.ownedBackgrounds = ['default'];
-    state.ownedEmotes = [];
-    state.equippedCosmetic = null;
-    state.equippedEmote = null;
-    state.activeBackground = 'default';
-    state.isDead = false;
-    state.isReviving = false;
-    state.unlockedAchievements = [];
-    state.streak = 0;
-    state.lastStreakDate = null;
-    if (state.username) {
-      fetch('/delete-user', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: state.username})});
-      state.username = null;
-    }
-    state.streakFreezeActive = false;
-    state.hasBook = false;
-    state.reborns = 0;
-    state.revivals = 0;
-    state.studyingDisabledUntil = null;
-    state.premiumSurvey = null;
-    state.aiPlanLastGeneratedDate = null;
-    state.premiumSavedStudyPlans = [];
-    setBackground('default');
-    renderCosmetic();
-    updateDisplay();
-    renderTodos();
-    renderShop();
-    renderGraph();
-    startHappyDecay();
-    saveState();
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('This will COMPLETELY WIPE your account — username, premium, all progress, all cosmetics. The app will reload. Continue?')) return;
+
+  // 1) Stop every interval / async loop so they can't write back after we clear.
+  ['happyDecayInterval','timerInterval','todoAlarmInterval','emojiInterval','rebornInterval','pauseInterval'].forEach(k => {
+    if (state[k]) { clearInterval(state[k]); state[k] = null; }
+  });
+
+  // 2) Delete the server-side user record if we had one.
+  if (state.username) {
+    try {
+      await fetch('/delete-user', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: state.username})});
+    } catch {}
   }
+
+  // 3) Nuke ALL persistence layers — localStorage, sessionStorage, caches, service workers, IndexedDB.
+  try { localStorage.clear(); } catch {}
+  try { sessionStorage.clear(); } catch {}
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch {}
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) { try { await r.unregister(); } catch {} }
+    }
+  } catch {}
+  try {
+    if (window.indexedDB && indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      dbs.forEach(db => { if (db.name) indexedDB.deleteDatabase(db.name); });
+    }
+  } catch {}
+
+  // 4) Prevent any in-flight saveState() from running by clobbering state with a sentinel.
+  window._resetting = true;
+
+  // 5) Cache-bust reload so the user really gets a fresh app.
+  const next = new URL(window.location.href);
+  next.searchParams.set('reset', Date.now().toString());
+  window.location.replace(next.toString());
 });
 
 document.getElementById('forceUpdateBtn').addEventListener('click', async () => {
@@ -6694,15 +7103,24 @@ function createTodoAlarmFromInputs() {
 function renderTodos() {
   const list = document.getElementById('todoList');
   list.innerHTML = '';
-  list.style.display='flex';
-  list.style.flexWrap='wrap';
-  list.style.justifyContent='space-between';
-  
+  list.removeAttribute('style');
+
   const sortBy = state.todoSort || 'deadline';
-  
+
   // Separate completed and active tasks
   const activeTasks = state.todos.filter(t => !t.completed);
   const completedTasks = state.todos.filter(t => t.completed);
+
+  // Empty state with character
+  if (state.todos.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-art">📝</div>
+        <div class="empty-state-title">Your list is clear.</div>
+        <div class="empty-state-text">Tap + to add your first task and start ticking things off.</div>
+      </div>`;
+    return;
+  }
   
   // Sort active tasks
   if (sortBy === 'deadline') {
@@ -6734,7 +7152,18 @@ function renderTodos() {
     `;
     
     item.querySelector('.todo-checkbox').addEventListener('click', () => {
-      state.todos[realIndex].completed = !state.todos[realIndex].completed;
+      const wasCompleted = state.todos[realIndex].completed;
+      state.todos[realIndex].completed = !wasCompleted;
+      if (!wasCompleted) {
+        // Celebrate the completion before re-rendering
+        item.classList.add('just-completed');
+        createSparkles(item);
+        // Tiny confetti burst for finishing a task
+        confetti(18);
+        playSound && playSound('complete');
+        setTimeout(() => { renderTodos(); renderCalendar(); saveState(); }, 500);
+        return;
+      }
       renderTodos();
       renderCalendar();
       saveState();
@@ -7200,6 +7629,9 @@ const achievements = [
 const STORAGE_KEY = 'vuliStudyState';
 
 function saveState() {
+  // If a hard reset is in flight, do nothing — otherwise we'd repopulate localStorage
+  // milliseconds before the page reloads, undoing the wipe.
+  if (window._resetting) return;
   const data = {
     username: state.username || null, //ong
     coins: state.coins,
@@ -7252,9 +7684,80 @@ function saveState() {
     timeLeft: state.timeLeft,
     stopwatchTime: state.stopwatchTime,
     evoLevel: state.evoLevel || 0,
-    isPremium: state.isPremium || false
+    isPremium: state.isPremium || false,
+    equippedCosmetics: state.equippedCosmetics || {},
+    tamperBanned: state.tamperBanned || false
   };
+  // === ANTI-TAMPER CHECKSUM ===
+  // We sign the critical economy fields. If they're edited in DevTools without going through
+  // the app's code, the checksum on next load won't match and we'll flag the account.
+  const critical = {
+    coins: data.coins, carrots: data.carrots, highestCoins: data.highestCoins,
+    longestSession: data.longestSession, streak: data.streak,
+    reborns: data.reborns, revivals: data.revivals, carrotsFed: data.carrotsFed,
+    studyMinutesTotal: Object.values(data.studyMinutes || {}).reduce((a,b)=>a+b,0),
+    isPremium: data.isPremium ? 1 : 0,
+    achievements: (data.unlockedAchievements || []).length
+  };
+  data._sig = _signCritical(critical);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// Lightweight FNV-1a 32-bit hash + a per-install salt — not crypto, but a determined
+// user has to find and replicate this function to forge a save. Trivial protection,
+// but it's exactly what the user asked for: "only if you're absolutely positive".
+function _getTamperSalt() {
+  let salt = localStorage.getItem('vuli_tamper_salt');
+  if (!salt) {
+    salt = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36));
+    localStorage.setItem('vuli_tamper_salt', salt);
+  }
+  return salt;
+}
+function _signCritical(obj) {
+  const str = JSON.stringify(obj) + '|' + _getTamperSalt() + '|vuli-x9k2p';
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(36);
+}
+
+function _verifyCritical(data) {
+  // No signature yet (first load on this version) — trust this load and let next save sign it.
+  if (!data._sig) return true;
+  const critical = {
+    coins: data.coins, carrots: data.carrots, highestCoins: data.highestCoins,
+    longestSession: data.longestSession, streak: data.streak,
+    reborns: data.reborns, revivals: data.revivals, carrotsFed: data.carrotsFed,
+    studyMinutesTotal: Object.values(data.studyMinutes || {}).reduce((a,b)=>a+b,0),
+    isPremium: data.isPremium ? 1 : 0,
+    achievements: (data.unlockedAchievements || []).length
+  };
+  return _signCritical(critical) === data._sig;
+}
+
+function _showTamperBanScreen() {
+  // Overlay everything — they can still use the app, but they're tagged.
+  const html = `
+    <div style="position:fixed;inset:0;background:rgba(20,10,5,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div style="max-width:380px;background:#fff;border-radius:20px;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="font-size:42px;margin-bottom:10px;">🚫</div>
+        <div style="font-size:20px;font-weight:900;color:#2D3142;margin-bottom:10px;">Tampering Detected</div>
+        <div style="font-size:13px;color:#5B4A3A;line-height:1.6;margin-bottom:18px;">
+          We detected that your save data was edited outside of the app.
+          To keep the leaderboard fair, your account has been permanently removed from the leaderboard.
+          <br><br>
+          You can keep using VuliStudy locally, but your stats will no longer be shown to others.
+        </div>
+        <button id="tamperAckBtn" style="background:linear-gradient(135deg,#FF6B6B,#FF5B5B);color:white;border:none;padding:12px 24px;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;width:100%;">I understand</button>
+      </div>
+    </div>`;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div);
+  div.querySelector('#tamperAckBtn').addEventListener('click', () => div.remove());
 }
 
 function loadState() {
@@ -7262,6 +7765,25 @@ function loadState() {
   if (saved) {
     try {
       const data = JSON.parse(saved);
+
+      // Anti-tamper check — only if a signature exists AND fails.
+      // Migrations / new fields shouldn't ever fail this because we only sign a
+      // small set of economy fields, not the whole blob.
+      if (data._sig && !_verifyCritical(data)) {
+        data.tamperBanned = true;
+        // Boot them off the leaderboard permanently.
+        if (data.username) {
+          try {
+            fetch('/delete-user', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({username: data.username})
+            });
+          } catch {}
+        }
+        setTimeout(_showTamperBanScreen, 600);
+      }
+
       Object.assign(state, data);
 
       state.todoAlarms = Array.isArray(state.todoAlarms) ? state.todoAlarms : [];
@@ -8346,7 +8868,7 @@ function updatePremiumUI() {
     if (nameLabel && state.username) nameLabel.classList.add('premium-gold');
     document.body.classList.add('premium-royalty');
     const premiumShopTab = document.getElementById('premiumCosmeticsTab');
-    if (premiumShopTab) premiumShopTab.style.display = 'inline-block';
+    if (premiumShopTab) premiumShopTab.style.display = 'flex';
   } else {
     if (settingsBtn) settingsBtn.style.display = state.username ? 'block' : 'none';
     if (centerBtn) centerBtn.style.display = 'none';
@@ -8443,7 +8965,31 @@ function openPremiumCenter() {
       <div class="premium-stat-label">${c.label}</div>
     </div>`).join('');
 
-  // Insights with progress bar
+  // Compute best-day insight
+  let bestDay = null, bestMins = 0;
+  Object.entries(state.studyMinutes).forEach(([d, m]) => {
+    if (m > bestMins) { bestMins = m; bestDay = d; }
+  });
+  let bestDayLabel = '—';
+  if (bestDay) {
+    const parts = bestDay.split('-');
+    const dt = new Date(+parts[0], +parts[1]-1, +parts[2]);
+    bestDayLabel = dt.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+  }
+
+  // Day-of-week breakdown — when do they study most?
+  const dowMins = [0,0,0,0,0,0,0];
+  Object.entries(state.studyMinutes).forEach(([d, m]) => {
+    const parts = d.split('-');
+    const dt = new Date(+parts[0], +parts[1]-1, +parts[2]);
+    dowMins[dt.getDay()] += m;
+  });
+  const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let bestDow = 0;
+  for (let i = 0; i < 7; i++) if (dowMins[i] > dowMins[bestDow]) bestDow = i;
+  const bestDowLabel = dowMins[bestDow] > 0 ? dowNames[bestDow] : '—';
+
+  // Insights with progress bar + heatmap
   const insights = document.getElementById('premiumInsights');
   const projectedWeek = avgPerDay * 7;
   const weeklyGoal = 300; // 5 hours/week soft goal
@@ -8453,6 +8999,23 @@ function openPremiumCenter() {
     : 'Not enough data yet — keep going.';
   const streakStatus = state.streak >= 7 ? 'On a hot streak.' : state.streak >= 3 ? 'Building nicely.' : 'Daily reps will compound.';
   const completionRate = state.todos.length > 0 ? Math.round(completedTodos / state.todos.length * 100) : 0;
+
+  // Build 28-day heatmap
+  const heatmapCells = [];
+  const todayStr = getTodayDateString();
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const m = state.studyMinutes[ds] || 0;
+    let lvl = '';
+    if (m >= 90) lvl = ' lvl-4';
+    else if (m >= 45) lvl = ' lvl-3';
+    else if (m >= 20) lvl = ' lvl-2';
+    else if (m > 0)   lvl = ' lvl-1';
+    const todayCls = ds === todayStr ? ' today' : '';
+    heatmapCells.push(`<div class="premium-heatmap-cell${lvl}${todayCls}" title="${ds}: ${m}m"></div>`);
+  }
+
   insights.innerHTML = `
     <strong>Weekly projection</strong><br>
     ${projectedWeek} min / week at current pace
@@ -8460,9 +9023,14 @@ function openPremiumCenter() {
       <div class="premium-progress-bar"><div class="premium-progress-fill" style="width:${goalPct}%"></div></div>
       <span>${goalPct}% of 5h goal</span>
     </div>
-    <div style="margin-top:10px;"><strong>Trend</strong> — ${trend}</div>
+    <div style="margin-top:10px;"><strong>Best day</strong> — ${bestMins > 0 ? `${bestMins}m on ${bestDayLabel}` : 'No big days yet'}</div>
+    <div><strong>Most productive weekday</strong> — ${bestDowLabel}${dowMins[bestDow] > 0 ? ` (${dowMins[bestDow]}m total)` : ''}</div>
+    <div><strong>Trend</strong> — ${trend}</div>
     <div><strong>Streak</strong> — ${streakStatus}</div>
     <div><strong>Tasks</strong> — ${completionRate}% completion (${completedTodos}/${state.todos.length})</div>
+    <div style="margin-top:14px;font-size:11px;font-weight:800;letter-spacing:1px;color:#8B5A0F;text-transform:uppercase;">Last 28 Days</div>
+    <div class="premium-heatmap">${heatmapCells.join('')}</div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#8B6A2A;margin-top:6px;"><span>Quiet</span><span>4 weeks</span><span>Heavy</span></div>
   `;
   // Premium chart
   if (window.premiumChartInstance) window.premiumChartInstance.destroy();
@@ -8541,12 +9109,7 @@ document.getElementById('premTabSaves').addEventListener('click', () => {
 });
 
 
-document.getElementById('generateStudyPlanBtn').addEventListener('click', async () => {
-  if (!requiresInternet('AI Study Plan')) return;
-  const btn = document.getElementById('generateStudyPlanBtn');
-  const output = document.getElementById('studyPlanOutput');
-  btn.disabled = true; btn.textContent = '🤖 Analyzing...';
-  output.style.display = 'none';
+function _aiBuildStudyData(extra) {
   const totalMins = Object.values(state.studyMinutes).reduce((a,b)=>a+b,0);
   const last7 = [];
   for (let i=6;i>=0;i--) {
@@ -8557,51 +9120,107 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
   const subjects = [...new Set(Object.values(state.colorSubjects))];
   const pendingTasks = state.todos.filter(t=>!t.completed).map(t=>t.text);
   const completedTasks = state.todos.filter(t=>t.completed).length;
+  // Always include the motivational quote pool so the AI can pick contextually.
+  return Object.assign({
+    totalMinutes: totalMins,
+    streak: state.streak,
+    reborns: state.reborns,
+    dailyMinutes: last7,
+    subjects,
+    pendingTasks,
+    completedTasks,
+    motivationalQuotes,
+    survey: state.premiumSurvey || null,
+    conversation: state.aiConversationMessages || []
+  }, extra || {});
+}
+
+document.getElementById('generateStudyPlanBtn').addEventListener('click', async () => {
+  if (!requiresInternet('AI Study Plan')) return;
+  const btn = document.getElementById('generateStudyPlanBtn');
+  const output = document.getElementById('studyPlanOutput');
+  const replyBox = document.getElementById('aiReplyBox');
+  const replyDone = document.getElementById('aiReplyDone');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  output.style.display = 'none';
+  replyBox.style.display = 'none';
+  replyDone.style.display = 'none';
+
   const todayKey = new Date().toISOString().slice(0,10);
-  if (state.aiConversationUsed || state.aiPlanLastGeneratedDate === todayKey) {
-    output.style.display='block';
-    output.textContent='You already used your one AI conversation this session.';
-    btn.disabled=false; btn.textContent='🤖 Generate My Study Plan';
+  if (state.aiPlanLastGeneratedDate === todayKey) {
+    output.style.display = 'block';
+    output.textContent = 'You already generated your plan today — come back tomorrow for a fresh one. Saved plans are in the Saved tab.';
+    btn.disabled = false; btn.textContent = 'Generate My Study Plan';
     return;
   }
+
+  // Reset conversation for a new plan
+  state.aiConversationMessages = [];
+  state.aiConversationUsed = false;
+
   try {
     const res = await fetch('/generate-study-plan', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks,motivationalQuotes}})
+      body: JSON.stringify({username:state.username, studyData: _aiBuildStudyData()})
     });
     const data = await res.json();
     if (data.success) {
       output.innerHTML = formatSimpleMarkdown(data.plan);
+      output.style.display = 'block';
       state.aiPlanLastGeneratedDate = todayKey;
-      if (!Array.isArray(state.aiConversationMessages)) state.aiConversationMessages = [];
       state.aiConversationMessages.push(`AI: ${data.plan}`);
-      const followUp = prompt('Reply once to refine your plan (e.g., What times are you free?):') || '';
-      if (followUp.trim()) {
-        state.aiConversationMessages.push(`User: ${followUp.trim()}`);
-        const res2 = await fetch('/generate-study-plan', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({username:state.username, studyData:{totalMinutes:totalMins,streak:state.streak,reborns:state.reborns,dailyMinutes:last7,subjects,pendingTasks,completedTasks,motivationalQuotes,conversation:state.aiConversationMessages}})
-        });
-        const data2 = await res2.json();
-        if (data2.success) {
-          output.innerHTML = formatSimpleMarkdown(data2.plan);
-          state.aiConversationMessages.push(`AI: ${data2.plan}`);
-        }
-      }
-      state.aiConversationUsed = true;
-      if (!Array.isArray(state.premiumSavedStudyPlans)) state.premiumSavedStudyPlans=[];
-      state.premiumSavedStudyPlans.unshift({date:todayKey, plan: output.textContent || data.plan});
+      // Show the in-modal reply input — works on mobile (no prompt()).
+      replyBox.style.display = 'block';
+      document.getElementById('aiReplyInput').value = '';
+      document.getElementById('aiReplyInput').disabled = false;
+      document.getElementById('aiReplySendBtn').disabled = false;
+      if (!Array.isArray(state.premiumSavedStudyPlans)) state.premiumSavedStudyPlans = [];
+      state.premiumSavedStudyPlans.unshift({date:todayKey, plan: data.plan});
       state.premiumSavedStudyPlans = state.premiumSavedStudyPlans.slice(0,20);
       saveState();
-      output.style.display = 'block';
     } else if (data.error === 'contact_owner') {
-      output.textContent = 'I regret to inform you that the primary and backup AIs have failed. This is highly unlikely.\nI have notified myself, and I will review this situation immediately.';
+      output.textContent = 'Both AI providers are currently offline. The developer has been notified.';
       output.style.display = 'block';
     } else {
-      alert(`❌ ${data.error||'Failed to generate plan.'}`);
+      toast(data.error || 'Failed to generate plan.', 'error');
     }
-  } catch { alert('Could not reach server. Check your connection.'); }
-  btn.disabled = false; btn.textContent = '🤖 Generate My Study Plan';
+  } catch { toast('Could not reach server. Check your connection.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Generate My Study Plan';
+});
+
+document.getElementById('aiReplySendBtn').addEventListener('click', async () => {
+  if (state.aiConversationUsed) return;
+  if (!requiresInternet('AI reply')) return;
+  const input = document.getElementById('aiReplyInput');
+  const sendBtn = document.getElementById('aiReplySendBtn');
+  const output = document.getElementById('studyPlanOutput');
+  const text = (input.value || '').trim();
+  if (!text) { toast('Type a reply first.', 'warn'); return; }
+  sendBtn.disabled = true; sendBtn.textContent = 'Sending...';
+  input.disabled = true;
+  state.aiConversationMessages.push(`User: ${text}`);
+  try {
+    const res = await fetch('/generate-study-plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:state.username, studyData: _aiBuildStudyData()})
+    });
+    const data = await res.json();
+    if (data.success) {
+      output.innerHTML = formatSimpleMarkdown(data.plan);
+      state.aiConversationMessages.push(`AI: ${data.plan}`);
+      state.aiConversationUsed = true;
+      document.getElementById('aiReplyBox').style.display = 'none';
+      document.getElementById('aiReplyDone').style.display = 'block';
+      saveState();
+    } else {
+      toast(data.error || 'Reply failed.', 'error');
+      input.disabled = false;
+    }
+  } catch {
+    toast('Could not reach server.', 'error');
+    input.disabled = false;
+  }
+  sendBtn.disabled = false; sendBtn.textContent = 'Send Reply';
 });
 
 // === SECOND ADMIN PANEL ===
@@ -8685,6 +9304,7 @@ if (typeof Chart !== 'undefined') {
 startHappyDecay();
 startTodoAlarmEngine();
 checkAchievements();
+startBuddyIdleBehaviors();
 
 if (state.showFloatingEmojis) {
   document.getElementById('emojiToggle').classList.add('active');
@@ -8803,6 +9423,8 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
 async function syncLeaderboard() {
   if (!state.username) return;
   if (!isOnline) return;
+  // Tamper-banned accounts never sync back to the leaderboard.
+  if (state.tamperBanned) return;
   const totalMinutes = Object.values(state.studyMinutes).reduce((a, b) => a + b, 0);
   await fetch('/sync-score', {
     method: 'POST',
@@ -9016,8 +9638,14 @@ function applyCharOffset() {
     const dir = dx < 0 ? 1 : -1; // left = forward, right = back
     const next = Math.max(0, Math.min(pages.length - 1, currentPageIndex + dir));
     if (next === currentPageIndex) return;
-    document.getElementById(pages[currentPageIndex] + 'Page').classList.remove('active');
-    document.getElementById(pages[next] + 'Page').classList.add('active');
+    const slideDir = dir === 1 ? 'right' : 'left';
+    const oldEl = document.getElementById(pages[currentPageIndex] + 'Page');
+    const newEl = document.getElementById(pages[next] + 'Page');
+    oldEl.classList.remove('active', 'slide-from-right', 'slide-from-left');
+    newEl.classList.remove('slide-from-right', 'slide-from-left');
+    newEl.classList.add('active');
+    void newEl.offsetWidth;
+    newEl.classList.add(slideDir === 'right' ? 'slide-from-right' : 'slide-from-left');
     currentPageIndex = next;
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelectorAll(`.nav-item[data-page="${pages[next]}"]`).forEach(i => i.classList.add('active'));
