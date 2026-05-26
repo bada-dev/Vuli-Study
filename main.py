@@ -109,7 +109,7 @@ SYNC_COOLDOWN = 5
 MAX_MINUTES = 50000
 MAX_STREAK = 5000
 MAX_REBORNS = 500
-VALID_COSMETICS = [None, 'tophat', 'wizard', 'pirate']
+VALID_COSMETICS = [None, 'tophat', 'wizard', 'pirate', 'premium-crown', 'premium-glow', 'premium-shades']
 VALID_BACKGROUNDS = ['default', 'ocean', 'sunset', 'lavender', 'mint', 'rose', 'midnight', 'forest']
 
 @app.route('/sw.js')
@@ -208,7 +208,6 @@ def sync_score():
                    DO UPDATE SET minutes = minutes + excluded.minutes''',
                 (username, week_start_ts, gained)
             )
-        conn.commit()
         conn.commit()
         return jsonify({'success': True, 'correctedMinutes': total_minutes})
     finally:
