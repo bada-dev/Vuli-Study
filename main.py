@@ -515,7 +515,7 @@ def admin_import_db():
     finally:
         conn.close()
 
-def call_ai(api_key, prompt):
+def call_ai(api_key, prompt, system_prompt=None):
     api_key = (api_key or '').strip().strip('"').strip("'")
     if not api_key:
         raise ValueError('No API key')
@@ -526,13 +526,24 @@ def call_ai(api_key, prompt):
         "mixtral-8x7b-32768"
     ]
 
+    default_system = (
+        "You are VuliStudy AI — a personal study coach inside the VuliStudy app. "
+        "You are ALWAYS speaking DIRECTLY to one specific student (the user). "
+        "Use the second person ('you', 'your'). Never narrate in the third person. "
+        "Never describe what 'the user' or 'they' should do — speak to them. "
+        "Be warm, concrete, and concise. Give specific actionable steps, not generic advice. "
+        "If a quote from the provided list genuinely fits the moment, drop it in once — never explain it. "
+        "Do not invent quotes that weren't given. "
+        "Use plain text only — no markdown (no **, no __, no headers with #)."
+    )
+
     last_error = None
     for model in models:
         data = json.dumps({
             "model": model,
-            'max_tokens': 1000,
+            'max_tokens': 1100,
             'messages': [
-                {'role': 'system', 'content': 'You are VuliStudy AI. You are speaking directly to the student. Give concrete study plans, not just descriptions. Keep tone natural and concise. Ask one helpful follow-up question at the end to improve the plan. Use quotes sparingly and only when they improve clarity.'},
+                {'role': 'system', 'content': system_prompt or default_system},
                 {'role': 'user', 'content': prompt}
             ]
         }).encode('utf-8')
@@ -869,36 +880,89 @@ def generate_study_plan():
         if not user or not user['is_premium']:
             return jsonify({'success': False, 'error': 'Premium required'})
         study_data = data.get('studyData', {})
-        quotes = study_data.get('motivationalQuotes', [])
-        convo = study_data.get('conversation', [])
+        quotes = study_data.get('motivationalQuotes', []) or []
+        convo = study_data.get('conversation', []) or []
+        survey = study_data.get('survey') or {}
+        total_mins = int(study_data.get('totalMinutes', user['total_minutes']) or 0)
+        streak_days = int(study_data.get('streak', user['streak']) or 0)
+        subjects = study_data.get('subjects', []) or []
+        daily = study_data.get('dailyMinutes', []) or []
+        pending = study_data.get('pendingTasks', []) or []
+
+        # Pre-pick a few quotes so the AI has options without overwhelming context.
+        sample_quotes = quotes[:25] if isinstance(quotes, list) else []
+        quotes_block = ""
+        if sample_quotes:
+            quotes_block = "\nAvailable motivational quotes (use AT MOST ONE, only if it truly fits — never invent your own):\n" + \
+                "\n".join(f"- \"{str(q)[:200]}\"" for q in sample_quotes)
+
         convo_text = ""
         if isinstance(convo, list) and convo:
-            convo_text = "\\nConversation context (latest first):\\n" + "\\n".join([str(x)[:500] for x in convo[:6]])
-        prompt = f"""You are an expert study advisor analyzing a student using VuliStudy named "{username}".
+            convo_text = "\n\nConversation so far (oldest first). The student has ONE reply — if this is their reply, respond directly to it:\n" + \
+                "\n".join(str(x)[:600] for x in convo[:8])
 
-Study Statistics:
-- Total minutes studied (all time): {study_data.get('totalMinutes', user['total_minutes'])}
-- Current streak: {study_data.get('streak', user['streak'])} days
-- Reborn count (dedication level): {study_data.get('reborns', user['reborns'])}
-- Daily minutes (last 7 days): {study_data.get('dailyMinutes', [])}
-- Subjects studied: {study_data.get('subjects', [])}
-- Pending tasks: {study_data.get('pendingTasks', [])}
-- Completed tasks: {study_data.get('completedTasks', 0)}
+        survey_block = ""
+        if survey:
+            survey_block = f"\nStudent self-described context: year group: {survey.get('yearGroup','')!r}, preferences: {survey.get('prefs','')!r}, interests: {survey.get('interests','')!r}"
 
-If you see the username as "EthanGenius", then this means that someone from Vuli, the company behind VuliStudy, is talking to you for testing. Treat him with respect and acknowledge that Vuli made you.
+        # Decide the mode:
+        # - First-time user with effectively no data -> ASK QUESTIONS rather than guess a plan.
+        # - Returning user with a conversation already -> CONTINUE the conversation (respond to their reply).
+        # - Otherwise -> GIVE the full plan.
+        is_low_data = (total_mins < 30 and streak_days < 2 and not subjects and not pending)
+        is_followup = bool(convo)
 
-Create a personalized, motivating study plan:
-1. Quick assessment of their current habits (2-3 sentences)
-2. Top 3 specific, actionable improvements
-3. Recommended weekly schedule
-4. Subject-specific tips if subjects are listed
-5. One motivational insight, dont try  to explain the quote, just drop a quote somewhere where its relevant.
+        if is_followup:
+            mode_instructions = (
+                "MODE: FOLLOW-UP REPLY. The student just sent you a single reply (see conversation). "
+                "Respond directly to THEIR message in 2-3 short paragraphs. "
+                "Adjust the plan based on what they said. Address them in second person. "
+                "Do NOT ask another question — this was their one reply. "
+                "End with one concrete next step for today."
+            )
+        elif is_low_data:
+            mode_instructions = (
+                "MODE: ONBOARDING. You don't have enough data on this student yet to build a real plan. "
+                "DO NOT produce a generic plan. Instead, address them warmly by name and ask 3-4 "
+                "specific questions, one per line, that will let you make their real plan next time. "
+                "Tailor the questions to what's actually missing — for example: what subjects they need to "
+                "study, when in the day they have free blocks, what their nearest deadline is, what their "
+                "biggest blocker is. Each question should be conversational, not a survey. "
+                "End with a single short sentence saying you'll build their real plan once they reply or come back tomorrow with some data."
+            )
+        else:
+            mode_instructions = (
+                "MODE: FULL PLAN. Speak to the student directly.\n"
+                "Structure (no headings, just clean paragraphs):\n"
+                "1) Two sentences acknowledging where they are right now.\n"
+                "2) Three specific actions they can take this week.\n"
+                "3) A suggested weekly rhythm using their actual numbers.\n"
+                "4) Subject-specific advice if subjects are listed.\n"
+                "5) One short motivational closer — optionally drop a single quote from the provided list verbatim, but only if it fits."
+            )
 
-Mandatory output formatting rules:
-- Use plain text only (no markdown symbols like ** or __).
+        identity_note = ""
+        if username == "EthanGenius":
+            identity_note = "(This username belongs to the developer of VuliStudy, from Vuli. Acknowledge briefly.)"
 
-Keep it under 350 words. Be encouraging and specific.
-{convo_text}"""
+        prompt = f"""You are speaking directly to "{username}". Address them by name when natural. Never refer to them in the third person. {identity_note}
+
+The student's current state:
+- Total minutes ever studied: {total_mins}
+- Current streak: {streak_days} days
+- Reborns (long-term dedication metric): {study_data.get('reborns', user['reborns'])}
+- Daily minutes for the last 7 days (oldest -> today): {daily}
+- Subjects they're tracking: {subjects}
+- Open tasks: {pending}
+- Tasks completed: {study_data.get('completedTasks', 0)}{survey_block}
+
+{mode_instructions}
+
+Hard formatting rules:
+- Plain text only. No markdown symbols (** __ # >). No bullet markers other than blank lines between items.
+- Keep the total response under 350 words.
+- Always use second person — "you", not "the user".
+{quotes_block}{convo_text}"""
 
         for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
             if not api_key:
@@ -907,7 +971,7 @@ Keep it under 350 words. Be encouraging and specific.
                 result_text = call_ai(api_key, prompt)
                 return jsonify({'success': True, 'plan': result_text})
             except Exception as e:
-                print(f"[ExtremelyNiceErrorMessage!!] Here's the error message. GoodLuck!!!!!!: {e}")
+                print(f"[AI error]: {e}")
                 continue
         return jsonify({'success': False, 'error': 'contact_owner'})
     finally:
