@@ -12,9 +12,9 @@
 
 <!--
     Project: VuliStudy
-    Author: Vuli
-    Version: 5.1.2 anothre test
-	ALL RIGHTS RESERVED
+    Author: ETHANTYAGI
+    Version: 5.1.2
+    ALL RIGHTS RESERVED
 -->
 
 <style>
@@ -417,6 +417,38 @@ body.premium-royalty {
 
 
 /* ===== COSMETICS ===== */
+.wizard-hat {
+  position: absolute; top: -54px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 32px solid transparent;
+  border-right: 32px solid transparent;
+  border-bottom: 60px solid #3b1f73;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+  z-index: 10;
+}
+.wizard-hat::after {
+  content: ''; position: absolute; top: 50px; left: -38px;
+  width: 76px; height: 12px; background: #2a1453; border-radius: 4px;
+}
+.wizard-hand { display: none; }
+.wizard-wand { position: absolute; top: 50px; right: -34px; width: 36px; z-index: 11; pointer-events: none; }
+@keyframes sparkle { 0% { opacity: 0.5; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.1); } }
+
+.pirate-hat {
+  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+  width: 80px; height: 32px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%);
+  border-radius: 50% 50% 10% 10% / 70% 70% 30% 30%;
+  border: 2px solid #000;
+  z-index: 10;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.pirate-hat::before {
+  content: '☠';
+  position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  color: white; font-size: 16px;
+}
+
 .crown { position: absolute; top: -46px; left: 50%; transform: translateX(-50%); width: 70px; z-index: 10; }
 .crown-base { width: 100%; height: 20px; background: linear-gradient(180deg, #FFD700 0%, #DAA520 100%); border-radius: 0 0 8px 8px; border: 2px solid #b8860b; box-shadow: 0 4px 8px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.4); }
 .crown-points { display: flex; justify-content: space-between; padding: 0 4px; }
@@ -2496,7 +2528,19 @@ button:disabled {
   0% { transform: scale(1) rotate(-4deg); }
   100% { transform: scale(1.15) rotate(4deg); }
 }
-	
+
+/* Premium Center tab buttons + button micro-interactions */
+#premTabAnalytics, #premTabAI, #premTabSaves {
+  transition: border-bottom-color 0.25s ease, color 0.25s ease, background 0.2s ease, transform 0.15s ease;
+}
+#premTabAnalytics:active, #premTabAI:active, #premTabSaves:active {
+  transform: scale(0.97);
+  background: rgba(255,184,77,0.08);
+}
+.gcal-btn { transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.25s ease; }
+.gcal-btn:active { transform: scale(0.97); filter: brightness(1.05); }
+.premium-btn-gold:active { transform: scale(0.97); filter: brightness(1.06); }
+
 </style>
 </head>
 <body>
@@ -2617,29 +2661,25 @@ button:disabled {
 
       <div class="stats-content">
       <div class="stats-header">Statistics</div>
-	  <button class="gcal-btn" id="leaderboardBtn" style="margin: 0 0 10px 0; position:relative; z-index:10;">🏆 Leaderboard</button>
-      <button class="gcal-btn premium-btn-gold" id="premiumCenterStatsBtn" style="margin:0 0 10px 0;position:relative;z-index:10;display:none;">✨ Premium Center</button>
-      <button class="gcal-btn" id="achievementsBtn" style="margin: 0 0 10px 0; position:relative; z-index:10;">🏆 Achievements</button>
-      <button class="gcal-btn" id="streakDisplay" style="margin: 0 0 20px 0; cursor: pointer; position:relative; z-index:10;">🔥 <span id="streakCount">0</span> Day Streak <span id="freezeIndicator"></span></button>
-        
+	  <button class="gcal-btn" id="leaderboardBtn" style="margin: 0 0 8px 0; position:relative; z-index:10;">Leaderboard</button>
+      <button class="gcal-btn premium-btn-gold" id="premiumCenterStatsBtn" style="margin:0 0 8px 0;position:relative;z-index:10;display:none;">Premium Center</button>
+      <button class="gcal-btn" id="achievementsBtn" style="margin: 0 0 8px 0; position:relative; z-index:10;">Achievements</button>
+      <button class="gcal-btn" id="streakDisplay" style="margin: 0 0 16px 0; cursor: pointer; position:relative; z-index:10;"><span id="streakCount">0</span> Day Streak <span id="freezeIndicator"></span></button>
+
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon">⏱️</div>
             <div class="stat-value" id="longestSession">0m</div>
             <div class="stat-label">Longest Session</div>
           </div>
           <div class="stat-card discourage">
-            <div class="stat-icon">☕</div>
             <div class="stat-value" id="longestBreak">0m</div>
             <div class="stat-label">Longest Break</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">💰</div>
             <div class="stat-value" id="highestCoins">0</div>
             <div class="stat-label">Highest Coins</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">🥕</div>
             <div class="stat-value" id="carrotsFed">0</div>
             <div class="stat-label">Carrots Fed</div>
           </div>
@@ -2677,7 +2717,7 @@ button:disabled {
             <div class="calendar-weekday">S</div>
           </div>
           <div class="calendar-grid" id="calendarGrid"></div>
-          <button class="gcal-btn" id="gcalBtn">📅 Open Google Calendar</button>
+          <button class="gcal-btn" id="gcalBtn">Open Google Calendar</button>
         </div>
       </div>
 
@@ -3506,9 +3546,9 @@ button:disabled {
     </div>
     <div style="font-size: 12px; color: #9B8F83; font-weight: 500; margin-bottom: 20px;">Your feedback goes directly to the developer.</div>
     <div style="display: flex; gap: 6px; margin-bottom: 16px;">
-      <button class="feedback-type-btn active" data-type="other" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">💬 General</button>
-      <button class="feedback-type-btn" data-type="bug" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">🐛 Bug Report</button>
-      <button class="feedback-type-btn" data-type="other" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">💬 Other</button>
+      <button class="feedback-type-btn active" data-type="general" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">General</button>
+      <button class="feedback-type-btn" data-type="bug" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">Bug Report</button>
+      <button class="feedback-type-btn" data-type="idea" style="flex:1;padding:8px 4px;border:2px solid transparent;border-radius:10px;background:#f4f4f4;font-size:12px;font-weight:700;cursor:pointer;color:#2D3142;">Idea</button>
     </div>
     <textarea id="feedbackText" placeholder="Describe your idea or issue clearly..." style="width:100%;padding:13px;border:2px solid #E8E8E8;border-radius:12px;font-size:13px;min-height:100px;resize:none;font-family:inherit;color:#2D3142;background:#FAFAFA;outline:none;transition:border 0.2s;line-height:1.5;"></textarea>
     <input type="text" id="feedbackContact" placeholder="Optional contact (Just anyway I can get back to you)" style="width:100%;padding:11px 13px;border:2px solid #E8E8E8;border-radius:12px;font-size:12px;font-family:inherit;color:#2D3142;background:#FAFAFA;outline:none;margin-top:8px;transition:border 0.2s;">
@@ -4081,7 +4121,7 @@ function handleDeath() {
 }
 
 function spawnFloatingEmoji() {
-  if (!state.isRunning || state.mode !== 'focus' || !state.showFloatingEmojis) return;
+  if (!state.isRunning || (state.mode !== 'focus' && state.mode !== 'stopwatch') || !state.showFloatingEmojis) return;
   
   const emoji = document.createElement('div');
   emoji.className = 'floating-emoji';
@@ -4122,7 +4162,7 @@ function updateCharacterAppearance() {
     character.classList.add('sad');
   }
   
-  if (state.isRunning && state.mode === 'focus' && !state.isDead) {
+  if (state.isRunning && (state.mode === 'focus' || state.mode === 'stopwatch') && !state.isDead) {
     character.classList.add('focused');
   }
   
@@ -4184,8 +4224,17 @@ function renderCosmetic() {
     case 'pirate':
       html = '<div class="pirate-hat"></div>';
       break;
+    case 'premium-crown':
+      html = '<div class="crown"><div class="crown-base"></div><div class="crown-points"><div class="crown-point"></div><div class="crown-point"></div><div class="crown-point"></div></div></div>';
+      break;
+    case 'premium-glow':
+      html = '<div class="halo"></div>';
+      break;
+    case 'premium-shades':
+      html = '<div class="sunglasses"><div class="sg-arm"></div><div class="sg-lens"></div><div class="sg-bridge"></div><div class="sg-lens"></div><div class="sg-arm"></div></div>';
+      break;
   }
-  
+
   cosmeticContainer.innerHTML = html;
 }
 
@@ -4200,7 +4249,7 @@ function renderBook() {
     existingBook.remove();
   }
   
-  if (!state.hasBook || !state.isRunning || state.mode !== 'focus' || state.isDead) return;
+  if (!state.hasBook || !state.isRunning || (state.mode !== 'focus' && state.mode !== 'stopwatch') || state.isDead) return;
   
   const bookHTML = `
     <div class="reading-book">
@@ -4791,7 +4840,7 @@ function startTimer() {
   state.isRunning = true;
   state.isPaused = false;
   requestWakeLock();
-  sessionLabel.textContent = state.mode === 'focus' ? 'Stay focused!' : state.mode === 'stopwatch' ? 'Tracking time... ⏱️' : 'Enjoying your break! ☕';
+  sessionLabel.textContent = state.mode === 'focus' ? 'Stay focused' : state.mode === 'stopwatch' ? 'Tracking time' : 'Enjoying your break';
   if (state.mode === 'long') {
     setTimeout(() => {
       if (confirm('🎮 Want to play Memory Match during your break?')) {
@@ -5659,10 +5708,6 @@ document.getElementById('nextMonth').addEventListener('click', () => {
 
 document.getElementById('gcalBtn').addEventListener('click', () => {
   window.open('https://calendar.google.com', '_blank');
-  const pick = prompt('Open calendar app quickly:\\n1 = Google Calendar\\n2 = Apple Calendar\\n3 = Outlook Calendar\\n(leave blank to stay on web)'); // google calendar  buttons
-  if (pick === '1') window.location.href = 'googlecalendar://';
-  if (pick === '2') window.location.href = 'calshow://';
-  if (pick === '3') window.location.href = 'ms-outlook://calendar';
 });
 if (!document.getElementById('calendarQuickApps')) {
   const quick = document.createElement('div');
@@ -5683,12 +5728,7 @@ document.getElementById('graphRange')?.addEventListener('change', () => {
 document.getElementById('refreshGraph')?.addEventListener('click', () => {
   renderGraph();
 });
-if (!document.getElementById('fullscreenStudyChartBtn')) {
-  document.getElementById('refreshGraph')?.insertAdjacentHTML('afterend', '<button id=\"fullscreenStudyChartBtn\" class=\"gcal-btn\" style=\"margin-top:8px;\">⛶ Fullscreen Chart</button>');
-}
-document.getElementById('fullscreenStudyChartBtn')?.addEventListener('click', () => {
-  document.getElementById('studyChart')?.requestFullscreen?.();
-});
+// Fullscreen chart removed — caused jarring UX on mobile.
 
 // Hamburger → Chat
 document.querySelectorAll('.menu-btn').forEach(btn => {
@@ -7677,15 +7717,15 @@ document.getElementById('redeemPremiumBtn').addEventListener('click', async () =
       state.isPremium = true;
       state.premiumUnlockedAt = Date.now();
       if (!state.premiumSurvey) {
-        const yearGroup = prompt('What year group are you in?') || '';
-        const prefs = prompt('Any preferences for the AI to know about you?') || '';
-        const interests = prompt('Favourite subjects or interests?') || '';
-        state.premiumSurvey = {yearGroup, prefs, interests};
+        state.premiumSurvey = {yearGroup: '', prefs: '', interests: ''};
       }
       saveState();
       updatePremiumUI();
-      document.getElementById('premiumCodeModal').classList.remove('active');
-      setTimeout(() => alert('✨🎉 PREMIUM UNLOCKED! You now have upgraded layouts, saved plans, savess, and MUCH more!'), 200);
+      statusEl.style.color = '#2D6B3A';
+      statusEl.textContent = 'Premium unlocked! Welcome.';
+      setTimeout(() => {
+        document.getElementById('premiumCodeModal').classList.remove('active');
+      }, 900);
     } else {
       statusEl.style.color='#FF6B6B';
       statusEl.textContent = `❌ ${data.error||'Invalid code'}`;
@@ -7732,12 +7772,7 @@ function openPremiumCenter() {
     data:{labels:labels14,datasets:[{label:'Minutes',data:last14,backgroundColor:'rgba(255,184,77,0.6)',borderColor:'rgba(255,184,77,1)',borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>v+'m',font:{size:9}}}}}
   });
-  if (!document.getElementById('fullscreenPremiumChartBtn')) {
-    canvas.insertAdjacentHTML('afterend', '<button id="fullscreenPremiumChartBtn" class="gcal-btn" style="margin-bottom:10px;">⛶ Fullscreen Premium Chart</button>');
-    document.getElementById('fullscreenPremiumChartBtn').addEventListener('click', () => {
-      document.getElementById('premiumChart').requestFullscreen?.();
-    });
-  }
+  // Fullscreen premium chart button removed.
 
   const saves = document.getElementById('premiumSavesContent');
   const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
@@ -7762,29 +7797,36 @@ function showPremiumTab(tabId) {
   });
 }
 
+function _setPremiumTabActive(activeId) {
+  ['premTabAnalytics','premTabAI','premTabSaves'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === activeId) {
+      el.style.borderBottomColor = '#FFB84D';
+      el.style.color = '#2D3142';
+      el.style.fontWeight = '700';
+    } else {
+      el.style.borderBottomColor = 'transparent';
+      el.style.color = '#9B9099';
+      el.style.fontWeight = '600';
+    }
+  });
+}
+
 document.getElementById('premTabAnalytics').addEventListener('click', () => {
   showPremiumTab('premiumAnalyticsTab');
-  document.getElementById('premTabAnalytics').style.borderBottomColor = '#FFB84D';
-  document.getElementById('premTabAnalytics').style.color = '#2D3142';
-  document.getElementById('premTabAnalytics').style.fontWeight = '700';
-  document.getElementById('premTabAI').style.borderBottomColor = 'transparent';
-  document.getElementById('premTabAI').style.color = '#9B9099';
-  document.getElementById('premTabAI').style.fontWeight = '600';
+  _setPremiumTabActive('premTabAnalytics');
 });
 
 document.getElementById('premTabAI').addEventListener('click', () => {
   showPremiumTab('premiumAITab');
-  document.getElementById('premTabAI').style.borderBottomColor = '#FFB84D';
-  document.getElementById('premTabAI').style.color = '#2D3142';
-  document.getElementById('premTabAI').style.fontWeight = '700';
-  document.getElementById('premTabAnalytics').style.borderBottomColor = 'transparent';
-  document.getElementById('premTabAnalytics').style.color = '#9B9099';
-  document.getElementById('premTabAnalytics').style.fontWeight = '600';
+  _setPremiumTabActive('premTabAI');
 });
 
 
 document.getElementById('premTabSaves').addEventListener('click', () => {
   showPremiumTab('premiumSavesTab');
+  _setPremiumTabActive('premTabSaves');
 });
 
 
