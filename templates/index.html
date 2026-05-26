@@ -1184,20 +1184,35 @@ body.premium-royalty {
 }
 
 .shop-tabs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 2px;
 }
+.shop-tabs-grid::-webkit-scrollbar { display: none; }
 
 .shop-tabs-grid .shop-tab {
-  padding: 16px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border-radius: 999px;
   font-size: 13px;
-  line-height: 1.2;
-  min-height: 60px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.4);
+  color: #5B4A3A;
+  border: 2px solid rgba(255,255,255,0.55);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-tabs-grid .shop-tab.active {
+  background: linear-gradient(135deg, #2D3142 0%, #4a4f63 100%);
+  color: #fff;
+  border-color: #2D3142;
+  box-shadow: 0 4px 14px rgba(45,49,66,0.35);
 }
 
 .shop-tab {
@@ -1205,7 +1220,90 @@ body.premium-royalty {
 }
 
 .shop-tab:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
+}
+
+/* Coin wallet hero card */
+.shop-wallet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.65), rgba(255,255,255,0.4));
+  border: 1px solid rgba(255,255,255,0.7);
+  border-radius: 20px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: hidden;
+}
+.shop-wallet::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle, rgba(255,184,77,0.25), transparent 55%);
+  pointer-events: none;
+}
+.shop-wallet-coin {
+  font-size: 36px;
+  filter: drop-shadow(0 4px 8px rgba(255,184,77,0.4));
+  animation: walletSpin 6s ease-in-out infinite;
+}
+@keyframes walletSpin {
+  0%, 100% { transform: rotateY(0deg); }
+  50% { transform: rotateY(180deg); }
+}
+.shop-wallet-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  z-index: 1;
+}
+.shop-wallet-balance {
+  font-size: 24px;
+  font-weight: 900;
+  color: #2D3142;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.shop-wallet-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6B7080;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+.shop-wallet-carrots {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.6);
+  padding: 6px 10px;
+  border-radius: 12px;
+  color: #2D3142;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Section heading inside a category */
+.shop-section-title {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 800;
+  color: #5B4A3A;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  margin: 6px 2px -4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shop-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.12), transparent);
 }
 
 .shop-items {
@@ -1215,52 +1313,189 @@ body.premium-royalty {
 }
 
 .shop-item {
-  background: linear-gradient(145deg, rgba(255,255,255,0.55), rgba(255,255,255,0.32));
-  border-radius: 18px;
-  padding: 16px 12px;
+  position: relative;
+  background: linear-gradient(155deg, rgba(255,255,255,0.7), rgba(255,255,255,0.4));
+  border-radius: 20px;
+  padding: 18px 12px 14px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-  border: 2px solid rgba(255,255,255,0.5);
+  transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
+              box-shadow 0.22s ease,
+              border-color 0.22s ease,
+              background 0.22s ease;
+  border: 2px solid rgba(255,255,255,0.65);
   text-align: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.shop-item::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -40%;
+  width: 180%;
+  height: 180%;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.4), transparent 50%);
+  pointer-events: none;
+  opacity: 0.7;
 }
 
 .shop-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.16);
 }
-
 .shop-item:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
 }
 
 .shop-item.owned {
-  border-color: #6BCF7F;
-  background: linear-gradient(145deg, rgba(107,207,127,0.18), rgba(107,207,127,0.08));
+  border-color: rgba(107,207,127,0.85);
+  background: linear-gradient(155deg, rgba(107,207,127,0.28), rgba(107,207,127,0.08));
 }
-
 .shop-item.equipped {
   border-color: #FFB84D;
-  background: linear-gradient(145deg, rgba(255,184,77,0.25), rgba(255,184,77,0.12));
-  box-shadow: 0 4px 14px rgba(255,184,77,0.3), 0 0 0 1px rgba(255,184,77,0.2);
+  background: linear-gradient(155deg, rgba(255,184,77,0.35), rgba(255,184,77,0.12));
+  box-shadow: 0 6px 18px rgba(255,184,77,0.35), 0 0 0 1px rgba(255,184,77,0.25);
+}
+
+/* Rarity bands */
+.shop-item.rarity-rare {
+  border-color: rgba(80,150,235,0.7);
+  box-shadow: 0 4px 14px rgba(80,150,235,0.18);
+}
+.shop-item.rarity-epic {
+  border-color: rgba(155,89,182,0.75);
+  box-shadow: 0 4px 16px rgba(155,89,182,0.22);
+  background: linear-gradient(155deg, rgba(155,89,182,0.18), rgba(155,89,182,0.04));
+}
+.shop-item.rarity-legendary {
+  border-color: rgba(255,184,77,0.85);
+  background: linear-gradient(155deg, rgba(255,215,0,0.22), rgba(255,140,0,0.08));
+  box-shadow: 0 6px 22px rgba(255,165,0,0.35);
+  animation: legendaryPulse 3.5s ease-in-out infinite;
+}
+@keyframes legendaryPulse {
+  0%, 100% { box-shadow: 0 6px 22px rgba(255,165,0,0.35); }
+  50% { box-shadow: 0 8px 32px rgba(255,200,0,0.65); }
+}
+.shop-item.locked {
+  filter: grayscale(0.55);
+  opacity: 0.7;
+}
+
+.shop-rarity-tag {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.18);
+  color: #fff;
+  z-index: 2;
+  text-transform: uppercase;
+}
+.rarity-rare .shop-rarity-tag { background: linear-gradient(135deg,#5096eb,#3a78cf); }
+.rarity-epic .shop-rarity-tag { background: linear-gradient(135deg,#9b59b6,#7d3f99); }
+.rarity-legendary .shop-rarity-tag { background: linear-gradient(135deg,#FFD700,#FF8C00); color: #3D1F00; }
+
+.shop-status-ribbon {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6BCF7F, #4caf6c);
+  color: #fff;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(76,175,108,0.4);
+}
+.shop-item.equipped .shop-status-ribbon {
+  background: linear-gradient(135deg, #FFB84D, #f0a020);
+  color: #3D1F00;
+  box-shadow: 0 2px 6px rgba(240,160,32,0.45);
 }
 
 .shop-item-icon {
-  font-size: 44px;
-  margin-bottom: 6px;
+  font-size: 46px;
+  margin-bottom: 8px;
+  display: inline-flex;
+  width: 78px;
+  height: 78px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.55);
+  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 2px 6px rgba(255,255,255,0.7),
+              0 4px 10px rgba(0,0,0,0.08);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.shop-item:hover .shop-item-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+.shop-item.equipped .shop-item-icon {
+  background: rgba(255,255,255,0.75);
+  box-shadow: inset 0 2px 6px rgba(255,255,255,0.9),
+              0 4px 12px rgba(255,184,77,0.4);
 }
 
 .shop-item-name {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 4px;
   color: #2D3142;
+  position: relative;
+  z-index: 1;
+}
+
+.shop-item-desc {
+  font-size: 10.5px;
+  color: #6B7080;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  min-height: 28px;
+  padding: 0 4px;
+  position: relative;
+  z-index: 1;
 }
 
 .shop-item-price {
-  font-size: 11px;
-  color: #6B7080;
-  font-weight: 600;
+  font-size: 12px;
+  color: #2D3142;
+  font-weight: 800;
+  background: rgba(255,255,255,0.65);
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.shop-item.owned .shop-item-price {
+  background: rgba(255,255,255,0.85);
+  color: #2D6B3A;
+}
+.shop-item.equipped .shop-item-price {
+  background: rgba(255,255,255,0.9);
+  color: #8B5A1B;
+}
+.shop-item-price .price-strike {
+  text-decoration: line-through;
+  opacity: 0.55;
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 4px;
 }
 
 .bg-item {
@@ -2529,6 +2764,191 @@ button:disabled {
   100% { transform: scale(1.15) rotate(4deg); }
 }
 
+/* ===== PREMIUM CENTER ===== */
+.premium-center {
+  background: #fffdf7;
+}
+.premium-hero {
+  position: relative;
+  padding: 22px 22px 26px;
+  background:
+    radial-gradient(circle at 25% 0%, rgba(255,255,255,0.35), transparent 55%),
+    linear-gradient(135deg, #FFD700 0%, #FF8C00 50%, #FFD700 100%);
+  background-size: 200% 200%;
+  animation: goldShimmer 7s linear infinite;
+  color: #3D1F00;
+  overflow: hidden;
+}
+.premium-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 4px, transparent 4px 14px);
+  pointer-events: none;
+}
+.premium-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(61,31,0,0.18);
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  backdrop-filter: blur(4px);
+}
+.premium-hero-greeting {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.82;
+  margin-bottom: 2px;
+}
+.premium-hero-name {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 8px rgba(61,31,0,0.15);
+}
+.premium-hero-sub {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+.premium-hero-coins {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(61,31,0,0.22);
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(4px);
+}
+.premium-stat-card {
+  background: linear-gradient(155deg, #fffaf0 0%, #fff6e4 100%);
+  border-radius: 14px;
+  padding: 14px 12px;
+  text-align: center;
+  border: 1.5px solid rgba(255,184,77,0.4);
+  box-shadow: 0 3px 10px rgba(255,165,0,0.1);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.premium-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(255,165,0,0.18);
+}
+.premium-stat-card.hero-stat {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #fff4d0 0%, #ffe39b 100%);
+  border: 2px solid rgba(255,184,77,0.55);
+}
+.premium-stat-icon { font-size: 22px; margin-bottom: 4px; opacity: 0.92; }
+.premium-stat-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #3D1F00;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.premium-stat-card.hero-stat .premium-stat-value { font-size: 32px; }
+.premium-stat-label {
+  font-size: 9.5px;
+  color: #8B6A2A;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-top: 3px;
+}
+.premium-insight-card {
+  background: linear-gradient(155deg, rgba(255,250,230,0.95), rgba(255,240,200,0.6));
+  border: 1.5px solid rgba(255,184,77,0.35);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #3D1F00;
+  margin-top: 12px;
+}
+.premium-insight-card strong { color: #8B5A0F; font-weight: 800; }
+.premium-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.premium-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(61,31,0,0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.premium-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFD700, #FF8C00);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Toast notification system */
+.toast-stack {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 90%;
+}
+.toast {
+  background: rgba(45,49,66,0.96);
+  color: white;
+  padding: 13px 22px;
+  border-radius: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+  animation: toastIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 100%;
+}
+.toast.toast-success { background: linear-gradient(135deg, #4caf6c 0%, #3d9959 100%); }
+.toast.toast-error { background: linear-gradient(135deg, #e85a5a 0%, #cc4747 100%); }
+.toast.toast-warn { background: linear-gradient(135deg, #f0a040 0%, #d98828 100%); }
+.toast.toast-info { background: rgba(45,49,66,0.96); }
+.toast.toast-premium { background: linear-gradient(135deg, #FFD700, #FF8C00, #FFD700); background-size: 200% 200%; animation: toastIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), goldShimmer 3s linear infinite; color: #3D1F00; }
+.toast.leaving { animation: toastOut 0.28s ease forwards; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(20px) scale(0.92); }
+}
+
 /* Premium Center tab buttons + button micro-interactions */
 #premTabAnalytics, #premTabAI, #premTabSaves {
   transition: border-bottom-color 0.25s ease, color 0.25s ease, background 0.2s ease, transform 0.15s ease;
@@ -2546,6 +2966,7 @@ button:disabled {
 <body>
 <div class="bg-overlay" id="bgOverlay"></div>
 <div class="offline-banner" id="offlineBanner">📡 No internet connection — leaderboard & sync unavailable</div>
+<div class="toast-stack" id="toastStack"></div>
 
 <div class="container">
   <div class="pages-container">
@@ -2668,18 +3089,22 @@ button:disabled {
 
         <div class="stats-grid">
           <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
             <div class="stat-value" id="longestSession">0m</div>
             <div class="stat-label">Longest Session</div>
           </div>
           <div class="stat-card discourage">
+            <div class="stat-icon">☕</div>
             <div class="stat-value" id="longestBreak">0m</div>
             <div class="stat-label">Longest Break</div>
           </div>
           <div class="stat-card">
+            <div class="stat-icon">💰</div>
             <div class="stat-value" id="highestCoins">0</div>
             <div class="stat-label">Highest Coins</div>
           </div>
           <div class="stat-card">
+            <div class="stat-icon">🥕</div>
             <div class="stat-value" id="carrotsFed">0</div>
             <div class="stat-label">Carrots Fed</div>
           </div>
@@ -2904,15 +3329,24 @@ button:disabled {
       </div>
 
       <div class="shop-content">
-        <div class="stats-header">Shop</div>
+        <div class="stats-header" style="margin-bottom:14px;">Shop</div>
 
-		<div id="shopDiscountBanner" style="margin-bottom:10px;"></div>
+        <div class="shop-wallet">
+          <div class="shop-wallet-coin">🪙</div>
+          <div class="shop-wallet-info">
+            <div class="shop-wallet-balance" id="shopWalletCoins">0</div>
+            <div class="shop-wallet-label">Coins available</div>
+          </div>
+          <div class="shop-wallet-carrots"><span id="shopWalletCarrots">0</span> 🥕</div>
+        </div>
+
+        <div id="shopDiscountBanner" style="margin-bottom:10px;"></div>
         <div class="shop-tabs-grid">
-          <button class="shop-tab active" data-category="items">Items</button>
-          <button class="shop-tab" data-category="cosmetics">Cosmetics</button>
-          <button class="shop-tab" data-category="premium-cosmetics" id="premiumCosmeticsTab" style="display:none;">Premium Free</button>
-          <button class="shop-tab" data-category="emotes">Emotes</button>
-          <button class="shop-tab" data-category="backgrounds">Backgrounds</button>
+          <button class="shop-tab active" data-category="items">🎒 Items</button>
+          <button class="shop-tab" data-category="cosmetics">🎩 Cosmetics</button>
+          <button class="shop-tab" data-category="premium-cosmetics" id="premiumCosmeticsTab" style="display:none;">✨ Premium</button>
+          <button class="shop-tab" data-category="emotes">😄 Emotes</button>
+          <button class="shop-tab" data-category="backgrounds">🌌 Backgrounds</button>
         </div>
 
         <div class="shop-items" id="shopItems"></div>
@@ -3458,32 +3892,35 @@ button:disabled {
 
 <!-- Premium Center Modal -->
 <div class="modal" id="premiumCenterModal">
-  <div class="modal-content" style="max-width:420px;width:96%;max-height:90vh;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:22px;">
-    <div style="padding:20px;background:linear-gradient(135deg,#FFD700,#FF8C00,#FFD700);background-size:200% 200%;animation:goldShimmer 3s linear infinite;">
-      <div style="font-size:22px;font-weight:900;color:#3D1F00;">✨ Premium Center</div>
-      <div style="font-size:12px;color:rgba(61,31,0,0.7);font-weight:600;margin-top:2px;">Your exclusive study intelligence hub</div>
+  <div class="modal-content premium-center" style="max-width:430px;width:96%;max-height:92vh;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:24px;">
+    <div class="premium-hero">
+      <div class="premium-hero-coins">🪙 <span id="premiumHeroCoins">0</span></div>
+      <div class="premium-hero-badge">✨ Premium Member</div>
+      <div class="premium-hero-greeting" id="premiumHeroGreeting">Welcome back,</div>
+      <div class="premium-hero-name" id="premiumHeroName">friend</div>
+      <div class="premium-hero-sub">Your study intelligence hub — analytics, AI plans, saved insights, and exclusive cosmetics.</div>
     </div>
-    <div style="display:flex;border-bottom:1px solid rgba(0,0,0,0.08);">
-      <button id="premTabAnalytics" style="flex:1;padding:12px;border:none;border-bottom:3px solid #FFB84D;background:none;font-weight:700;font-size:13px;color:#2D3142;cursor:pointer;">📊 Analytics</button>
-      <button id="premTabAI" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🤖 AI Plan</button>
-	  <button id="premTabSaves" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">🌌 Saves</button>
+    <div style="display:flex;border-bottom:1px solid rgba(0,0,0,0.08);background:#fffdf7;">
+      <button id="premTabAnalytics" style="flex:1;padding:13px;border:none;border-bottom:3px solid #FFB84D;background:none;font-weight:700;font-size:13px;color:#2D3142;cursor:pointer;">Analytics</button>
+      <button id="premTabAI" style="flex:1;padding:13px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">AI Plan</button>
+      <button id="premTabSaves" style="flex:1;padding:13px;border:none;border-bottom:3px solid transparent;background:none;font-weight:600;font-size:13px;color:#9B9099;cursor:pointer;">Saved</button>
     </div>
-    <div style="flex:1;overflow-y:auto;">
+    <div style="flex:1;overflow-y:auto;background:#fffdf7;">
       <!-- Analytics Tab -->
       <div id="premiumAnalyticsTab" style="padding:16px;">
-        <div id="premiumStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;"></div>
-        <canvas id="premiumChart" style="max-height:180px;margin-bottom:12px;"></canvas>
-        <div id="premiumInsights" style="font-size:13px;color:#4A3F35;line-height:1.7;background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;border:1px solid rgba(255,184,77,0.25);"></div>
+        <div id="premiumStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;"></div>
+        <canvas id="premiumChart" style="max-height:180px;margin-bottom:8px;"></canvas>
+        <div id="premiumInsights" class="premium-insight-card"></div>
       </div>
-	  <div id="premiumSavesTab" style="padding:16px;display:none;"><div id="premiumSavesContent" style="font-size:13px;color:#4A3F35;line-height:1.7;"></div></div>
+      <div id="premiumSavesTab" style="padding:16px;display:none;"><div id="premiumSavesContent" style="font-size:13px;color:#4A3F35;line-height:1.7;"></div></div>
       <!-- AI Tab -->
       <div id="premiumAITab" style="padding:16px;display:none;">
-        <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let AI analyze your study patterns and generate a personalized improvement plan.</div>
-        <button class="modal-btn primary" id="generateStudyPlanBtn" style="width:100%;margin-bottom:14px;">🤖 Generate My Study Plan</button>
-        <div id="studyPlanOutput" style="font-size:13px;line-height:1.8;color:#2D3142;white-space:pre-wrap;background:rgba(0,0,0,0.03);border-radius:12px;padding:14px;min-height:60px;display:none;"></div>
+        <div style="font-size:13px;color:#6B7080;margin-bottom:14px;line-height:1.6;">Let our AI analyze your study patterns and write you a personalised improvement plan.</div>
+        <button class="modal-btn primary premium-btn-gold" id="generateStudyPlanBtn" style="width:100%;margin-bottom:14px;">Generate My Study Plan</button>
+        <div id="studyPlanOutput" style="font-size:13px;line-height:1.8;color:#2D3142;white-space:pre-wrap;background:rgba(255,184,77,0.08);border:1px solid rgba(255,184,77,0.25);border-radius:14px;padding:14px;min-height:60px;display:none;"></div>
       </div>
     </div>
-    <div style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);">
+    <div style="padding:12px 16px;border-top:1px solid rgba(0,0,0,0.07);background:#fffdf7;">
       <button class="modal-btn secondary" id="closePremiumCenterBtn" style="width:100%;">Close</button>
     </div>
   </div>
@@ -3748,10 +4185,27 @@ window.addEventListener('offline', updateOnlineStatus);
 
 function requiresInternet(featureName) {
   if (!isOnline) {
-    alert(`📡 No internet connection.\n\n"${featureName}" needs Wi-Fi or mobile data to work.\n\nYour local data is safe — connect and try again!`);
+    toast(`${featureName} needs an internet connection.`, 'warn', 3200);
     return false;
   }
   return true;
+}
+
+// === TOAST NOTIFICATION SYSTEM ===
+function toast(message, type = 'info', duration = 2400) {
+  const stack = document.getElementById('toastStack');
+  if (!stack) { console.log('[toast]', message); return; }
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  stack.appendChild(el);
+  // Cap to 4 visible
+  while (stack.children.length > 4) stack.removeChild(stack.firstChild);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 280);
+  }, duration);
+  return el;
 }
 	
 const cosmetics = [
@@ -4324,16 +4778,16 @@ function applyOpacity() {
 }
 
 function updateCurrencyDisplays() {
-  ['coinsDisplay', 'coinsDisplay2', 'coinsDisplay3', 'coinsDisplay4', 'coinsDisplay5'].forEach(id => {
+  ['coinsDisplay', 'coinsDisplay2', 'coinsDisplay3', 'coinsDisplay4', 'coinsDisplay5', 'shopWalletCoins'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = state.coins;
   });
-  
-  ['carrotsDisplay', 'carrotsDisplay2', 'carrotsDisplay3', 'carrotsDisplay4', 'carrotsDisplay5'].forEach(id => {
+
+  ['carrotsDisplay', 'carrotsDisplay2', 'carrotsDisplay3', 'carrotsDisplay4', 'carrotsDisplay5', 'shopWalletCarrots'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = state.carrots;
   });
-  
+
   if (state.coins > state.highestCoins) {
     state.highestCoins = state.coins;
   }
@@ -4694,7 +5148,7 @@ function feedCarrot() {
   
   // Check if reborning - can't feed during reborn
   if (state.isReborning) {
-    alert('Your buddy is LITTERALY reborning, incase you couldnt tell, so you cant feed it until then...');
+    toast('Your buddy is currently reborning — feeding paused.', 'info');
     return;
   }
   
@@ -4825,7 +5279,7 @@ function reviveBuddy() {
   setTimeout(() => {
     state.isReviving = false;
     updateHappiness(1);
-    alert('✨ Your buddy is alive again!');
+    toast('Your buddy is alive again.', 'success');
     updateDisplay();
   }, 5000);
 }
@@ -4834,7 +5288,7 @@ function startTimer() {
   saveState();
   if (state.studyingDisabledUntil && Date.now() < state.studyingDisabledUntil && state.mode === 'focus') {
     const secondsLeft = Math.ceil((state.studyingDisabledUntil - Date.now()) / 1000);
-    alert(`⏳ Please wait ${secondsLeft}s before starting focus again!`);
+    toast(`Wait ${secondsLeft}s before starting focus again.`, 'warn');
     return;
   }
   state.isRunning = true;
@@ -5254,7 +5708,7 @@ document.getElementById('saveTimeBtn').addEventListener('click', () => {
 // Event Listeners
 actionBtn.addEventListener('click', () => {
   if (state.isDead) {
-    alert('Your buddy is dead! Feed it 3 carrots to revive.');
+    toast('Your buddy needs reviving — feed 3 carrots.', 'warn', 3200);
     return;
   }
   
@@ -5275,7 +5729,7 @@ document.querySelectorAll('.mode-tab').forEach(tab => {
     // NEW: Check if studying is disabled
     if (state.studyingDisabledUntil && Date.now() < state.studyingDisabledUntil && tab.dataset.mode === 'focus') {
       const secondsLeft = Math.ceil((state.studyingDisabledUntil - Date.now()) / 1000);
-      alert(`⏳ Please wait ${secondsLeft}s before switching to focus!`);
+      toast(`Wait ${secondsLeft}s before switching to focus.`, 'warn');
       return;
     }
     
@@ -5338,292 +5792,251 @@ document.querySelectorAll('.shop-tab').forEach(tab => {
   });
 });
 
+// ---- Shop card builder (used by every category) ----
+function buildShopItem(cfg) {
+  // cfg: { icon, name, desc, rarity, owned, equipped, locked, price, basePrice, status, onClick }
+  const el = document.createElement('div');
+  el.className = 'shop-item';
+  if (cfg.rarity) el.classList.add('rarity-' + cfg.rarity);
+  if (cfg.owned) el.classList.add('owned');
+  if (cfg.equipped) el.classList.add('equipped');
+  if (cfg.locked) el.classList.add('locked');
+
+  let badge = '';
+  if (cfg.equipped) badge = '<div class="shop-status-ribbon">Equipped</div>';
+  else if (cfg.owned) badge = '<div class="shop-status-ribbon">Owned</div>';
+
+  let rarityTag = '';
+  if (cfg.rarity && cfg.rarity !== 'common') {
+    rarityTag = `<div class="shop-rarity-tag">${cfg.rarity}</div>`;
+  }
+
+  let priceHtml;
+  if (cfg.status) {
+    priceHtml = cfg.status;
+  } else if (cfg.owned && !cfg.price) {
+    priceHtml = cfg.equipped ? 'Tap to unequip' : 'Tap to equip';
+  } else {
+    const strike = (cfg.basePrice && cfg.basePrice !== cfg.price)
+      ? `<span class="price-strike">${cfg.basePrice}</span>` : '';
+    priceHtml = `${strike}${cfg.price} 🪙`;
+  }
+
+  el.innerHTML = `
+    ${rarityTag}
+    ${badge}
+    <div class="shop-item-icon">${cfg.icon}</div>
+    <div class="shop-item-name">${cfg.name}</div>
+    <div class="shop-item-desc">${cfg.desc || ''}</div>
+    <div class="shop-item-price">${priceHtml}</div>
+  `;
+
+  if (cfg.locked) el.style.cursor = 'not-allowed';
+  el.addEventListener('click', () => cfg.onClick && cfg.onClick());
+  return el;
+}
+
 function renderShop() {
   const container = document.getElementById('shopItems');
   container.innerHTML = '';
-  
+
   // Calculate discounts
   const itemDiscount = state.streak >= 30 ? 0.05 : 0;
   const bgDiscount = state.streak >= 50 ? 0.40 : 0;
-  
-  // Remove old banner
-  document.getElementById('shopDiscountBanner').innerHTML = '';
-  
-  // Show streak discount banner
-  if ((state.streak >= 30 && currentShopCategory === 'items') || 
-      (state.streak >= 50 && currentShopCategory === 'backgrounds') ||
-      (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') ||
-      (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') ||
-      (state.streak < 20)) {
-    
-    const banner = document.createElement('div');
-    banner.id = 'streakDiscountBanner';
-    banner.style.cssText = 'background: linear-gradient(135deg, rgba(255,184,77,0.3), rgba(107,207,127,0.3)); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: #2D3142; text-align: center; border: 1px solid rgba(255,184,77,0.4);';
-    
-    if (state.streak >= 50 && currentShopCategory === 'backgrounds') {
-      banner.textContent = `🔥 ${state.streak} day streak = 40% OFF backgrounds!`;
-    } else if (state.streak >= 30 && currentShopCategory === 'items') {
-      banner.textContent = `🔥 ${state.streak} day streak = 5% OFF items!`;
-    } else if (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') {
-      banner.textContent = `⚡ ${30 - state.streak} more days = 5% item discount!`;
-    } else if (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') {
-      banner.textContent = `⚡ ${50 - state.streak} more days = 40% background discount!`;
-    } else if (state.streak < 20 && (currentShopCategory === 'items' || currentShopCategory === 'backgrounds')) {
-		//alr
-    }
-    
-    document.getElementById('shopDiscountBanner').innerHTML = '';
-	document.getElementById('shopDiscountBanner').appendChild(banner);
+
+  // Streak banner
+  const banner = document.getElementById('shopDiscountBanner');
+  banner.innerHTML = '';
+  let bannerText = '';
+  if (state.streak >= 50 && currentShopCategory === 'backgrounds') {
+    bannerText = `🔥 ${state.streak}-day streak — 40% OFF backgrounds`;
+  } else if (state.streak >= 30 && currentShopCategory === 'items') {
+    bannerText = `🔥 ${state.streak}-day streak — 5% OFF items`;
+  } else if (state.streak >= 20 && state.streak < 30 && currentShopCategory === 'items') {
+    bannerText = `${30 - state.streak} more days for 5% item discount`;
+  } else if (state.streak >= 40 && state.streak < 50 && currentShopCategory === 'backgrounds') {
+    bannerText = `${50 - state.streak} more days for 40% background discount`;
   }
-  
+  if (bannerText) {
+    const b = document.createElement('div');
+    b.style.cssText = 'background: linear-gradient(135deg, rgba(255,184,77,0.32), rgba(107,207,127,0.28)); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #2D3142; text-align: center; border: 1px solid rgba(255,184,77,0.45); box-shadow: 0 3px 10px rgba(255,184,77,0.18);';
+    b.textContent = bannerText;
+    banner.appendChild(b);
+  }
+
   if (currentShopCategory === 'items') {
-    // === CARROT ===
+    const addSection = (label) => {
+      const s = document.createElement('div');
+      s.className = 'shop-section-title';
+      s.textContent = label;
+      container.appendChild(s);
+    };
+
+    const buyConfirm = (label, cost, run) => {
+      if (state.coins < cost) { toast('Not enough coins.', 'error'); return; }
+      if (confirm(`Buy ${label} for ${cost} coins?`)) run();
+    };
+
+    // === FEED YOUR BUDDY ===
+    addSection('Feed your buddy');
+
     const carrotBasePrice = 10;
     const carrotPrice = Math.floor(carrotBasePrice * (1 - itemDiscount));
-    const canAffordCarrot = state.coins >= carrotPrice;
-    
-    const carrotItem = document.createElement('div');
-    carrotItem.className = 'shop-item';
-    carrotItem.innerHTML = `
-      <div class="shop-item-icon">🥕</div>
-      <div class="shop-item-name">Carrot</div>
-      <div class="shop-item-price">${itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${carrotBasePrice}🪙</span> ` : ''}${canAffordCarrot ? carrotPrice + ' 🪙' : carrotPrice + ' 🪙 (Need ' + (carrotPrice - state.coins) + ')'}</div>
-    `;
-    if (!canAffordCarrot) {
-      carrotItem.style.opacity = '0.5';
-      carrotItem.style.cursor = 'not-allowed';
-    }
-    carrotItem.addEventListener('click', () => {
-      if (canAffordCarrot && confirm(`Buy 1 carrot for ${carrotPrice} coins?`)) {
-        state.coins -= carrotPrice;
-        state.carrots++;
-        updateDisplay();
-        renderShop();
-      } else if (!canAffordCarrot) {
-        alert('❌ Not enough coins!');
-      }
-    });
-    container.appendChild(carrotItem);
-    
-    // === CARROT BUNDLE ===
+    container.appendChild(buildShopItem({
+      icon: '🥕', name: 'Carrot', rarity: 'common',
+      desc: 'A snack to keep your buddy happy.',
+      price: carrotPrice, basePrice: itemDiscount > 0 ? carrotBasePrice : null,
+      locked: state.coins < carrotPrice,
+      onClick: () => buyConfirm('a carrot', carrotPrice, () => {
+        state.coins -= carrotPrice; state.carrots++; updateDisplay(); renderShop();
+        toast('Carrot added to your pouch.', 'success');
+      })
+    }));
+
     const bundleBasePrice = 25;
     const bundlePrice = Math.floor(bundleBasePrice * (1 - itemDiscount));
-    const canAffordBundle = state.coins >= bundlePrice;
-    
-    const carrotBundle = document.createElement('div');
-    carrotBundle.className = 'shop-item';
-    carrotBundle.innerHTML = `
-      <div class="shop-item-icon">🥕🥕🥕</div>
-      <div class="shop-item-name">Carrot Bundle</div>
-      <div class="shop-item-price">${itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${bundleBasePrice}🪙</span> ` : ''}${canAffordBundle ? bundlePrice + ' 🪙' : bundlePrice + ' 🪙 (Need ' + (bundlePrice - state.coins) + ')'}</div>
-    `;
-    if (!canAffordBundle) {
-      carrotBundle.style.opacity = '0.5';
-      carrotBundle.style.cursor = 'not-allowed';
-    }
-    carrotBundle.addEventListener('click', () => {
-      if (canAffordBundle && confirm(`Buy 3 carrots for ${bundlePrice} coins?`)) {
-        state.coins -= bundlePrice;
-        state.carrots += 3;
-        updateDisplay();
-        renderShop();
-      } else if (!canAffordBundle) {
-        alert('❌ Not enough coins!');
-      }
-    });
-    container.appendChild(carrotBundle);
+    container.appendChild(buildShopItem({
+      icon: '🥕🥕🥕', name: 'Carrot Bundle', rarity: 'rare',
+      desc: 'Three carrots, one happy buddy.',
+      price: bundlePrice, basePrice: itemDiscount > 0 ? bundleBasePrice : null,
+      locked: state.coins < bundlePrice,
+      onClick: () => buyConfirm('a carrot bundle', bundlePrice, () => {
+        state.coins -= bundlePrice; state.carrots += 3; updateDisplay(); renderShop();
+        toast('Bundle added — 3 carrots earned.', 'success');
+      })
+    }));
 
-    // === STREAK FREEZER ===
+    // === BOOSTS ===
+    addSection('Boosts');
+
     const freezerBasePrice = 60;
     const freezerPrice = Math.floor(freezerBasePrice * (1 - itemDiscount));
-    const canAffordFreezer = state.coins >= freezerPrice;
     const freezerActive = state.streakFreezeActive;
-
-    const streakFreezer = document.createElement('div');
-    streakFreezer.className = 'shop-item';
-    streakFreezer.innerHTML = `
-      <div class="shop-item-icon">❄️</div>
-      <div class="shop-item-name">Streak Freezer</div>
-      <div class="shop-item-price">${freezerActive ? 'Active!' : (itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${freezerBasePrice}🪙</span> ` : '') + (canAffordFreezer ? freezerPrice + ' 🪙' : freezerPrice + ' 🪙 (Need ' + (freezerPrice - state.coins) + ')')}</div>
-    `;
-    if (freezerActive) {
-      streakFreezer.classList.add('equipped');
-      streakFreezer.style.cursor = 'default';
-    } else if (!canAffordFreezer) {
-      streakFreezer.style.opacity = '0.5';
-      streakFreezer.style.cursor = 'not-allowed';
-    }
-    streakFreezer.addEventListener('click', () => {
-      if (freezerActive) {
-        alert('❄️ Streak Freezer is already active! It will protect your streak for 1 missed day.');
-      } else if (canAffordFreezer && confirm(`Buy Streak Freezer for ${freezerPrice} coins?`)) {
-        state.coins -= freezerPrice;
-        state.streakFreezeActive = true;
-        document.getElementById('freezeIndicator').textContent = '❄️';
-        updateDisplay();
-        renderShop();
-        alert('❄️ Streak Freezer activated!');
-      } else if (!canAffordFreezer) {
-        alert('❌ Not enough coins!');
+    container.appendChild(buildShopItem({
+      icon: '❄️', name: 'Streak Freezer', rarity: 'epic',
+      desc: 'Protects your streak for one missed day.',
+      owned: freezerActive, equipped: freezerActive,
+      price: freezerPrice, basePrice: itemDiscount > 0 ? freezerBasePrice : null,
+      status: freezerActive ? 'Active' : undefined,
+      locked: !freezerActive && state.coins < freezerPrice,
+      onClick: () => {
+        if (freezerActive) { toast('Streak Freezer is already active.', 'info'); return; }
+        buyConfirm('Streak Freezer', freezerPrice, () => {
+          state.coins -= freezerPrice; state.streakFreezeActive = true;
+          document.getElementById('freezeIndicator').textContent = '❄️';
+          updateDisplay(); renderShop();
+          toast('Streak Freezer activated. Sleep easy.', 'success');
+        });
       }
-    });
-    container.appendChild(streakFreezer);
+    }));
 
-    // === STUDY BOOK ===
     const bookBasePrice = 25;
     const bookPrice = Math.floor(bookBasePrice * (1 - itemDiscount));
-    const canAffordBook = state.coins >= bookPrice;
     const bookActive = state.hasBook;
-    
-    const studyBook = document.createElement('div');
-    studyBook.className = 'shop-item';
-    if (bookActive) studyBook.classList.add('equipped');
-    studyBook.innerHTML = `
-      <div class="shop-item-icon">📚</div>
-      <div class="shop-item-name">Study Book</div>
-      <div class="shop-item-price">${bookActive ? 'Active!' : (itemDiscount > 0 ? `<span style="text-decoration:line-through;opacity:0.5;font-size:10px">${bookBasePrice}🪙</span> ` : '') + (canAffordBook ? bookPrice + ' 🪙' : bookPrice + ' 🪙 (Need ' + (bookPrice - state.coins) + ')')}</div>
-    `;
-    if (!canAffordBook && !bookActive) {
-      studyBook.style.opacity = '0.5';
-      studyBook.style.cursor = 'not-allowed';
-    }
-    if (bookActive) studyBook.style.cursor = 'default';
-    studyBook.addEventListener('click', () => {
-      if (bookActive) {
-        alert('📚 Study Book is active! Use it in your next focus session for 1.5x coins!');
-      } else if (canAffordBook && confirm(`Buy Study Book for ${bookPrice} coins?`)) {
-        state.coins -= bookPrice;
-        state.hasBook = true;
-        updateDisplay();
-        renderShop();
-        alert('📚 Study Book purchased! Start a focus session to use it!');
-      } else if (!canAffordBook) {
-        alert('❌ Not enough coins!');
+    container.appendChild(buildShopItem({
+      icon: '📚', name: 'Study Book', rarity: 'rare',
+      desc: '1.5× coins on your next focus session.',
+      owned: bookActive, equipped: bookActive,
+      price: bookPrice, basePrice: itemDiscount > 0 ? bookBasePrice : null,
+      status: bookActive ? 'Ready' : undefined,
+      locked: !bookActive && state.coins < bookPrice,
+      onClick: () => {
+        if (bookActive) { toast('Study Book is ready — start a focus session for 1.5× coins.', 'info', 3000); return; }
+        buyConfirm('Study Book', bookPrice, () => {
+          state.coins -= bookPrice; state.hasBook = true; updateDisplay(); renderShop();
+          toast('Study Book purchased — 1.5× coins next session.', 'success', 3000);
+        });
       }
-    });
-    container.appendChild(studyBook);
-    
+    }));
+
   } else if (currentShopCategory === 'cosmetics') {
+    const cosmeticDescs = {
+      tophat: 'Classic charm. Instantly fancy.',
+      wizard: 'Tap your buddy for magic sparkles.',
+      pirate: 'Yo-ho-ho. Adventure awaits.'
+    };
+    const cosmeticRarity = { tophat: 'common', wizard: 'rare', pirate: 'rare' };
     cosmetics.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'shop-item';
       const canAfford = state.coins >= item.price;
       const owned = state.ownedCosmetics.includes(item.id);
-      
-      if (owned) el.classList.add('owned');
-      if (state.equippedCosmetic === item.id) el.classList.add('equipped');
-      
-      let priceText;
-      if (owned) {
-        priceText = state.equippedCosmetic === item.id ? 'Equipped' : 'Equip';
-      } else if (canAfford) {
-        priceText = item.price + ' 🪙';
-      } else {
-        priceText = item.price + ' 🪙 (Need ' + (item.price - state.coins) + ')';
-      }
-      
-      el.innerHTML = `
-        <div class="shop-item-icon">${item.icon}</div>
-        <div class="shop-item-name">${item.name}</div>
-        <div class="shop-item-price">${priceText}</div>
-      `;
-      
-      if (!owned && !canAfford) {
-        el.style.opacity = '0.5';
-        el.style.cursor = 'not-allowed';
-      }
-      
-      el.addEventListener('click', () => {
-        if (owned) {
-          state.equippedCosmetic = state.equippedCosmetic === item.id ? null : item.id;
-          renderCosmetic();
-          renderShop();
-        } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
-          state.coins -= item.price;
-          state.ownedCosmetics.push(item.id);
-          checkAchievements();
-          updateDisplay();
-          renderShop();
+      const equipped = state.equippedCosmetic === item.id;
+      container.appendChild(buildShopItem({
+        icon: item.icon, name: item.name,
+        desc: cosmeticDescs[item.id] || '',
+        rarity: cosmeticRarity[item.id] || 'common',
+        owned, equipped,
+        price: owned ? null : item.price,
+        locked: !owned && !canAfford,
+        onClick: () => {
+          if (owned) {
+            state.equippedCosmetic = equipped ? null : item.id;
+            renderCosmetic(); saveState(); renderShop();
+            toast(equipped ? 'Cosmetic unequipped.' : `${item.name} equipped.`, 'success');
+          } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
+            state.coins -= item.price;
+            state.ownedCosmetics.push(item.id);
+            checkAchievements(); updateDisplay(); renderShop();
+            toast(`${item.name} added to your closet.`, 'success');
+          } else if (!canAfford) {
+            toast('Not enough coins.', 'error');
+          }
         }
-      });
-      
-      container.appendChild(el);
+      }));
     });
-    
+
   } else if (currentShopCategory === 'emotes') {
     emotes.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'shop-item';
       const canAfford = state.coins >= item.price;
       const owned = state.ownedEmotes.includes(item.id);
-      
-      if (owned) el.classList.add('owned');
-      if (state.equippedEmote === item.id) el.classList.add('equipped');
-      
-      let priceText;
-      if (owned) {
-        priceText = state.equippedEmote === item.id ? 'Equipped' : 'Equip';
-      } else if (canAfford) {
-        priceText = item.price + ' 🪙';
-      } else {
-        priceText = item.price + ' 🪙 (Need ' + (item.price - state.coins) + ')';
-      }
-      
-      el.innerHTML = `
-        <div class="shop-item-icon">${item.icon}</div>
-        <div class="shop-item-name">${item.name}</div>
-        <div class="shop-item-price">${priceText}</div>
-      `;
-      
-      if (!owned && !canAfford) {
-        el.style.opacity = '0.5';
-        el.style.cursor = 'not-allowed';
-      }
-      
-      el.addEventListener('click', () => {
-        if (owned) {
-          state.equippedEmote = state.equippedEmote === item.id ? null : item.id;
-          renderEmote();
-          renderShop();
-       } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
-          state.coins -= item.price;
-          state.ownedEmotes.push(item.id);
-          checkAchievements();
-          updateDisplay();
-          renderShop();
+      const equipped = state.equippedEmote === item.id;
+      container.appendChild(buildShopItem({
+        icon: item.icon, name: item.name,
+        desc: 'Tap your buddy in-app to react.',
+        rarity: 'common',
+        owned, equipped,
+        price: owned ? null : item.price,
+        locked: !owned && !canAfford,
+        onClick: () => {
+          if (owned) {
+            state.equippedEmote = equipped ? null : item.id;
+            renderEmote(); saveState(); renderShop();
+            toast(equipped ? 'Emote unequipped.' : `${item.name} equipped.`, 'success');
+          } else if (canAfford && confirm(`Buy ${item.name} for ${item.price} coins?`)) {
+            state.coins -= item.price;
+            state.ownedEmotes.push(item.id);
+            checkAchievements(); updateDisplay(); renderShop();
+            toast(`${item.name} unlocked.`, 'success');
+          } else if (!canAfford) {
+            toast('Not enough coins.', 'error');
+          }
         }
-      });
-      
-      container.appendChild(el);
+      }));
     });
-    
+
   } else if (currentShopCategory === 'premium-cosmetics') {
     if (!state.isPremium) {
-      container.innerHTML = '<div style="padding:12px;border-radius:12px;background:rgba(255,184,77,0.12);font-weight:700;">Premium required for this tab.</div>';
+      container.innerHTML = '<div style="grid-column:1/-1;padding:24px;border-radius:18px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,140,0,0.05));font-weight:700;text-align:center;color:#5B4A3A;border:2px solid rgba(255,184,77,0.35);">Premium required to view exclusive cosmetics.</div>';
       return;
     }
     const premiumFree = [
-      {id:'premium-crown',name:'Royal Crown',icon:'👑'},
-      {id:'premium-glow',name:'Golden Aura',icon:'✨'},
-      {id:'premium-shades',name:'Elite Shades',icon:'🕶️'}
+      {id:'premium-crown',  name:'Royal Crown', icon:'👑', desc:'For those born to study.'},
+      {id:'premium-glow',   name:'Golden Aura', icon:'✨', desc:'A halo of focused energy.'},
+      {id:'premium-shades', name:'Elite Shades',icon:'🕶️', desc:'Too cool for distraction.'}
     ];
     premiumFree.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'shop-item owned';
       const equipped = state.equippedCosmetic === item.id;
-      if (equipped) el.classList.add('equipped');
-      el.innerHTML = `
-        <div class="shop-item-icon">${item.icon}</div>
-        <div class="shop-item-name">${item.name}</div>
-        <div class="shop-item-price">${equipped ? 'Equipped' : 'Equip (Free)'}</div>
-      `;
-      el.addEventListener('click', () => {
-        state.equippedCosmetic = state.equippedCosmetic === item.id ? null : item.id;
-        renderCosmetic();
-        saveState();
-        renderShop();
-      });
-      container.appendChild(el);
+      container.appendChild(buildShopItem({
+        icon: item.icon, name: item.name,
+        desc: item.desc,
+        rarity: 'legendary',
+        owned: true, equipped,
+        status: equipped ? 'Equipped' : 'Tap to equip',
+        onClick: () => {
+          state.equippedCosmetic = equipped ? null : item.id;
+          renderCosmetic(); saveState(); renderShop();
+          toast(equipped ? 'Cosmetic unequipped.' : `${item.name} equipped.`, 'premium', 2200);
+        }
+      }));
     });
 
   } else if (currentShopCategory === 'backgrounds') {
@@ -5714,8 +6127,8 @@ if (!document.getElementById('calendarQuickApps')) {
   quick.id = 'calendarQuickApps';
   quick.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;';
   quick.innerHTML = `
-    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">🍎 Open Apple Calendar</button>
-    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">📄 Open Outlook Calendar</button>
+    <button class="gcal-btn" id="quickAppleCalBtn" style="margin:0;">Open Apple Calendar</button>
+    <button class="gcal-btn" id="quickOutlookCalBtn" style="margin:0;">Open Outlook Calendar</button>
   `;
   document.getElementById('gcalBtn').insertAdjacentElement('afterend', quick); // damn..
   document.getElementById('quickAppleCalBtn').addEventListener('click', () => { window.location.href = 'calshow://'; });
@@ -7735,27 +8148,69 @@ document.getElementById('redeemPremiumBtn').addEventListener('click', async () =
 });
 
 function openPremiumCenter() {
-  if (!state.isPremium) { alert('Premium required.'); return; }
+  if (!state.isPremium) { toast('Premium required.', 'warn'); return; }
+  // Personalize hero
+  const greet = (() => {
+    const h = new Date().getHours();
+    if (h < 5)  return 'Burning the midnight oil,';
+    if (h < 12) return 'Good morning,';
+    if (h < 17) return 'Good afternoon,';
+    if (h < 22) return 'Good evening,';
+    return 'Late-night focus,';
+  })();
+  document.getElementById('premiumHeroGreeting').textContent = greet;
+  document.getElementById('premiumHeroName').textContent = state.username || 'friend';
+  document.getElementById('premiumHeroCoins').textContent = state.coins;
+
   // Build analytics
   const grid = document.getElementById('premiumStatsGrid');
   const totalMins = Object.values(state.studyMinutes).reduce((a,b)=>a+b,0);
   const studyDays = Object.keys(state.studyMinutes).length;
   const avgPerDay = studyDays > 0 ? Math.round(totalMins/studyDays) : 0;
   const completedTodos = state.todos.filter(t=>t.completed).length;
-  const cards = [
-    {label:'Total Hours',value:(totalMins/60).toFixed(1)+'h',icon:'⏱️'},
+  const totalHours = (totalMins/60).toFixed(1);
+
+  const heroCard = `
+    <div class="premium-stat-card hero-stat">
+      <div class="premium-stat-value">${totalHours}h</div>
+      <div class="premium-stat-label">Total time invested</div>
+    </div>`;
+  const stats = [
+    {label:'Day Streak',value:state.streak+'d',icon:'🔥'},
     {label:'Days Studied',value:studyDays,icon:'📅'},
     {label:'Avg per Day',value:avgPerDay+'m',icon:'📊'},
     {label:'Tasks Done',value:completedTodos,icon:'✅'},
-    {label:'Streak',value:state.streak+'d',icon:'🔥'},
-    {label:'Evolution',value:`Evo ${state.evoLevel}`,icon:'⚡'},
+    {label:'Reborns',value:state.reborns,icon:'💪'},
+    {label:'Evolution',value:`Lv ${state.evoLevel || 0}`,icon:'⚡'},
   ];
-  grid.innerHTML = cards.map(c=>`<div style="background:rgba(255,184,77,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(255,184,77,0.2);"><div style="font-size:20px;">${c.icon}</div><div style="font-size:20px;font-weight:800;color:#2D3142;">${c.value}</div><div style="font-size:9px;color:#6B7080;font-weight:700;text-transform:uppercase;">${c.label}</div></div>`).join('');
-  // Build predictions
+  grid.innerHTML = heroCard + stats.map(c => `
+    <div class="premium-stat-card">
+      <div class="premium-stat-icon">${c.icon}</div>
+      <div class="premium-stat-value">${c.value}</div>
+      <div class="premium-stat-label">${c.label}</div>
+    </div>`).join('');
+
+  // Insights with progress bar
   const insights = document.getElementById('premiumInsights');
-  const trend = totalMins > 0 && studyDays > 0 ? (avgPerDay >= 30 ? '🟢 Strong habit forming!' : avgPerDay >= 15 ? '🟡 Building momentum.' : '🔴 Needs more consistency.') : '⬜ Not enough data yet.';
   const projectedWeek = avgPerDay * 7;
-  insights.innerHTML = `<strong>Weekly Projection:</strong> ${projectedWeek}m at current pace<br><strong>Trend:</strong> ${trend}<br><strong>Streak status:</strong> ${state.streak >= 7 ? '🔥 On a hot streak!' : state.streak >= 3 ? '✅ Building nicely' : '⚠️ Keep going daily!'}<br><strong>Completion rate:</strong> ${state.todos.length>0?Math.round(completedTodos/state.todos.length*100):0}% of tasks done`;
+  const weeklyGoal = 300; // 5 hours/week soft goal
+  const goalPct = Math.min(100, Math.round((projectedWeek / weeklyGoal) * 100));
+  const trend = totalMins > 0 && studyDays > 0
+    ? (avgPerDay >= 30 ? 'Strong habit forming.' : avgPerDay >= 15 ? 'Building momentum.' : 'Aim for a touch more consistency.')
+    : 'Not enough data yet — keep going.';
+  const streakStatus = state.streak >= 7 ? 'On a hot streak.' : state.streak >= 3 ? 'Building nicely.' : 'Daily reps will compound.';
+  const completionRate = state.todos.length > 0 ? Math.round(completedTodos / state.todos.length * 100) : 0;
+  insights.innerHTML = `
+    <strong>Weekly projection</strong><br>
+    ${projectedWeek} min / week at current pace
+    <div class="premium-progress-row">
+      <div class="premium-progress-bar"><div class="premium-progress-fill" style="width:${goalPct}%"></div></div>
+      <span>${goalPct}% of 5h goal</span>
+    </div>
+    <div style="margin-top:10px;"><strong>Trend</strong> — ${trend}</div>
+    <div><strong>Streak</strong> — ${streakStatus}</div>
+    <div><strong>Tasks</strong> — ${completionRate}% completion (${completedTodos}/${state.todos.length})</div>
+  `;
   // Premium chart
   if (window.premiumChartInstance) window.premiumChartInstance.destroy();
   const canvas = document.getElementById('premiumChart');
@@ -7778,6 +8233,9 @@ function openPremiumCenter() {
   const plans = (state.premiumSavedStudyPlans||[]).slice(0,5);
   saves.innerHTML = `<div style='margin-bottom:10px;font-weight:700;'>Saved AI plans</div>` + (plans.length?plans.map(p=>`<div style='padding:10px;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-bottom:8px;'><div style='font-size:11px;color:#777;'>${p.date}</div>${formatSimpleMarkdown(p.plan.slice(0,1200))}</div>`).join(''):'No saved plans yet.') + `<div style='margin-top:10px;'>Premium cosmetics unlocked, advanced backgrounds, and enhanced layout active ✨</div>`;
   document.getElementById('studyPlanOutput').style.display = 'none';
+  // Reset to Analytics tab each open for predictable UX
+  showPremiumTab('premiumAnalyticsTab');
+  _setPremiumTabActive('premTabAnalytics');
   document.getElementById('premiumCenterModal').classList.add('active');
 }
 
