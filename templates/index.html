@@ -13,8 +13,12 @@
 <!--
     Project: VuliStudy
     Author: ETHANTYAGI
-    Version: 5.1.2
+    Version: 2.0.1
     ALL RIGHTS RESERVED
+-->
+<!-- 
+	Version has been pushed back significantly.
+	Previous versions already saved
 -->
 
 <style>
@@ -108,6 +112,77 @@ body.premium-royalty {
   z-index: 0;
 }
 
+/* Auto text-contrast boost when a dark background is active. Adds a subtle
+   light wash behind any plain dark text so it doesn't blend into a black bg. */
+body.premium-royalty,
+body.bg-midnight,
+body.bg-forest {
+  /* Lighten the default text color so it pops against the dark gradient. */
+  color: #f3ebe1;
+}
+body.premium-royalty .setting-label,
+body.premium-royalty .stats-header,
+body.premium-royalty .modal-title,
+body.premium-royalty .section-title,
+body.bg-midnight .setting-label,
+body.bg-midnight .stats-header,
+body.bg-midnight .modal-title,
+body.bg-midnight .section-title,
+body.bg-forest .setting-label,
+body.bg-forest .stats-header,
+body.bg-forest .modal-title,
+body.bg-forest .section-title {
+  color: #f3ebe1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+}
+/* Reduced-motion preference */
+body.vs-reduce-motion *,
+body.vs-reduce-motion *::before,
+body.vs-reduce-motion *::after {
+  animation-duration: 0.001s !important;
+  transition-duration: 0.001s !important;
+}
+
+/* Unified loading spinner — used in place of the old "Loading..." text */
+.vs-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 12px;
+  color: #6B7080;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.vs-loader::before {
+  content: '';
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(45,49,66,0.18);
+  border-top-color: #c4a07a;
+  animation: vsSpin 0.8s linear infinite;
+}
+@keyframes vsSpin { to { transform: rotate(360deg); } }
+.vs-loader-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #6B7080;
+  font-size: 13px;
+}
+.vs-loader-inline::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(45,49,66,0.2);
+  border-top-color: #c4a07a;
+  animation: vsSpin 0.8s linear infinite;
+}
+
 .star {
   position: absolute;
   width: 3px;
@@ -185,24 +260,17 @@ body.premium-royalty {
 }
 
 .hamburger {
-  width: 24px;
-  height: 18px;
+  width: 32px;
+  height: 32px;
   position: relative;
+  font-size: 26px;
+  line-height: 32px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
 }
-
-.hamburger span {
-  display: block;
-  width: 100%;
-  height: 3px;
-  background: #2D3142;
-  border-radius: 2px;
-  position: absolute;
-  transition: all 0.3s;
-}
-
-.hamburger span:nth-child(1) { top: 0; }
-.hamburger span:nth-child(2) { top: 7.5px; }
-.hamburger span:nth-child(3) { top: 15px; }
 
 .admin-key {
   position: absolute;
@@ -314,17 +382,18 @@ body.premium-royalty {
   75% { transform: translateY(-25px) scale(1.1) rotate(-2deg); }
 }
 
-.character.eating { animation: eatBob 0.18s ease-in-out 4 !important; }
+/* Eating animation slowed: body bobs gentler, mouth chews calmly. */
+.character.eating { animation: eatBob 0.42s ease-in-out 3 !important; }
 .character.eating .character-mouth {
-  animation: chew 0.18s ease-in-out 4;
+  animation: chew 0.42s ease-in-out 3;
 }
 @keyframes chew {
   0%, 100% { transform: translateX(-50%) scaleY(1); }
-  50% { transform: translateX(-50%) scaleY(0.25); }
+  50% { transform: translateX(-50%) scaleY(0.45); }
 }
 @keyframes eatBob {
   0%, 100% { transform: translateY(0) scale(1); }
-  50%      { transform: translateY(-4px) scale(1.04); }
+  50%      { transform: translateY(-2.5px) scale(1.02); }
 }
 
 .character.melted .character-body {
@@ -394,8 +463,10 @@ body.premium-royalty {
 
 .character-mouth {
   position: absolute;
-  bottom: 55px;
-  left: 25px;
+  /* nudged: slightly lower (was bottom:55px) and slightly right (was left:25px)
+     so the mouth no longer reads like an eye bag under the eyes */
+  bottom: 44px;
+  left: 31px;
   width: 34px;
   height: 18px;
   border: 3px solid #2D3142;
@@ -405,14 +476,15 @@ body.premium-royalty {
 }
 
 .character.focused .character-mouth {
+  /* keep focused mouth aligned with the new resting position (slight right + lower) */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(calc(-50% + 3px), 0);
   width: 28px;
   height: 3px;
   border: none;
   background: #2D3142;
   border-radius: 2px;
-  bottom: 52px;
+  bottom: 42px;
 }
 
 .character.sad .character-mouth {
@@ -635,16 +707,7 @@ body.premium-royalty {
   border-radius: 1px;
 }
 
-.character.reborning {
-  animation: rebornWiggle 0.5s ease-in-out infinite;
-}
-
-@keyframes rebornWiggle {
-  0%, 100% { transform: translateX(0) rotate(0deg) scale(1); }
-  25% { transform: translateX(-10px) rotate(-5deg) scale(1.05); }
-  50% { transform: translateX(0) rotate(0deg) scale(0.95); }
-  75% { transform: translateX(10px) rotate(5deg) scale(1.05); }
-}
+/* (Older rebornWiggle removed — replaced by rebornShake with decaying intensity below.) */
 
 
 
@@ -924,7 +987,13 @@ body.premium-royalty {
   padding: 16px;
   margin-bottom: 16px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  scroll-behavior: smooth;
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+.calendar-grid {
+  transition: opacity 0.22s ease;
+}
+.calendar-grid.swapping { opacity: 0; }
 
 .calendar-header {
   display: flex;
@@ -2372,16 +2441,20 @@ body.premium-royalty {
   z-index: 1;
 }
 
-/* Reborn Wiggle Animation */
+/* Reborn shake: vigorous tremor whose intensity decays over the 2-minute
+   animation (driven by --reborn-shake, set from JS each tick: 1 -> 0). */
 .character.reborning {
-  animation: rebornWiggle 0.5s ease-in-out infinite;
+  --reborn-shake: 1;
+  animation: rebornShake 0.12s linear infinite;
 }
 
-@keyframes rebornWiggle {
-  0%, 100% { transform: translateX(0) rotate(0deg) scale(1); }
-  25% { transform: translateX(-10px) rotate(-5deg) scale(1.05); }
-  50% { transform: translateX(0) rotate(0deg) scale(0.95); }
-  75% { transform: translateX(10px) rotate(5deg) scale(1.05); }
+@keyframes rebornShake {
+  0%   { transform: translate(calc(-3px * var(--reborn-shake)), calc(-2px * var(--reborn-shake))) rotate(calc(-2deg * var(--reborn-shake))); }
+  20%  { transform: translate(calc( 4px * var(--reborn-shake)), calc( 1px * var(--reborn-shake))) rotate(calc( 2.5deg * var(--reborn-shake))); }
+  40%  { transform: translate(calc(-2px * var(--reborn-shake)), calc( 3px * var(--reborn-shake))) rotate(calc(-1.5deg * var(--reborn-shake))); }
+  60%  { transform: translate(calc( 3px * var(--reborn-shake)), calc(-1px * var(--reborn-shake))) rotate(calc( 2deg * var(--reborn-shake))); }
+  80%  { transform: translate(calc(-4px * var(--reborn-shake)), calc( 2px * var(--reborn-shake))) rotate(calc(-2.5deg * var(--reborn-shake))); }
+  100% { transform: translate(calc( 2px * var(--reborn-shake)), calc(-3px * var(--reborn-shake))) rotate(calc( 1.5deg * var(--reborn-shake))); }
 }
 
 .reborn-timer {
@@ -3219,6 +3292,40 @@ button:disabled {
 .character.look-up .eye::after    { transform: translate(0, -2px); }
 .character.look-down .eye::after  { transform: translate(0, 2px); }
 
+/* Buddy SLEEPING (10 PM – 7 AM): closed eyes + floating Zzz */
+.character.sleeping .eye {
+  height: 3px !important;
+  background: #2D3142 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  margin-top: 9px;
+}
+.character.sleeping .eye::after { display: none !important; }
+.character.sleeping .character-mouth {
+  width: 18px !important; height: 4px !important;
+  border-radius: 6px !important; border: none !important;
+  background: #2D3142 !important;
+  bottom: 42px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+.character.sleeping::after {
+  content: 'Zzz';
+  position: absolute;
+  top: -22px;
+  right: -8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #5b6da0;
+  animation: zzzFloat 2.6s ease-in-out infinite;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+@keyframes zzzFloat {
+  0%   { transform: translate(0, 0)   scale(1);   opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(14px, -20px) scale(1.18); opacity: 0; }
+}
+
 /* Buddy yawn when bored / low happiness */
 .character.yawning .character-mouth {
   width: 24px !important; height: 28px !important;
@@ -3328,11 +3435,27 @@ button:disabled {
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-/* Page slide-in (direction-aware) */
-.page.active.slide-from-right { animation: slideFromRight 0.32s cubic-bezier(0.4,0,0.2,1); }
-.page.active.slide-from-left  { animation: slideFromLeft  0.32s cubic-bezier(0.4,0,0.2,1); }
-@keyframes slideFromRight { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes slideFromLeft  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* Page transition (direction-aware):
+   The page-content (everything between the top bar and bottom nav) briefly
+   fades out to a blank canvas, then fades in. We deliberately keep the
+   .top-bar and .bottom-nav fully opaque the whole time so the chrome stays
+   visible during the swipe. Same total duration as before so it doesn't
+   feel sluggish — just smoother. */
+.page.active.slide-from-right { animation: pageFadeIn 0.32s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.page.active.slide-from-left  { animation: pageFadeIn 0.32s cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes pageFadeIn {
+  0%   { opacity: 0; transform: translateX(0) scale(0.985); filter: blur(2px); }
+  35%  { opacity: 0; transform: translateX(0) scale(0.99);  filter: blur(1.4px); }
+  100% { opacity: 1; transform: translateX(0) scale(1);     filter: blur(0); }
+}
+/* Top-bar and bottom-nav are exempt from the fade so the user always sees them */
+.page.active.slide-from-right > .top-bar,
+.page.active.slide-from-left  > .top-bar,
+.page.active.slide-from-right > .bottom-nav,
+.page.active.slide-from-left  > .bottom-nav {
+  animation: barFadeKeep 0.32s linear;
+}
+@keyframes barFadeKeep { from { opacity: 1; } to { opacity: 1; } }
 
 /* Currency bump when coins/carrots change */
 .currency-item.bumping {
@@ -3441,11 +3564,7 @@ button:disabled {
     <div class="page active" id="homePage">
       <div class="top-bar">
         <div class="menu-btn" id="menuBtn">
-          <div class="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="hamburger" aria-label="Menu">👤</div>
         </div>
         <div class="admin-key" id="adminKey">🔑</div>
         <div class="currency-display">
@@ -3483,7 +3602,7 @@ button:disabled {
         </div>
 
         <div class="timer-area">
-          <button id="addTimerMinuteBtn" style="display:none;align-self:center;margin-bottom:8px;background:rgba(255,255,255,0.75);border:none;border-radius:999px;width:34px;height:34px;font-size:20px;font-weight:800;cursor:pointer;">＋</button>
+          <button id="addTimerMinuteBtn" style="display:none;align-self:center;margin-bottom:8px;background:rgba(255,255,255,0.85);border:none;border-radius:50%;width:36px;height:36px;line-height:1;font-size:22px;font-weight:700;cursor:pointer;padding:0;align-items:center;justify-content:center;color:#2D3142;box-shadow:0 2px 6px rgba(0,0,0,0.18);">+</button>
           <div class="timer-display" id="timerDisplay">25:00</div>
           <div class="session-label" id="sessionLabel">Ready to focus</div>
         </div>
@@ -3528,11 +3647,7 @@ button:disabled {
     <div class="page" id="statsPage">
       <div class="top-bar">
         <div class="menu-btn">
-          <div class="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="hamburger" aria-label="Menu">👤</div>
         </div>
         <div class="admin-key">🔑</div>
         <div class="currency-display">
@@ -3549,9 +3664,15 @@ button:disabled {
 
       <div class="stats-content">
       <div class="stats-header">Statistics</div>
-	  <button class="gcal-btn" id="leaderboardBtn" style="margin: 0 0 8px 0; position:relative; z-index:10;">Leaderboard</button>
       <button class="gcal-btn premium-btn-gold" id="premiumCenterStatsBtn" style="margin:0 0 8px 0;position:relative;z-index:10;display:none;">Premium Center</button>
-      <button class="gcal-btn" id="achievementsBtn" style="margin: 0 0 8px 0; position:relative; z-index:10;">Achievements</button>
+      <!-- Achievements glorified: bigger, gold-trimmed, trophy icon, glow. -->
+      <button class="gcal-btn" id="achievementsBtn"
+        style="margin: 0 0 14px 0; position:relative; z-index:10; padding:16px; font-size:16px;
+               background:linear-gradient(135deg,#f6d365 0%,#fda085 45%,#f5a623 100%);
+               color:#3a2a08; box-shadow:0 6px 20px rgba(245,166,35,0.45), inset 0 0 0 2px rgba(255,255,255,0.55);
+               letter-spacing:0.5px; text-transform:uppercase; font-weight:800;">
+        🏆 Achievements
+      </button>
       <button class="gcal-btn" id="streakDisplay" style="margin: 0 0 16px 0; cursor: pointer; position:relative; z-index:10;"><span id="streakCount">0</span> Day Streak <span id="freezeIndicator"></span></button>
 
         <div class="stats-grid">
@@ -3577,6 +3698,9 @@ button:disabled {
           </div>
         </div>
 
+        <!-- Leaderboard relocated between the 4-stat grid and the calendar. -->
+        <button class="gcal-btn" id="leaderboardBtn" style="margin: 4px 0 12px 0; position:relative; z-index:10;">🌍 Leaderboard</button>
+
         <div class="calendar">
           <div class="calendar-header">
             <button class="calendar-nav-btn" id="prevMonth">‹</button>
@@ -3587,6 +3711,7 @@ button:disabled {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="calendar-month">Study Time</div>
             <div style="display: flex; gap: 6px;">
+              <button id="fullscreenGraph" title="Full-screen view" style="padding: 6px 10px; border-radius: 10px; border: none; background: rgba(255,255,255,0.3); font-weight: 600; cursor: pointer; font-size: 14px;">⛶</button>
               <button id="refreshGraph" style="padding: 6px 10px; border-radius: 10px; border: none; background: rgba(255,255,255,0.3); font-weight: 600; cursor: pointer; font-size: 14px;">🔄</button>
               <select id="graphRange" style="padding: 6px 10px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); font-weight: 600;">
                 <option value="7">Last 7 Days</option>
@@ -3683,11 +3808,7 @@ button:disabled {
     <div class="page" id="todoPage">
       <div class="top-bar">
         <div class="menu-btn">
-          <div class="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="hamburger" aria-label="Menu">👤</div>
         </div>
         <div class="admin-key">🔑</div>
         <div class="currency-display">
@@ -3776,11 +3897,7 @@ button:disabled {
     <div class="page" id="shopPage">
       <div class="top-bar">
         <div class="menu-btn">
-          <div class="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="hamburger" aria-label="Menu">👤</div>
         </div>
         <div class="admin-key">🔑</div>
         <div class="currency-display">
@@ -3847,11 +3964,7 @@ button:disabled {
     <div class="page" id="settingsPage">
       <div class="top-bar">
         <div class="menu-btn">
-          <div class="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="hamburger" aria-label="Menu">👤</div>
         </div>
         <div class="admin-key">🔑</div>
         <div class="currency-display">
@@ -3903,8 +4016,42 @@ button:disabled {
             </div>
           </div>
           <div class="setting-item" id="opacitySetting">
-            <div class="setting-label">Background Darkness</div>
+            <div class="setting-label">Text Brightness (raise if background is dark)</div>
             <div class="setting-value" id="opacityValue">10%</div>
+          </div>
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">Buddy Sleeps at Night</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Shows Zzz on the buddy between 10 PM and 7 AM.</div>
+            </div>
+            <div class="toggle active" id="sleepBuddyToggle">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">Confirm Late-Night Sessions</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Ask before starting focus between 10 PM and 7 AM.</div>
+            </div>
+            <div class="toggle active" id="lateNightConfirmToggle">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">Replay Tutorial</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Show the welcome tour again.</div>
+            </div>
+            <div class="setting-value" id="replayTutorialBtn" style="cursor:pointer;">↻</div>
+          </div>
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">Reduce Motion</div>
+              <div style="font-size:11px;color:#8B7A6A;margin-top:2px;">Calmer animations for sensitive eyes.</div>
+            </div>
+            <div class="toggle" id="reduceMotionToggle">
+              <div class="toggle-slider"></div>
+            </div>
           </div>
         </div>
 
@@ -4053,18 +4200,68 @@ button:disabled {
 </div>
 <div class="modal" id="opacityModal">
   <div class="modal-content">
-    <div class="modal-title">Background Darkness</div>
+    <div class="modal-title">Text Readability Boost</div>
+    <div style="font-size:12px;color:#6B7080;margin-bottom:10px;line-height:1.4;">
+      Raise this if your background is dark and the text is hard to read.
+      It adds a subtle light layer behind text so it stays clearly visible.
+    </div>
     <div style="margin-bottom: 18px;">
       <input type="range" id="opacitySlider" min="0" max="50" value="10" style="width: 100%; height: 8px; border-radius: 10px; outline: none; background: linear-gradient(90deg, #6BCF7F 0%, #5ABF6F 100%);">
       <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #6B7080;">
-        <span>0 (Clear)</span>
+        <span>0 (light bg)</span>
         <span id="opacityPreview">10</span>
-        <span>50 (Dark)</span>
+        <span>50 (dark bg)</span>
       </div>
     </div>
     <div class="modal-buttons">
       <button class="modal-btn secondary" id="cancelOpacityBtn">Cancel</button>
       <button class="modal-btn primary" id="saveOpacityBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- First-launch mini tutorial. Skippable. -->
+<div class="modal" id="firstTimeTutorial">
+  <div class="modal-content" style="max-width:380px;">
+    <div class="modal-title" id="tutTitle">Welcome to VuliStudy 👋</div>
+    <div id="tutBody" style="font-size:14px;line-height:1.55;color:#2D3142;min-height:120px;">
+      Meet your buddy. The longer you study, the happier (and stronger) they get.
+    </div>
+    <div id="tutProgress" style="display:flex;gap:6px;justify-content:center;margin:14px 0 8px;">
+      <span class="tut-dot active"></span><span class="tut-dot"></span><span class="tut-dot"></span><span class="tut-dot"></span>
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="tutSkipBtn">Skip</button>
+      <button class="modal-btn primary" id="tutNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+<style>
+  .tut-dot { width:8px;height:8px;border-radius:50%;background:rgba(45,49,66,0.25); }
+  .tut-dot.active { background:#c4a07a; transform:scale(1.2); }
+</style>
+
+<!-- Fullscreen bar chart view. Same vibe as the inline chart, just bigger,
+     with a lifespan range option that only exists in fullscreen. -->
+<div class="modal" id="graphFullscreenModal">
+  <div class="modal-content" style="max-width: 96vw; width: 96vw; max-height: 92vh; padding: 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+      <div class="modal-title" style="margin:0;">📊 Study Time — Full View</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select id="graphRangeFull" style="padding:8px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.5);font-weight:600;">
+          <option value="7">Last 7 Days</option>
+          <option value="30">Last 30 Days</option>
+          <option value="90">Last 90 Days</option>
+          <option value="lifespan">Whole Account Lifespan</option>
+        </select>
+        <button class="modal-btn secondary" id="closeGraphFullBtn" style="padding:8px 14px;">Close</button>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.35);border-radius:14px;padding:14px;">
+      <canvas id="studyChartFull" style="width:100%;height:62vh;max-height:62vh;"></canvas>
+      <div style="margin-top:10px;text-align:center;font-size:13px;font-weight:600;color:#5B4A3A;">
+        Total: <span id="totalStudyTimeFull">0</span> minutes
+      </div>
     </div>
   </div>
 </div>
@@ -4690,17 +4887,15 @@ function startBuddyIdleBehaviors() {
     if (state.isRunning && (state.mode === 'focus' || state.mode === 'stopwatch')) return;
 
     const action = Math.random();
-    if (action < 0.55) {
+    if (action < 0.65) {
       // Look in a random direction briefly
       const dirs = ['look-left', 'look-right', 'look-up', 'look-down'];
       const dir = dirs[Math.floor(Math.random() * dirs.length)];
       character.classList.add(dir);
       setTimeout(() => character.classList.remove(dir), 1100 + Math.random() * 800);
-    } else if (action < 0.75 && state.happiness < 60) {
-      // Bored yawn
-      character.classList.add('yawning');
-      setTimeout(() => character.classList.remove('yawning'), 1400);
     }
+    // (Removed the "yawning" branch — it produced a tall O-shaped mouth that
+    // looked like a shocked face appearing at random.)
   }, 5500);
 }
 
@@ -5196,6 +5391,11 @@ function updateCharacterAppearance() {
   if (state.isRunning && (state.mode === 'focus' || state.mode === 'stopwatch') && !state.isDead) {
     desired.push('focused');
   }
+  // Sleeping buddy (10 PM – 7 AM) when idle: not during a session, reborn, etc.
+  if (typeof isSleepHours === 'function' && isSleepHours()
+      && !state.isRunning && !state.isReborning && !state.isReviving && !state.isDead) {
+    desired.push('sleeping');
+  }
   // Preserve emote / eating / happy transient classes (added elsewhere) by checking existing
   ['eating', 'happy'].forEach(c => { if (character.classList.contains(c)) desired.push(c); });
   Array.from(character.classList).filter(c => c.startsWith('emote-')).forEach(c => desired.push(c));
@@ -5211,15 +5411,20 @@ function updateCharacterAppearance() {
   // Evolution glow system
   const body = character.querySelector('.character-body');
   for (let i = 1; i <= 5; i++) character.classList.remove(`evo-${i}`);
-  if ((state.evoLevel || 0) > 0 && !state.isDead && !state.isReborning) {
-    character.classList.add(`evo-${state.evoLevel}`);
+  // During the reborn animation we want to KEEP showing the user's current
+  // (pre-evolution) skin instead of bug-flashing back to default brown.
+  const displayEvo = state.isReborning ? (state.rebornVisualEvo || state.evoLevel || 0) : (state.evoLevel || 0);
+  if (displayEvo > 0 && !state.isDead) {
+    character.classList.add(`evo-${displayEvo}`);
     if (body) body.style.boxShadow = '';
-    if (state.evoLevel >= 4) {
-      character.style.animation = 'breatheMax 1.8s ease-in-out infinite alternate';
-    } else if (state.evoLevel >= 2) {
-      character.style.animation = 'breatheFast 2.2s ease-in-out infinite alternate';
-    } else {
-      character.style.animation = 'breathe 3s ease-in-out infinite alternate';
+    if (!state.isReborning) {
+      if (displayEvo >= 4) {
+        character.style.animation = 'breatheMax 1.8s ease-in-out infinite alternate';
+      } else if (displayEvo >= 2) {
+        character.style.animation = 'breatheFast 2.2s ease-in-out infinite alternate';
+      } else {
+        character.style.animation = 'breathe 3s ease-in-out infinite alternate';
+      }
     }
   } else if (!state.isReborning && !state.isReviving) {
     if (body) body.style.boxShadow = '0 10px 28px rgba(0,0,0,0.2)';
@@ -5510,44 +5715,71 @@ function renderCalendar() {
   }
 }
 
-function renderGraph() {
+function renderGraph(opts) {
   if (typeof Chart === 'undefined') {
     console.warn('⚠️ Chart.js not loaded yet, skipping graph render');
     return;
   }
-  const canvas = document.getElementById('studyChart');
+  opts = opts || {};
+  const targetCanvasId = opts.canvasId || 'studyChart';
+  const canvas = document.getElementById(targetCanvasId);
   if (!canvas) return;
-  
-  const range = parseInt(document.getElementById('graphRange')?.value || 7);
-  
+
+  // Range source: lifespan view (fullscreen only) walks the user's whole history.
+  let range = opts.range || parseInt(document.getElementById('graphRange')?.value || 7);
+  let isLifespan = !!opts.lifespan;
+  if (isLifespan) {
+    // Find the earliest day the user has any record on (study OR breaks OR session colors).
+    const allKeys = new Set([
+      ...Object.keys(state.studyMinutes || {}),
+      ...Object.keys(state.breakMinutes || {}),
+      ...Object.keys(state.sessionColors || {}).map(k => k.slice(0, 10)),
+    ]);
+    const sorted = [...allKeys].filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+    if (sorted.length === 0) {
+      range = 7;
+      isLifespan = false;
+    } else {
+      const first = new Date(sorted[0] + 'T00:00:00');
+      const today = new Date(); today.setHours(0,0,0,0);
+      range = Math.max(1, Math.round((today - first) / 86400000) + 1);
+    }
+  }
+
   const days = [];
   const colorDatasets = {};
   const untaggedData = new Array(range).fill(0);
+  const breakData = new Array(range).fill(0);
   let totalMinutes = 0;
-  
+  let totalBreakMinutes = 0;
+
   // Build days and collect data
   for (let i = range - 1; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    
-    if (range === 7) {
+
+    if (range <= 7) {
       days.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]);
-    } else {
+    } else if (range <= 60) {
       days.push(`${date.getMonth() + 1}/${date.getDate()}`);
+    } else {
+      // Lifespan: sparser labels every ~range/14 days, otherwise blank to avoid clutter
+      const step = Math.max(1, Math.floor(range / 14));
+      days.push((range - 1 - i) % step === 0 ? `${date.getMonth() + 1}/${date.getDate()}` : '');
     }
-    
+
     const dayIndex = range - 1 - i;
     let taggedMinutes = 0;
-    
+
     // Get colored sessions for this day
-    const daySessions = Object.keys(state.sessionColors).filter(key => key.startsWith(dateStr));
-    
+    const daySessions = Object.keys(state.sessionColors || {}).filter(key => key.startsWith(dateStr));
+
     daySessions.forEach(sessionKey => {
       const session = state.sessionColors[sessionKey];
       const color = session.color;
       const subject = session.subject || 'Untagged';
-      
+
       if (!colorDatasets[color]) {
         colorDatasets[color] = {
           label: subject,
@@ -5558,24 +5790,31 @@ function renderGraph() {
           borderRadius: 6
         };
       }
-      
+
       colorDatasets[color].data[dayIndex] += session.duration;
       taggedMinutes += session.duration;
     });
-    
+
     // Handle untagged sessions (backwards compatibility)
     const totalDayMinutes = state.studyMinutes[dateStr] || 0;
     const untaggedMinutes = Math.max(0, totalDayMinutes - taggedMinutes);
     untaggedData[dayIndex] = untaggedMinutes;
-    
+
+    // Break minutes for this day (recorded in barchart as their own stacked bar).
+    const dayBreakMins = (state.breakMinutes && state.breakMinutes[dateStr]) || 0;
+    breakData[dayIndex] = dayBreakMins;
+    totalBreakMinutes += dayBreakMins;
+
     totalMinutes += totalDayMinutes;
   }
-  
-  document.getElementById('totalStudyTime').textContent = totalMinutes;
-  
+
+  const totalElId = targetCanvasId === 'studyChartFull' ? 'totalStudyTimeFull' : 'totalStudyTime';
+  const totalEl = document.getElementById(totalElId);
+  if (totalEl) totalEl.textContent = totalMinutes + (totalBreakMinutes ? ` (+${totalBreakMinutes}m breaks)` : '');
+
   // Build final datasets array
   const datasets = Object.values(colorDatasets);
-  
+
   // Add untagged data if it exists
   if (true || untaggedData.some(val => val > 0)) {
     datasets.push({
@@ -5587,14 +5826,26 @@ function renderGraph() {
       borderRadius: 6
     });
   }
-  
-  // Destroy old chart
-  if (window.studyChartInstance) {
-    window.studyChartInstance.destroy();
+  // Breaks as a distinct stacked series (cool blue so they read as "rest").
+  if (breakData.some(v => v > 0)) {
+    datasets.push({
+      label: 'Breaks',
+      data: breakData,
+      backgroundColor: '#7FB3D5',
+      borderColor: '#5499C7',
+      borderWidth: 2,
+      borderRadius: 6
+    });
   }
   
+  // Destroy old chart (per-canvas — fullscreen has its own).
+  const instKey = targetCanvasId === 'studyChart' ? 'studyChartInstance' : 'studyChartInstanceFull';
+  if (window[instKey]) {
+    window[instKey].destroy();
+  }
+
   // Create new chart
-  window.studyChartInstance = new Chart(canvas, {
+  window[instKey] = new Chart(canvas, {
     type: 'bar',
     data: {
       labels: days,
@@ -5724,16 +5975,23 @@ function playSound(type) {
 }
 
 function gainReward(coins) {
+  // No coins -> no popup. Stops the ghost "+0 coins earned" flash on load /
+  // on instant stops where no time accumulated.
+  if (!coins || coins <= 0) {
+    updateDisplay();
+    return;
+  }
   state.coins += coins;
-  
+
   const rewardPopup = document.getElementById('rewardPopup');
   const rewardAmount = document.getElementById('rewardAmount');
-  
-  rewardAmount.textContent = `+${coins} 🪙`;
-  
-  rewardPopup.classList.add('show');
-  setTimeout(() => rewardPopup.classList.remove('show'), 2500);
-  
+
+  if (rewardAmount) rewardAmount.textContent = `+${coins} 🪙`;
+  if (rewardPopup) {
+    rewardPopup.classList.add('show');
+    setTimeout(() => rewardPopup.classList.remove('show'), 2500);
+  }
+
   updateDisplay();
 }
 
@@ -5791,7 +6049,7 @@ function feedCarrot() {
   const happinessGain = baseHappiness * rebornBonus;
   
   updateHappiness(happinessGain);
-  // Fast chew, then quick happy bounce — total < 1s
+  // Slower, gentler chew (matches calmer CSS eat anim).
   character.classList.add('eating');
   playSound('feed');
   setTimeout(() => {
@@ -5801,8 +6059,8 @@ function feedCarrot() {
     setTimeout(() => {
       character.classList.remove('happy');
       updateCharacterAppearance();
-    }, 500);
-  }, 350);
+    }, 600);
+  }, 1100);
   
   checkAchievements();
   updateDisplay();
@@ -5811,15 +6069,15 @@ function feedCarrot() {
 function triggerReborn() {
   state.isReborning = true;
   state.rebornTimeLeft = 120;
+  // Preserve the *current* (pre-evolution) evo level on the buddy during the
+  // animation so the user keeps seeing their existing skin while shaking,
+  // instead of the body bug-flashing back to default brown.
+  state.rebornVisualEvo = state.evoLevel || 0;
   updateCharacterAppearance();
-  
-  const skipNow = confirm('🎉 Stomach at max capacity!\n\n🏋️ Your buddy is entering REBORN phase!\n\n⏭️ Skip 2-minute animation?');
-  
-  if (skipNow) {
-    completeReborn();
-    return;
-  }
-  
+
+  // (Removed the confirm() prompt — the in-UI Skip Animation button below is the
+  // only way to skip. No more browser alert.)
+
   // Show timer with skip option
   const timerDiv = document.createElement('div');
   timerDiv.className = 'reborn-timer';
@@ -5832,24 +6090,34 @@ function triggerReborn() {
     <button class="modal-btn primary" id="skipRebornBtn" style="margin-top: 15px; width: 100%;">⏭️ Skip Animation</button>
   `;
   document.body.appendChild(timerDiv);
-  
+
   state.rebornInterval = setInterval(() => {
     state.rebornTimeLeft--;
-    
+
+    // Slowly decay the shake intensity: starts vigorous, fades to nothing
+    // over the full 120s window. We expose it as a CSS var so the keyframes
+    // can scale themselves without us swapping classes.
+    const character = document.querySelector('.character');
+    if (character) {
+      const progress = 1 - (state.rebornTimeLeft / 120); // 0 -> 1
+      const intensity = Math.max(0, 1 - progress);       // 1 -> 0
+      character.style.setProperty('--reborn-shake', intensity.toFixed(3));
+    }
+
     const mins = Math.floor(state.rebornTimeLeft / 60);
     const secs = state.rebornTimeLeft % 60;
     const countdownEl = document.getElementById('rebornCountdown');
     if (countdownEl) {
       countdownEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-    
+
     if (state.rebornTimeLeft <= 0) {
       clearInterval(state.rebornInterval);
       state.rebornInterval = null;
       completeReborn();
     }
   }, 1000);
-  
+
   // Skip button
   setTimeout(() => {
     document.getElementById('skipRebornBtn')?.addEventListener('click', () => {
@@ -5881,14 +6149,22 @@ function completeReborn() {
   }
   
   updateCharacterAppearance();
-  checkAchievements();
   saveState();
-  
+  // Defer the achievement unlock so the reborn modal/toast finishes settling
+  // first — otherwise the first_reborn popup gets clobbered after a split second.
+  setTimeout(() => { checkAchievements(); }, 800);
+
+    // Reborn-complete messaging now flows through the normal toast pipeline so
+    // it shares the same vibe as the rest of the app (no jarring alert()).
     if (state.reborns === 10) {
-  alert(`🏆🏆🏆 LEGENDARY - 10TH REBORN! 🏆🏆🏆\n\n✨ YOUR BUDDY HAS REACHED MAXIMUM POWER! ✨\n\n⭐ GOLDEN GLOW UNLOCKED ⭐\n\n📸 TAKE A SCREENSHOT OF THIS MESSAGE AND SEND IT TO THE DEVELOPER! 📸`);
+      toast('🏆 LEGENDARY — 10th Reborn! Golden glow unlocked. Screenshot this!', 'success');
     } else {
-  alert(`✨ REBORN COMPLETE!\n\n🎊 Reborn Count: ${state.reborns}\n💪 Carrot effectiveness +${state.reborns * 2}%!\n${state.reborns >= 7 ? '🌟 LEGENDARY glow active!' : state.reborns >= 4 ? '💙 Epic glow active!' : '💚 Glow unlocked!'}\n\nYour buddy is fit and ready!`);
+      const glow = state.reborns >= 7 ? '🌟 LEGENDARY glow active'
+                  : state.reborns >= 4 ? '💙 Epic glow active'
+                  : '💚 Glow unlocked';
+      toast(`✨ Reborn #${state.reborns} complete · +${state.reborns * 2}% carrot power · ${glow}`, 'success');
     }
+    state.rebornVisualEvo = 0;
   
   updateDisplay();
 }
@@ -5906,12 +6182,34 @@ function reviveBuddy() {
   }, 5000);
 }
 
+function isSleepHours() {
+  // Sleep window = 22:00 (10 PM) through 06:59 inclusive.
+  const h = new Date().getHours();
+  return h >= 22 || h < 7;
+}
+// Re-check every minute so the buddy nods off / wakes up live.
+setInterval(() => {
+  if (typeof updateCharacterAppearance === 'function') updateCharacterAppearance();
+}, 60000);
+
 function startTimer() {
   saveState();
   if (state.studyingDisabledUntil && Date.now() < state.studyingDisabledUntil && state.mode === 'focus') {
     const secondsLeft = Math.ceil((state.studyingDisabledUntil - Date.now()) / 1000);
     toast(`Wait ${secondsLeft}s before starting focus again.`, 'warn');
     return;
+  }
+  // Late-night confirmation: 10 PM – 7 AM on focus/stopwatch only. Breaks are fine.
+  // User can disable this via the setting (defaults to on).
+  const lateConfirmOn = state.lateNightConfirmEnabled !== false;
+  if (lateConfirmOn && (state.mode === 'focus' || state.mode === 'stopwatch') && isSleepHours() && !state._lateConfirmed) {
+    const h = new Date().getHours();
+    const when = h >= 22 ? 'this late' : 'this early';
+    if (!confirm(`It's ${when} — your buddy is sleeping. Are you sure you want to study now?`)) {
+      return;
+    }
+    state._lateConfirmed = true;
+    setTimeout(() => { state._lateConfirmed = false; }, 60000);
   }
   state.isRunning = true;
   state.isPaused = false;
@@ -5977,21 +6275,20 @@ function pauseTimer() {
   document.getElementById('pauseTimer').textContent = '0:00';
   document.getElementById('pauseModal').style.display = 'flex';
   
-  // Start pause penalty timer
+  // Pausing during a break is FREE — never tick a coin penalty during break.
+  const isBreakPause = state.mode === 'long';
   state.pauseInterval = setInterval(() => {
     state.pauseElapsed++;
     const mins = Math.floor(state.pauseElapsed / 60);
     const secs = state.pauseElapsed % 60;
     document.getElementById('pauseTimer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    
-    // After 7 minutes, lose 1 coin every 30 seconds
-    if (state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
+
+    // After 7 minutes, lose 1 coin every 30 seconds — but only on focus/stopwatch.
+    if (!isBreakPause && state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
       state.coins = Math.max(0, state.coins - 1);
       updateDisplay();
     }
   }, 1000);
-  
-  // Show pause modal with quote
 }
 
 function resumeTimer() {
@@ -6003,15 +6300,22 @@ function resumeTimer() {
 function stopTimer() {
   // Compute preview of what will happen so we can show it in the confirm modal.
   let elapsedMins = 0;
+  let elapsedSecs = 0;
   if (state.mode === 'stopwatch') {
+    elapsedSecs = state.stopwatchTime;
     elapsedMins = Math.floor(state.stopwatchTime / 60);
   } else {
-    elapsedMins = Math.max(0, Math.floor((state.timerInitialLeft - state.timeLeft) / 60));
+    elapsedSecs = Math.max(0, state.timerInitialLeft - state.timeLeft);
+    elapsedMins = Math.max(0, Math.floor(elapsedSecs / 60));
   }
 
-  // Penalty only applies to focus sessions — breaks are never punished.
+  // Free-stop window: if you bail within the first 8 seconds of a session,
+  // it's treated as a misclick — no penalty, no reward, no credit.
+  const withinFreeWindow = elapsedSecs < 8;
+  // Penalty only applies to focus sessions — breaks are NEVER punished,
+  // AND a session paused-on-break can't be punished either.
   const isFocusLike = state.mode === 'focus' || state.mode === 'stopwatch';
-  const penalty = isFocusLike ? (Math.floor(Math.random() * 11) + 5) : 0;
+  const penalty = (isFocusLike && !withinFreeWindow) ? (Math.floor(Math.random() * 11) + 5) : 0;
   let coinsEarned = elapsedMins >= 5 ? Math.floor(elapsedMins / 5) * 2 : 0;
   if (coinsEarned > 0 && state.hasBook) coinsEarned = Math.floor(coinsEarned * 1.5);
 
@@ -6019,6 +6323,8 @@ function stopTimer() {
   const lines = [];
   if (state.mode === 'long') {
     lines.push('<div>Ending your break early — no penalty.</div>');
+  } else if (withinFreeWindow) {
+    lines.push('<div>Stopped within 8 seconds of starting — no penalty.</div>');
   } else {
     if (elapsedMins >= 5) {
       lines.push(`<div><strong style="color:#2D6B3A;">+${elapsedMins} min</strong> credited to today's study time</div>`);
@@ -6157,21 +6463,37 @@ function completeSession() {
       
       updateDisplay();
       renderBook();
-      
+
       // Show color selection after modal is dismissed
       setTimeout(() => showColorSelection(duration), 300);
-      
+
       // Show book alert if it was used
       if (bookUsed) {
         setTimeout(() => {
           alert('📚 Study Book was used! The multiplier is gone. Buy another to use again!');
         }, 500);
       }
-      
+
       saveState();
       modalBtn.removeEventListener('click', modalHandler);
+
+      // Auto-start a break if the setting is on (works for stopwatch too).
+      if (state.autoStartBreaks) {
+        setTimeout(() => {
+          if (state.isRunning || state.isPaused) return;
+          state.mode = 'long';
+          state.timeLeft = state.durations.long * 60;
+          document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === 'long');
+          });
+          actionBtn.textContent = 'Start Break';
+          updateDisplay();
+          startTimer();
+          toast('Auto-started your break ☕', 'info');
+        }, 1200);
+      }
     };
-    
+
     modalBtn.addEventListener('click', modalHandler);
     return;
   }
@@ -6226,21 +6548,38 @@ function completeSession() {
       
       updateDisplay();
       renderBook();
-      
+
       // Show color selection after modal is dismissed
       setTimeout(() => showColorSelection(duration), 300);
-      
+
       // Show book alert if it was used
       if (bookUsed) {
         setTimeout(() => {
           alert('📚 Study Book was used! The multiplier is gone. Buy another to use again!');
         }, 500);
       }
-      
+
       saveState();
       modalBtn.removeEventListener('click', modalHandler);
+
+      // Auto-start a break after a focus session completes if the user
+      // enabled the setting.
+      if (state.autoStartBreaks) {
+        setTimeout(() => {
+          if (state.isRunning || state.isPaused) return;
+          state.mode = 'long';
+          state.timeLeft = state.durations.long * 60;
+          document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === 'long');
+          });
+          actionBtn.textContent = 'Start Break';
+          updateDisplay();
+          startTimer();
+          toast('Auto-started your break ☕', 'info');
+        }, 1200);
+      }
     };
-    
+
     modalBtn.addEventListener('click', modalHandler);
     
   } else {
@@ -6359,8 +6698,14 @@ document.getElementById('cancelTimeBtn').addEventListener('click', () => {
 });
 
 document.getElementById('saveTimeBtn').addEventListener('click', () => {
-  const minutes = parseInt(document.getElementById('minutesInput').value);
+  let minutes = parseInt(document.getElementById('minutesInput').value);
   if (minutes >= 1 && minutes <= 500) {
+    // Enforce 5-minute minimum for everything except the long-break timer.
+    // (Breaks are allowed to be short; focus/etc. must be at least 5 min.)
+    if (editingTimer !== 'long' && minutes < 5) {
+      minutes = 5;
+      toast('Focus sessions must be at least 5 minutes — bumped to 5.', 'info');
+    }
     state.durations[editingTimer] = minutes;
     if (state.mode === editingTimer && !state.isRunning) {
       state.timeLeft = minutes * 60;
@@ -6775,23 +7120,36 @@ function renderShop() {
     });
   }
 }
-// Calendar navigation
+// Calendar navigation — animated, not instant. We fade the grid out, swap,
+// then fade back in. Total ~220ms so it's still snappy.
+function _smoothCalendarSwap(mutate) {
+  const grid = document.querySelector('.calendar-grid');
+  if (!grid) { mutate(); renderCalendar(); return; }
+  grid.classList.add('swapping');
+  setTimeout(() => {
+    mutate();
+    renderCalendar();
+    requestAnimationFrame(() => grid.classList.remove('swapping'));
+  }, 180);
+}
 document.getElementById('prevMonth').addEventListener('click', () => {
-  state.currentCalendarMonth--;
-  if (state.currentCalendarMonth < 0) {
-    state.currentCalendarMonth = 11;
-    state.currentCalendarYear--;
-  }
-  renderCalendar();
+  _smoothCalendarSwap(() => {
+    state.currentCalendarMonth--;
+    if (state.currentCalendarMonth < 0) {
+      state.currentCalendarMonth = 11;
+      state.currentCalendarYear--;
+    }
+  });
 });
 
 document.getElementById('nextMonth').addEventListener('click', () => {
-  state.currentCalendarMonth++;
-  if (state.currentCalendarMonth > 11) {
-    state.currentCalendarMonth = 0;
-    state.currentCalendarYear++;
-  }
-  renderCalendar();
+  _smoothCalendarSwap(() => {
+    state.currentCalendarMonth++;
+    if (state.currentCalendarMonth > 11) {
+      state.currentCalendarMonth = 0;
+      state.currentCalendarYear++;
+    }
+  });
 });
 
 document.getElementById('gcalBtn').addEventListener('click', () => {
@@ -6816,7 +7174,26 @@ document.getElementById('graphRange')?.addEventListener('change', () => {
 document.getElementById('refreshGraph')?.addEventListener('click', () => {
   renderGraph();
 });
-// Fullscreen chart removed — caused jarring UX on mobile.
+
+// Fullscreen barchart with extended ranges + lifespan-only view.
+function _renderFullGraph() {
+  const sel = document.getElementById('graphRangeFull');
+  const v = sel ? sel.value : '7';
+  if (v === 'lifespan') {
+    renderGraph({ canvasId: 'studyChartFull', lifespan: true });
+  } else {
+    renderGraph({ canvasId: 'studyChartFull', range: parseInt(v) || 7 });
+  }
+}
+document.getElementById('fullscreenGraph')?.addEventListener('click', () => {
+  document.getElementById('graphFullscreenModal').classList.add('active');
+  // give the modal a frame to lay out before rendering into the bigger canvas
+  setTimeout(_renderFullGraph, 80);
+});
+document.getElementById('closeGraphFullBtn')?.addEventListener('click', () => {
+  document.getElementById('graphFullscreenModal').classList.remove('active');
+});
+document.getElementById('graphRangeFull')?.addEventListener('change', _renderFullGraph);
 
 // Hamburger → Chat
 document.querySelectorAll('.menu-btn').forEach(btn => {
@@ -6837,6 +7214,35 @@ document.getElementById('emojiToggle').addEventListener('click', function() {
 document.getElementById('autoBreakToggle').addEventListener('click', function() {
   this.classList.toggle('active');
   state.autoStartBreaks = this.classList.contains('active');
+});
+
+document.getElementById('sleepBuddyToggle')?.addEventListener('click', function() {
+  this.classList.toggle('active');
+  state.sleepBuddyEnabled = this.classList.contains('active');
+  // Patch isSleepHours so disabling the toggle hides the Zzz.
+  window.isSleepHours = function() {
+    if (state.sleepBuddyEnabled === false) return false;
+    const h = new Date().getHours();
+    return h >= 22 || h < 7;
+  };
+  if (typeof updateCharacterAppearance === 'function') updateCharacterAppearance();
+});
+
+document.getElementById('lateNightConfirmToggle')?.addEventListener('click', function() {
+  this.classList.toggle('active');
+  state.lateNightConfirmEnabled = this.classList.contains('active');
+});
+
+document.getElementById('replayTutorialBtn')?.addEventListener('click', () => {
+  localStorage.removeItem('vs_tutorial_done');
+  if (typeof maybeShowFirstTimeTutorial === 'function') maybeShowFirstTimeTutorial();
+});
+
+document.getElementById('reduceMotionToggle')?.addEventListener('click', function() {
+  this.classList.toggle('active');
+  state.reduceMotion = this.classList.contains('active');
+  document.documentElement.style.setProperty('--vs-anim-scale', state.reduceMotion ? '0.25' : '1');
+  document.body.classList.toggle('vs-reduce-motion', state.reduceMotion);
 });
 
 document.getElementById('opacitySetting').addEventListener('click', () => {
@@ -7808,7 +8214,13 @@ function loadState() {
           } else {
             state.timeLeft = Math.max(0, state.timerInitialLeft - elapsed);
             if (state.timeLeft === 0) {
-              completeSession();
+              // Session naturally finished while the app was closed. Just clear
+              // the running flags silently — DO NOT fire the +coins popup on
+              // app launch (that ghost "+2 coins earned" toast every load).
+              state.isRunning = false;
+              state.isPaused = false;
+              state.timerStartedAt = null;
+              state.timerInitialLeft = null;
               return;
             }
           }
@@ -7840,15 +8252,16 @@ function loadState() {
           document.getElementById('pauseTimer').textContent = '0:00';
           document.getElementById('pauseModal').style.display = 'flex';
           
-          // Start pause penalty timer
+          // Start pause penalty timer (break pauses are free — no coin tick).
           state.pauseElapsed = 0;
+          const isBreakPauseR = state.mode === 'long';
           state.pauseInterval = setInterval(() => {
             state.pauseElapsed++;
             const mins = Math.floor(state.pauseElapsed / 60);
             const secs = state.pauseElapsed % 60;
             document.getElementById('pauseTimer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-            
-            if (state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
+
+            if (!isBreakPauseR && state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
               state.coins = Math.max(0, state.coins - 1);
               updateDisplay();
             }
@@ -8263,7 +8676,7 @@ function openChatSystem() {
 async function loadChatList() {
   const list = document.getElementById('chatListContainer');
   const countEl = document.getElementById('chatListCount');
-  list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:14px;">Loading...</div>';
+  list.innerHTML = '<div class="vs-loader">Loading</div>';
   try {
     const res = await fetch('/user-chats', {
       method: 'POST',
@@ -8394,7 +8807,7 @@ function closeChatView() {
 async function openChatMembers() {
   const membersList = document.getElementById('chatMembersList');
   const addSection = document.getElementById('addMemberSection');
-  membersList.innerHTML = '<div style="color:#6B7080;text-align:center;padding:12px;font-size:13px;">Loading...</div>';
+  membersList.innerHTML = '<div class="vs-loader" style="padding:14px 8px;">Loading</div>';
   addSection.style.display = 'none';
   openModal('chatMembersModal');
   try {
@@ -8607,7 +9020,7 @@ async function loadFriends() {
   if (!state.username) return;
   const list = document.getElementById('friendsListContainer');
   const countEl = document.getElementById('chatListCount');
-  list.innerHTML = '<div style="text-align:center;color:#6B7080;padding:24px;font-size:14px;">Loading...</div>';
+  list.innerHTML = '<div class="vs-loader">Loading</div>';
   // Load requests
   try {
     const rRes = await fetch('/get-friend-requests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:state.username})});
@@ -8672,7 +9085,7 @@ async function openFriendStats(username) {
   const nameEl = document.getElementById('friendStatsName');
   const grid = document.getElementById('friendStatsGrid');
   nameEl.textContent = username;
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#6B7080;padding:12px;">Loading...</div>';
+  grid.innerHTML = '<div class="vs-loader" style="grid-column:1/-1;">Loading</div>';
   openModal('friendStatsModal');
   try {
     const res = await fetch('/get-user-stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requester:state.username,target:username})});
@@ -9161,7 +9574,12 @@ document.getElementById('generateStudyPlanBtn').addEventListener('click', async 
   try {
     const res = await fetch('/generate-study-plan', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:state.username, studyData: _aiBuildStudyData()})
+      body: JSON.stringify({
+        username: state.username,
+        studyData: _aiBuildStudyData(),
+        clientNow: (new Date()).toString(),
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+      })
     });
     const data = await res.json();
     if (data.success) {
@@ -9202,7 +9620,12 @@ document.getElementById('aiReplySendBtn').addEventListener('click', async () => 
   try {
     const res = await fetch('/generate-study-plan', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:state.username, studyData: _aiBuildStudyData()})
+      body: JSON.stringify({
+        username: state.username,
+        studyData: _aiBuildStudyData(),
+        clientNow: (new Date()).toString(),
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+      })
     });
     const data = await res.json();
     if (data.success) {
@@ -9277,6 +9700,45 @@ document.getElementById('refreshCodeStatusBtn').addEventListener('click', () => 
   loadPremiumCodeStatus(pw);
 });
 
+// === FIRST-LAUNCH TUTORIAL ===
+const TUTORIAL_STEPS = [
+  { title: 'Welcome to VuliStudy 👋',
+    body: 'This is your study companion. Real study sessions feed the buddy on screen. Skip any time.' },
+  { title: 'Start a focus session',
+    body: 'Tap Start Focus on the home page. Stay on the timer — when it finishes you earn coins and your buddy gets happier.' },
+  { title: 'Carrots, breaks and reborns',
+    body: 'Coins buy carrots in the Shop. Feed your buddy to keep them alive — and after enough carrots they level up via Reborn.' },
+  { title: 'Tabs to explore',
+    body: 'Bottom nav: 🏠 Home, 📊 Stats (with calendar + barchart), ✓ To-Do, 🛒 Shop, ⚙️ Settings. Swipe left/right to switch pages too.' },
+];
+function _showTutorialStep(i) {
+  const step = TUTORIAL_STEPS[i];
+  document.getElementById('tutTitle').textContent = step.title;
+  document.getElementById('tutBody').textContent = step.body;
+  document.querySelectorAll('#tutProgress .tut-dot').forEach((d, idx) => {
+    d.classList.toggle('active', idx === i);
+  });
+  document.getElementById('tutNextBtn').textContent = (i === TUTORIAL_STEPS.length - 1) ? 'Got it!' : 'Next';
+}
+function maybeShowFirstTimeTutorial() {
+  // Show only if the user has never finished or skipped it.
+  if (localStorage.getItem('vs_tutorial_done')) return;
+  let idx = 0;
+  _showTutorialStep(0);
+  const modal = document.getElementById('firstTimeTutorial');
+  modal.classList.add('active');
+  const finish = () => {
+    localStorage.setItem('vs_tutorial_done', '1');
+    modal.classList.remove('active');
+  };
+  document.getElementById('tutSkipBtn').onclick = finish;
+  document.getElementById('tutNextBtn').onclick = () => {
+    if (idx >= TUTORIAL_STEPS.length - 1) { finish(); return; }
+    idx++;
+    _showTutorialStep(idx);
+  };
+}
+
 // === INITIALIZE ===
 loadState();
 initUsername();
@@ -9296,6 +9758,9 @@ renderTodos();
 renderTodoAlarmPanel();
 renderCalendar();
 renderShop();
+
+// First-launch tutorial — only the first time, skippable.
+setTimeout(maybeShowFirstTimeTutorial, 600);
 if (typeof Chart !== 'undefined') {
   renderGraph();
 } else {
@@ -9491,7 +9956,7 @@ function setLeaderboardTab(period) {
 async function openLeaderboard(forceRefresh = false) {
   if (!requiresInternet('Leaderboard')) return;
   const list = document.getElementById('leaderboardList');
-  list.innerHTML = '<div style="text-align:center;padding:20px;color:#6B7080;">Loading...</div>';
+  list.innerHTML = '<div class="vs-loader" style="padding:20px 12px;">Loading</div>';
   document.getElementById('leaderboardModal').classList.add('active');
   await syncLeaderboard();
 
