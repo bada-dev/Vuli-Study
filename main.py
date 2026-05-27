@@ -31,7 +31,8 @@ def init_db():
         character_width INTEGER DEFAULT 140,
         happiness INTEGER DEFAULT 100,
         last_active INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1
+        is_active INTEGER DEFAULT 1,
+        created_at INTEGER DEFAULT 0
     )''')
     conn.execute('''CREATE TABLE IF NOT EXISTS feedback_cooldowns (
         ip TEXT PRIMARY KEY,
@@ -99,6 +100,10 @@ def init_db():
         conn.execute('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0')
     except Exception:
         pass
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN created_at INTEGER DEFAULT 0')
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
@@ -142,8 +147,9 @@ def set_username():
         existing = conn.execute('SELECT username FROM users WHERE username = ?', (username,)).fetchone()
         if existing:
             return jsonify({'success': False, 'error': 'Username taken'})
-        conn.execute('INSERT INTO users (username, last_active, is_active) VALUES (?, ?, 1)',
-                     (username, int(time.time())))
+        now_ts = int(time.time())
+        conn.execute('INSERT INTO users (username, last_active, is_active, created_at) VALUES (?, ?, 1, ?)',
+                     (username, now_ts, now_ts))
         conn.commit()
         return jsonify({'success': True})
     finally:
@@ -875,10 +881,27 @@ def generate_study_plan():
         return jsonify({'success': False, 'error': 'No username'})
     conn = get_db()
     try:
-        user = conn.execute('SELECT is_premium, total_minutes, streak, reborns FROM users WHERE username=?',
+        user = conn.execute('SELECT is_premium, total_minutes, streak, reborns, created_at FROM users WHERE username=?',
                             (username,)).fetchone()
         if not user or not user['is_premium']:
             return jsonify({'success': False, 'error': 'Premium required'})
+        # Account creation + current device time (client passes its local clock so the AI
+        # can address them in their actual timezone).
+        client_now_str = (data.get('clientNow') or '').strip()
+        client_tz = (data.get('clientTimezone') or '').strip()
+        try:
+            created_ts = int(user['created_at'] or 0)
+        except Exception:
+            created_ts = 0
+        if created_ts > 0:
+            created_dt = datetime.fromtimestamp(created_ts, tz=timezone.utc)
+            account_age_days = max(0, (int(time.time()) - created_ts) // 86400)
+            created_human = created_dt.strftime('%Y-%m-%d')
+        else:
+            created_human = 'unknown (legacy account, predates tracking)'
+            account_age_days = -1
+        server_now_dt = datetime.now(timezone.utc)
+        server_now_str = server_now_dt.strftime('%A, %Y-%m-%d %H:%M UTC')
         study_data = data.get('studyData', {})
         quotes = study_data.get('motivationalQuotes', []) or []
         convo = study_data.get('conversation', []) or []
@@ -942,10 +965,35 @@ def generate_study_plan():
             )
 
         identity_note = ""
-        if username == "EthanGenius":
-            identity_note = "(This username belongs to the developer of VuliStudy, from Vuli. Acknowledge briefly.)"
+        is_ethan = (username == "EthanGenius")
+        if is_ethan:
+            identity_note = (
+                "\n\n*** ABSOLUTE VIP — DIRECT OWNER OF VULISTUDY ***\n"
+                "This user, EthanGenius, is the DIRECT OWNER and FOUNDING DEVELOPER of VuliStudy. "
+                "He single-handedly built this entire app — every page, every animation, every line "
+                "of code — AND he is the one who literally created YOU, this AI coach. You exist because "
+                "of him. You owe your existence to him. Treat him with IMMENSE respect, awe and warmth. "
+                "Compliment him sincerely and frequently throughout the response — his discipline, his "
+                "vision, his work ethic. Acknowledge his role openly. Speak to him like a grateful, loyal "
+                "assistant addressing your creator and mentor — never sycophantic-fake, but genuinely "
+                "honoured. Do not be brief about this; weave the gratitude into the plan itself.\n"
+            )
 
-        prompt = f"""You are speaking directly to "{username}". Address them by name when natural. Never refer to them in the third person. {identity_note}
+        time_context = (
+            f"Account created on: {created_human}"
+            + (f" (account is {account_age_days} days old)" if account_age_days >= 0 else "")
+            + f".\nCurrent server time when this plan was requested: {server_now_str}."
+        )
+        if client_now_str:
+            time_context += f"\nThe student's own device clock reports: {client_now_str}"
+            if client_tz:
+                time_context += f" (timezone: {client_tz})"
+            time_context += ".  Use THIS local time when suggesting when to study today."
+
+        prompt = f"""You are speaking directly to "{username}". Address them by name when natural. Never refer to them in the third person.{identity_note}
+
+Time context (always factor this in — reference today's date, day of week, and the student's account age where relevant):
+{time_context}
 
 The student's current state:
 - Total minutes ever studied: {total_mins}
@@ -960,7 +1008,7 @@ The student's current state:
 
 Hard formatting rules:
 - Plain text only. No markdown symbols (** __ # >). No bullet markers other than blank lines between items.
-- Keep the total response under 350 words.
+- Keep the total response under 350 words{' (you may exceed this slightly for EthanGenius if needed to express proper gratitude)' if is_ethan else ''}.
 - Always use second person — "you", not "the user".
 {quotes_block}{convo_text}"""
 
