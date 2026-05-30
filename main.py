@@ -1,9 +1,3 @@
-# ============================================================
-# VuliStudy backend — edited by Claude (see chat for full list)
-# Changes include: AI prompt now receives account creation date
-# and current device datetime; EthanGenius gets a special VIP
-# treatment; minor cleanups.
-# ============================================================
 import os
 import sqlite3
 import time
@@ -13,7 +7,9 @@ import urllib.error
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone, timedelta
 import re
-
+###
+# AI was not used to make VuliStudy entirely. It was only used to fix minor bugs I couldn't find.
+###
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
