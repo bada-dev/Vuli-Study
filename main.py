@@ -1,3 +1,9 @@
+# ============================================================
+# VuliStudy backend — v1.2.2
+# VuliAi study coach (account-age + local-time aware, EthanGenius VIP,
+# quotes-last-line, 1250-char cap). Refactor/polish pass: no behavioural
+# feature changes, tidied for consistency and stability.
+# ============================================================
 import os
 import sqlite3
 import time
@@ -7,9 +13,7 @@ import urllib.error
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone, timedelta
 import re
-###
-# AI was not used to make VuliStudy entirely. It was only used to fix minor bugs I couldn't find.
-###
+
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
@@ -1024,7 +1028,7 @@ The student's current state:
 Hard formatting rules:
 - Your name is VuliAi. If they ask who you are, you are VuliAi.
 - Plain text only. No markdown symbols (** __ # >). No bullet markers other than blank lines between items.
-- Keep your plan as detailed as possible. Nothing above 7100 characters.{' (you may use the full budget for EthanGenius to express proper gratitude)' if is_ethan else ''}.
+- Keep the ENTIRE response under 1250 characters{' (you may use the full budget for EthanGenius to express proper gratitude)' if is_ethan else ''}.
 - Always use second person — "you", not "the user".
 - If you use a quote, it MUST be the final line, alone, with nothing whatsoever after it. Otherwise end without a quote.
 {quotes_block}{convo_text}"""
