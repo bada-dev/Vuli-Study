@@ -1,3 +1,9 @@
+# ============================================================
+# VuliStudy backend — edited by Claude (see chat for full list)
+# Changes include: AI prompt now receives account creation date
+# and current device datetime; EthanGenius gets a special VIP
+# treatment; minor cleanups.
+# ============================================================
 import os
 import sqlite3
 import time
@@ -533,21 +539,25 @@ def call_ai(api_key, prompt, system_prompt=None):
     ]
 
     default_system = (
-        "You are VuliStudy AI — a personal study coach inside the VuliStudy app. "
+        "Your name is VuliAi. You are VuliAi — the personal study coach AI inside the VuliStudy app. "
+        "If asked who or what you are, you are VuliAi. "
         "You are ALWAYS speaking DIRECTLY to one specific student (the user). "
         "Use the second person ('you', 'your'). Never narrate in the third person. "
         "Never describe what 'the user' or 'they' should do — speak to them. "
         "Be warm, concrete, and concise. Give specific actionable steps, not generic advice. "
-        "If a quote from the provided list genuinely fits the moment, drop it in once — never explain it. "
-        "Do not invent quotes that weren't given. "
-        "Use plain text only — no markdown (no **, no __, no headers with #)."
+        "Use plain text only — no markdown (no **, no __, no headers with #). "
+        "QUOTE RULE (strict): If — and only if — a quote from the provided list genuinely fits, "
+        "you may include exactly ONE quote, and it MUST be the very last line of your entire reply, "
+        "on its own separate line, with absolutely NOTHING after it (no attribution, no explanation, "
+        "no sign-off). If no quote fits, simply end normally without one. Never invent quotes. "
+        "Keep your entire reply under 1250 characters."
     )
 
     last_error = None
     for model in models:
         data = json.dumps({
             "model": model,
-            'max_tokens': 1100,
+            'max_tokens': 420,
             'messages': [
                 {'role': 'system', 'content': system_prompt or default_system},
                 {'role': 'user', 'content': prompt}
@@ -566,7 +576,16 @@ def call_ai(api_key, prompt, system_prompt=None):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 result = json.loads(resp.read().decode('utf-8'))
-                return result['choices'][0]['message']['content']
+                content = result['choices'][0]['message']['content']
+                # Hard cap at 1250 chars. Trim on a word boundary so we never
+                # cut a word in half, and strip trailing whitespace.
+                if content and len(content) > 1250:
+                    cut = content[:1250]
+                    sp = cut.rfind(' ')
+                    if sp > 1000:
+                        cut = cut[:sp]
+                    content = cut.rstrip()
+                return content
         except urllib.error.HTTPError as e:
             body = e.read().decode('utf-8', errors='ignore')
             last_error = RuntimeError(f'Groq HTTP {e.code} [{model}]: {body[:240]}')
@@ -961,7 +980,7 @@ def generate_study_plan():
                 "2) Three specific actions they can take this week.\n"
                 "3) A suggested weekly rhythm using their actual numbers.\n"
                 "4) Subject-specific advice if subjects are listed.\n"
-                "5) One short motivational closer — optionally drop a single quote from the provided list verbatim, but only if it fits."
+                "5) One short motivational closer. If a provided quote truly fits, it must be the FINAL line, alone, with nothing after it."
             )
 
         identity_note = ""
@@ -1007,9 +1026,11 @@ The student's current state:
 {mode_instructions}
 
 Hard formatting rules:
+- Your name is VuliAi. If they ask who you are, you are VuliAi.
 - Plain text only. No markdown symbols (** __ # >). No bullet markers other than blank lines between items.
-- Keep the total response under 350 words{' (you may exceed this slightly for EthanGenius if needed to express proper gratitude)' if is_ethan else ''}.
+- Keep your plan as detailed as possible. Nothing above 7100 characters.{' (you may use the full budget for EthanGenius to express proper gratitude)' if is_ethan else ''}.
 - Always use second person — "you", not "the user".
+- If you use a quote, it MUST be the final line, alone, with nothing whatsoever after it. Otherwise end without a quote.
 {quotes_block}{convo_text}"""
 
         for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
