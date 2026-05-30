@@ -12,8 +12,9 @@
 
 <!--
     Project: VuliStudy
-    Version: 1.1.2
-    ALL RIGHTS RESERVED.
+    Author: ETHANTYAGI
+    Version: 1.2.2
+    ALL RIGHTS RESERVED
 -->
 
 <style>
@@ -3138,7 +3139,6 @@ button:disabled {
 .character.evo-5 .evo-extras::after { content: ''; position: absolute; top: -24px; left: -24px; right: -24px; bottom: -24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); animation: evo5Ring 3s linear infinite; }
 .character.evo-5 .evo-extras::after { top: -38px; left: -38px; right: -38px; bottom: -38px; animation-duration: 5s; animation-direction: reverse; }
 @keyframes evo5Ring { from { transform: rotate(0deg); opacity: 0.8; } 50% { opacity: 0.3; } to { transform: rotate(360deg); opacity: 0.8; } }
-/*This took too long 😭*/
 
 /* ===== PREMIUM ===== */
 .premium-gold {
@@ -4038,28 +4038,6 @@ button:disabled {
           <div class="todo-alarm-summary" id="todoAlarmSummary">No active alarms or timers.</div>
 			<button class="open-alarm-btn" id="openTodoAlarmBtn2">Open Center</button>
         </div>
-        <div class="todo-timer-panel" style="display:none;">
-          <div class="todo-timer-title">Task Alarms & Timers</div>
-          <div class="todo-timer-grid">
-            <select id="todoAlarmType">
-              <option value="timer">⏳ Timer</option>
-              <option value="alarm">🕒 Set Time</option>
-            </select>
-            <input id="todoAlarmLabel" type="text" maxlength="30" placeholder="Optional label">
-            <input id="todoTimerMinutes" type="number" min="0" max="600" placeholder="Minutes">
-            <input id="todoTimerSeconds" type="number" min="0" max="59" placeholder="Seconds">
-            <input id="todoAlarmTime" type="time" class="full" style="display:none;">
-            <select id="todoAlarmSchedule" class="full">
-              <option value="once">Once</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-            <button id="todoTimerActionBtn" class="full">Start Timer / Alarm</button>
-          </div>
-          <div id="todoActiveAlarms"></div>
-          <div class="todo-history-title">Last 10</div>
-          <div id="todoAlarmHistory"></div>
-        </div>
 
         <div class="todo-list" id="todoList"></div>
       </div>
@@ -4800,26 +4778,6 @@ button:disabled {
   </div>
 </div>
 
-<!-- Chat Timer Create Modal -->
-<div class="modal" id="chatTimerModal">
-  <div class="modal-content" style="max-width:300px;">
-    <div class="modal-title">⏱️ Group Timer</div>
-    <div class="modal-text">All active members earn coins when complete.</div>
-    <div style="margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Duration (minutes)</div>
-      <input type="number" id="chatTimerDuration" class="modal-input" min="1" max="120" value="25" style="margin:0;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:#5B4A3A;margin-bottom:5px;">Reward per person (coins)</div>
-      <input type="number" id="chatTimerRewardInput" class="modal-input" min="1" max="20" value="5" style="margin:0;">
-    </div>
-    <div class="modal-buttons">
-      <button class="modal-btn secondary" id="cancelChatTimerBtn">Cancel</button>
-      <button class="modal-btn primary" id="startChatTimerBtn">Start Timer</button>
-    </div>
-  </div>
-</div>
-
 <!-- Friend Stats Modal -->
 <div class="modal" id="friendStatsModal">
   <div class="modal-content" style="max-width:300px;padding:0;overflow:hidden;border-radius:22px;">
@@ -5233,7 +5191,7 @@ const state = {
   premiumUnlockedAt: null,
   aiPlanLastGeneratedDate: null,
   premiumSavedStudyPlans: []
-}; // wow 1 "-" killed absolutely everything..
+};
 
 // === ONLINE / OFFLINE DETECTION ===
 let isOnline = navigator.onLine;
@@ -5476,7 +5434,6 @@ const happyPercent = document.getElementById('happyPercent');
 const cosmeticContainer = document.getElementById('cosmeticContainer');
 const carrotIcon = document.getElementById('carrotIcon');
 
-// PASSWORD GONE!!
 let draggedCarrot = null;
 let editingTimer = null;
 let currentShopCategory = 'items';
@@ -6670,6 +6627,24 @@ setInterval(() => {
   if (typeof updateCharacterAppearance === 'function') updateCharacterAppearance();
 }, 60000);
 
+// Switch to a break and start it, if the user enabled auto-start breaks.
+// Shared by every session-completion path (focus, stopwatch, timed).
+function maybeAutoStartBreak() {
+  if (!state.autoStartBreaks) return;
+  setTimeout(() => {
+    if (state.isRunning || state.isPaused) return;
+    state.mode = 'long';
+    state.timeLeft = state.durations.long * 60;
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.mode === 'long');
+    });
+    actionBtn.textContent = 'Start Break';
+    updateDisplay();
+    startTimer();
+    toast('Auto-started your break ☕', 'info');
+  }, 1200);
+}
+
 function startTimer() {
   saveState();
   if (state.studyingDisabledUntil && Date.now() < state.studyingDisabledUntil && state.mode === 'focus') {
@@ -6753,15 +6728,19 @@ function pauseTimer() {
   document.getElementById('pauseTimer').textContent = '0:00';
   document.getElementById('pauseModal').style.display = 'flex';
   
-  // Pausing during a break is FREE — never tick a coin penalty during break.
+  startPausePenaltyTimer();
+}
+
+// Runs the pause clock + idle coin penalty. Break pauses are always free.
+// After 7 minutes paused, focus/stopwatch sessions lose 1 coin every 30s.
+function startPausePenaltyTimer() {
   const isBreakPause = state.mode === 'long';
+  const pauseTimerEl = document.getElementById('pauseTimer');
   state.pauseInterval = setInterval(() => {
     state.pauseElapsed++;
     const mins = Math.floor(state.pauseElapsed / 60);
     const secs = state.pauseElapsed % 60;
-    document.getElementById('pauseTimer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-    // After 7 minutes, lose 1 coin every 30 seconds — but only on focus/stopwatch.
+    if (pauseTimerEl) pauseTimerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     if (!isBreakPause && state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
       state.coins = Math.max(0, state.coins - 1);
       updateDisplay();
@@ -6954,22 +6933,7 @@ function completeSession() {
 
       saveState();
       modalBtn.removeEventListener('click', modalHandler);
-
-      // Auto-start a break if the setting is on (works for stopwatch too).
-      if (state.autoStartBreaks) {
-        setTimeout(() => {
-          if (state.isRunning || state.isPaused) return;
-          state.mode = 'long';
-          state.timeLeft = state.durations.long * 60;
-          document.querySelectorAll('.mode-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.mode === 'long');
-          });
-          actionBtn.textContent = 'Start Break';
-          updateDisplay();
-          startTimer();
-          toast('Auto-started your break ☕', 'info');
-        }, 1200);
-      }
+      maybeAutoStartBreak();
     };
 
     modalBtn.addEventListener('click', modalHandler);
@@ -7039,23 +7003,7 @@ function completeSession() {
 
       saveState();
       modalBtn.removeEventListener('click', modalHandler);
-
-      // Auto-start a break after a focus session completes if the user
-      // enabled the setting.
-      if (state.autoStartBreaks) {
-        setTimeout(() => {
-          if (state.isRunning || state.isPaused) return;
-          state.mode = 'long';
-          state.timeLeft = state.durations.long * 60;
-          document.querySelectorAll('.mode-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.mode === 'long');
-          });
-          actionBtn.textContent = 'Start Break';
-          updateDisplay();
-          startTimer();
-          toast('Auto-started your break ☕', 'info');
-        }, 1200);
-      }
+      maybeAutoStartBreak();
     };
 
     modalBtn.addEventListener('click', modalHandler);
@@ -7250,30 +7198,34 @@ document.querySelectorAll('.mode-tab').forEach(tab => {
 let currentPageIndex = 0;
 const pages = ['home', 'stats', 'todo', 'shop', 'settings'];
 
+// Single source of truth for switching pages — used by both the bottom nav
+// and the swipe gesture so the transition behaves identically everywhere.
+function navigateToPage(newIndex) {
+  newIndex = Math.max(0, Math.min(pages.length - 1, newIndex));
+  if (newIndex === currentPageIndex) return;
+
+  const page = pages[newIndex];
+  const direction = newIndex > currentPageIndex ? 'right' : 'left';
+  const oldEl = document.getElementById(pages[currentPageIndex] + 'Page');
+  const newEl = document.getElementById(page + 'Page');
+
+  oldEl.classList.remove('active', 'slide-from-right', 'slide-from-left');
+  newEl.classList.remove('slide-from-right', 'slide-from-left');
+  newEl.classList.add('active');
+  void newEl.offsetWidth; // force animation restart
+  newEl.classList.add(direction === 'right' ? 'slide-from-right' : 'slide-from-left');
+
+  currentPageIndex = newIndex;
+
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
+
+  if (page === 'shop') renderShop();
+  if (page === 'stats') setTimeout(renderGraph, 230);
+}
+
 document.querySelectorAll('.nav-item[data-page]').forEach((item) => {
-  item.addEventListener('click', () => {
-    const page = item.dataset.page;
-    const newIndex = pages.indexOf(page);
-    if (newIndex === currentPageIndex) return;
-
-    const direction = newIndex > currentPageIndex ? 'right' : 'left';
-    const oldEl = document.getElementById(pages[currentPageIndex] + 'Page');
-    const newEl = document.getElementById(page + 'Page');
-    oldEl.classList.remove('active', 'slide-from-right', 'slide-from-left');
-    newEl.classList.remove('slide-from-right', 'slide-from-left');
-    newEl.classList.add('active');
-    // Force animation restart
-    void newEl.offsetWidth;
-    newEl.classList.add(direction === 'right' ? 'slide-from-right' : 'slide-from-left');
-
-    currentPageIndex = newIndex;
-
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(i => i.classList.add('active'));
-
-    if (page === 'shop') renderShop();
-    if (page === 'stats') setTimeout(renderGraph, 230);
-  });
+  item.addEventListener('click', () => navigateToPage(pages.indexOf(item.dataset.page)));
 });
 
 
@@ -8773,19 +8725,8 @@ function loadState() {
           
           // Start pause penalty timer (break pauses are free — no coin tick).
           state.pauseElapsed = 0;
-          const isBreakPauseR = state.mode === 'long';
-          state.pauseInterval = setInterval(() => {
-            state.pauseElapsed++;
-            const mins = Math.floor(state.pauseElapsed / 60);
-            const secs = state.pauseElapsed % 60;
-            document.getElementById('pauseTimer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+          startPausePenaltyTimer();
 
-            if (!isBreakPauseR && state.pauseElapsed > 420 && state.pauseElapsed % 30 === 0) {
-              state.coins = Math.max(0, state.coins - 1);
-              updateDisplay();
-            }
-          }, 1000);
-          
           // Update character appearance
           updateCharacterAppearance();
           renderBook();
@@ -8794,9 +8735,8 @@ function loadState() {
         }, 500);
       }
       
-      console.log('✅I lowkey havent found any bugs in the code!');
     } catch (e) {
-      console.error('loadstate() failed! Goodluck.:', e);
+      console.error('loadState() failed:', e);
     }
   }
 }
@@ -9103,7 +9043,7 @@ document.getElementById('copyRawStatsBtn')?.addEventListener('click', () => {
       form.append('contact', contact || 'Not provided');
       form.append('streak', state.streak);
       form.append('reborns', state.reborns);
-      form.append('version', 'v4.0');
+      form.append('version', 'v1.2.2');
 
       const ep = ['https://formspree', '.io/f/', 'mlgwwdke'].join('');
       const res = await fetch(ep, { method: 'POST', body: form, headers: { 'Accept': 'application/json' } });
@@ -10042,7 +9982,8 @@ document.getElementById('optLbHighlight')?.addEventListener('click', function() 
   state.optLbHighlight = this.classList.contains('active');
   saveState();
 });
-document.getElementById('optExportData')?.addEventListener('click', () => {
+// Shared data export — used by VuliStudy+ Options and Account Settings.
+function exportMyData() {
   try {
     const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
     const a = document.createElement('a');
@@ -10052,7 +9993,8 @@ document.getElementById('optExportData')?.addEventListener('click', () => {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast('Exported your data.', 'success');
   } catch { toast('Export failed.', 'error'); }
-});
+}
+document.getElementById('optExportData')?.addEventListener('click', exportMyData);
 
 document.getElementById('premiumCenterSettingsBtn').addEventListener('click', openPremiumCenter);
 document.getElementById('premiumCenterStatsBtn').addEventListener('click', openPremiumCenter);
@@ -10474,17 +10416,7 @@ document.getElementById('openAccountSettingsItem')?.addEventListener('click', op
 document.getElementById('closeAccountSettingsBtn')?.addEventListener('click', () => {
   document.getElementById('accountSettingsModal').classList.remove('active');
 });
-document.getElementById('accountExportBtn')?.addEventListener('click', () => {
-  try {
-    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `vulistudy-${state.username || 'me'}-${Date.now()}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast('Exported your data.', 'success');
-  } catch { toast('Export failed.', 'error'); }
-});
+document.getElementById('accountExportBtn')?.addEventListener('click', exportMyData);
 document.getElementById('accountClearCacheBtn')?.addEventListener('click', async () => {
   if (!confirm('Clear cached files and reload? Your saved progress is kept.')) return;
   try {
@@ -10738,24 +10670,10 @@ function applyCharOffset() {
   container.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return; // too short or too vertical ykyk
-    if (state.isRunning) return; // dont switch mid-session
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return; // too short or too vertical
+    if (state.isRunning) return; // don't switch mid-session
     const dir = dx < 0 ? 1 : -1; // left = forward, right = back
-    const next = Math.max(0, Math.min(pages.length - 1, currentPageIndex + dir));
-    if (next === currentPageIndex) return;
-    const slideDir = dir === 1 ? 'right' : 'left';
-    const oldEl = document.getElementById(pages[currentPageIndex] + 'Page');
-    const newEl = document.getElementById(pages[next] + 'Page');
-    oldEl.classList.remove('active', 'slide-from-right', 'slide-from-left');
-    newEl.classList.remove('slide-from-right', 'slide-from-left');
-    newEl.classList.add('active');
-    void newEl.offsetWidth;
-    newEl.classList.add(slideDir === 'right' ? 'slide-from-right' : 'slide-from-left');
-    currentPageIndex = next;
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll(`.nav-item[data-page="${pages[next]}"]`).forEach(i => i.classList.add('active'));
-    if (pages[next] === 'shop') renderShop();
-    if (pages[next] === 'stats') setTimeout(renderGraph, 230);
+    navigateToPage(currentPageIndex + dir);
   }, { passive: true });
 })();
 
