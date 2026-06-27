@@ -1,19 +1,16 @@
-# ============================================================
-# VuliStudy backend — v1.2.2
-# VuliAi study coach (account-age + local-time aware, EthanGenius VIP,
-# quotes-last-line, 1250-char cap). Refactor/polish pass: no behavioural
-# feature changes, tidied for consistency and stability.
-# ============================================================
 import os
 import sqlite3
 import time
 import json
+import hmac
+import hashlib
+import secrets
 import urllib.request
 import urllib.error
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone, timedelta
 import re
-
+# too many imports
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
@@ -102,12 +99,53 @@ def init_db():
         minutes INTEGER DEFAULT 0,
         PRIMARY KEY (username, week_start)
     )''')
+    # Auth tokens for cross-device login (VuliTab browser extension + app live-sync).
+    # A user logs in with username+password and receives an opaque token they store
+    # locally; every authenticated call sends the token instead of the password.
+    conn.execute('''CREATE TABLE IF NOT EXISTS vt_sessions (
+        token TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        platform TEXT DEFAULT 'unknown',
+        created_at INTEGER DEFAULT 0,
+        last_seen INTEGER DEFAULT 0
+    )''')
+    # Live focus-session state, shared between the phone app and the browser tab so a
+    # session started on one device continues on the other. One row per user.
+    conn.execute('''CREATE TABLE IF NOT EXISTS live_sessions (
+        username TEXT PRIMARY KEY,
+        mode TEXT DEFAULT 'focus',
+        status TEXT DEFAULT 'idle',
+        started_at INTEGER DEFAULT 0,
+        base_seconds INTEGER DEFAULT 0,
+        target_seconds INTEGER DEFAULT 0,
+        source TEXT DEFAULT 'app',
+        updated_at INTEGER DEFAULT 0
+    )''')
+    # Per-session focus reports produced by VuliTab (productive vs distracted time).
+    conn.execute('''CREATE TABLE IF NOT EXISTS focus_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        started_at INTEGER DEFAULT 0,
+        ended_at INTEGER DEFAULT 0,
+        productive_seconds INTEGER DEFAULT 0,
+        distracted_seconds INTEGER DEFAULT 0,
+        neutral_seconds INTEGER DEFAULT 0,
+        focus_score INTEGER DEFAULT 0,
+        sites_json TEXT DEFAULT '[]',
+        created_at INTEGER DEFAULT 0
+    )''')
     try:
         conn.execute('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0')
     except Exception:
         pass
     try:
         conn.execute('ALTER TABLE users ADD COLUMN created_at INTEGER DEFAULT 0')
+    except Exception:
+        pass
+    # Password hash for the new signup/login system. NULL = legacy passwordless
+    # account that can still claim a password once via /set-password.
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT NULL')
     except Exception:
         pass
     conn.commit()
@@ -122,6 +160,69 @@ MAX_STREAK = 5000
 MAX_REBORNS = 500
 VALID_COSMETICS = [None, 'tophat', 'wizard', 'pirate', 'premium-crown', 'premium-glow', 'premium-shades']
 VALID_BACKGROUNDS = ['default', 'ocean', 'sunset', 'lavender', 'mint', 'rose', 'midnight', 'forest']
+
+# ============================================================
+# Auth helpers — password hashing (stdlib PBKDF2) + login tokens.
+# ============================================================
+PBKDF2_ITERATIONS = 200_000
+TOKEN_TTL = 365 * 24 * 60 * 60  # tokens are long-lived; study app, low risk
+
+def hash_password(password):
+    """Return a self-describing pbkdf2_sha256 hash string."""
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${dk.hex()}"
+
+def verify_password(password, stored):
+    if not stored or not isinstance(stored, str):
+        return False
+    try:
+        algo, iters, salt_hex, hash_hex = stored.split('$')
+        if algo != 'pbkdf2_sha256':
+            return False
+        dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'),
+                                 bytes.fromhex(salt_hex), int(iters))
+        return hmac.compare_digest(dk.hex(), hash_hex)
+    except Exception:
+        return False
+
+def password_problem(password):
+    """Return an error string if the password is unacceptable, else None."""
+    if not password or len(password) < 6:
+        return 'Password must be at least 6 characters'
+    if len(password) > 128:
+        return 'Password too long'
+    return None
+
+def issue_token(conn, username, platform='unknown'):
+    token = secrets.token_hex(32)
+    now = int(time.time())
+    conn.execute('INSERT INTO vt_sessions (token, username, platform, created_at, last_seen) VALUES (?,?,?,?,?)',
+                 (token, username, platform[:20], now, now))
+    return token
+
+def user_from_token(conn, token):
+    """Resolve a token to a username, refreshing last_seen. None if invalid/expired."""
+    if not token:
+        return None
+    row = conn.execute('SELECT username, last_seen FROM vt_sessions WHERE token = ?', (token,)).fetchone()
+    if not row:
+        return None
+    now = int(time.time())
+    if now - row['last_seen'] > TOKEN_TTL:
+        conn.execute('DELETE FROM vt_sessions WHERE token = ?', (token,))
+        conn.commit()
+        return None
+    conn.execute('UPDATE vt_sessions SET last_seen = ? WHERE token = ?', (now, token))
+    return row['username']
+
+def public_profile(conn, username):
+    """The account snapshot shown on any logged-in device (app + VuliTab)."""
+    u = conn.execute('''SELECT username, total_minutes, streak, reborns,
+                        equipped_cosmetic, active_background, character_width,
+                        happiness, is_premium, created_at
+                        FROM users WHERE username = ?''', (username,)).fetchone()
+    return dict(u) if u else None
 
 @app.route('/sw.js')
 def service_worker():
@@ -141,25 +242,123 @@ def check_password():
 
 @app.route('/set-username', methods=['POST'])
 def set_username():
+    """Signup. Creates a brand-new account with a username + password and returns
+    a login token. The username can never be changed and accounts are device-bound
+    (the app stores progress locally) — to move devices the user contacts the owner."""
     data = request.get_json()
     username = data.get('username', '').strip()
+    password = data.get('password', '')
     if not username or len(username) > 20 or len(username) < 2:
         return jsonify({'success': False, 'error': 'Invalid username'})
     blocked = ['admin', 'system', 'null', 'undefined', 'test', 'mod', 'owner']
     if username.lower() in blocked:
         return jsonify({'success': False, 'error': 'Username not allowed'})
+    pw_err = password_problem(password)
+    if pw_err:
+        return jsonify({'success': False, 'error': pw_err})
     conn = get_db()
     try:
         existing = conn.execute('SELECT username FROM users WHERE username = ?', (username,)).fetchone()
         if existing:
             return jsonify({'success': False, 'error': 'Username taken'})
         now_ts = int(time.time())
-        conn.execute('INSERT INTO users (username, last_active, is_active, created_at) VALUES (?, ?, 1, ?)',
-                     (username, now_ts, now_ts))
+        conn.execute('''INSERT INTO users (username, last_active, is_active, created_at, password_hash)
+                        VALUES (?, ?, 1, ?, ?)''',
+                     (username, now_ts, now_ts, hash_password(password)))
+        token = issue_token(conn, username, data.get('platform', 'app'))
         conn.commit()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'token': token})
     finally:
         conn.close()
+
+@app.route('/set-password', methods=['POST'])
+def set_password():
+    """One-time password claim for legacy accounts created before the signup system
+    (password_hash IS NULL). Lets the existing owner — who already controls the
+    account on their device — secure it so they can log into VuliTab."""
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    if not username:
+        return jsonify({'success': False, 'error': 'No username'})
+    pw_err = password_problem(password)
+    if pw_err:
+        return jsonify({'success': False, 'error': pw_err})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT username, password_hash FROM users WHERE username = ?',
+                            (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        if user['password_hash']:
+            return jsonify({'success': False, 'error': 'Account already has a password'})
+        conn.execute('UPDATE users SET password_hash = ? WHERE username = ?',
+                     (hash_password(password), username))
+        token = issue_token(conn, username, data.get('platform', 'app'))
+        conn.commit()
+        return jsonify({'success': True, 'token': token})
+    finally:
+        conn.close()
+
+@app.route('/login', methods=['POST'])
+def login():
+    """Authenticate username + password (used by VuliTab and app re-login).
+    Returns a long-lived token plus the account profile."""
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Missing credentials'})
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT username, password_hash FROM users WHERE username = ?',
+                            (username,)).fetchone()
+        if not user:
+            return jsonify({'success': False, 'error': 'Incorrect username or password'})
+        if not user['password_hash']:
+            # Legacy passwordless account — must claim a password on the app first.
+            return jsonify({'success': False, 'error': 'no_password',
+                            'message': 'Open the VuliStudy app and set a password first.'})
+        if not verify_password(password, user['password_hash']):
+            return jsonify({'success': False, 'error': 'Incorrect username or password'})
+        token = issue_token(conn, username, data.get('platform', 'vulitab'))
+        conn.execute('UPDATE users SET last_active = ?, is_active = 1 WHERE username = ?',
+                     (int(time.time()), username))
+        conn.commit()
+        return jsonify({'success': True, 'token': token, 'profile': public_profile(conn, username)})
+    finally:
+        conn.close()
+
+@app.route('/vt-profile', methods=['POST'])
+def vt_profile():
+    """Token-authenticated account snapshot. VuliTab polls this to mirror the
+    phone: minutes, streak, buddy cosmetics/background, happiness, premium."""
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        profile = public_profile(conn, username)
+        if not profile:
+            return jsonify({'success': False, 'error': 'User not found'})
+        return jsonify({'success': True, 'profile': profile})
+    finally:
+        conn.close()
+
+@app.route('/vt-logout', methods=['POST'])
+def vt_logout():
+    data = request.get_json()
+    token = data.get('token', '')
+    if token:
+        conn = get_db()
+        try:
+            conn.execute('DELETE FROM vt_sessions WHERE token = ?', (token,))
+            conn.commit()
+        finally:
+            conn.close()
+    return jsonify({'success': True})
 
 @app.route('/sync-score', methods=['POST'])
 def sync_score():
@@ -1069,6 +1268,252 @@ def leave_chat():
         return jsonify({'success': True})
     finally:
         conn.close()
+
+# ============================================================
+# Live session sync — shared focus-timer state across devices.
+# The phone app and VuliTab both write here on start/pause/stop and read here on
+# open, so a session begun in the browser keeps running when the app opens (and
+# vice-versa). Elapsed time is derived from server time to survive clock drift.
+# ============================================================
+VALID_SESSION_MODES = ('focus', 'stopwatch', 'long')
+VALID_SESSION_STATUS = ('running', 'paused', 'idle')
+
+@app.route('/session-update', methods=['POST'])
+def session_update():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        mode = data.get('mode', 'focus')
+        status = data.get('status', 'idle')
+        if mode not in VALID_SESSION_MODES:
+            mode = 'focus'
+        if status not in VALID_SESSION_STATUS:
+            status = 'idle'
+        base_seconds = max(0, min(int(data.get('baseSeconds', 0) or 0), 200000))
+        target_seconds = max(0, min(int(data.get('targetSeconds', 0) or 0), 200000))
+        source = (data.get('source', 'app') or 'app')[:20]
+        now = int(time.time())
+        # For a running segment the client tells us when *this* run segment began
+        # (its own clock); we re-anchor to server time so the other device agrees.
+        started_at = now if status == 'running' else 0
+        conn.execute('''INSERT INTO live_sessions
+            (username, mode, status, started_at, base_seconds, target_seconds, source, updated_at)
+            VALUES (?,?,?,?,?,?,?,?)
+            ON CONFLICT(username) DO UPDATE SET
+              mode=excluded.mode, status=excluded.status, started_at=excluded.started_at,
+              base_seconds=excluded.base_seconds, target_seconds=excluded.target_seconds,
+              source=excluded.source, updated_at=excluded.updated_at''',
+            (username, mode, status, started_at, base_seconds, target_seconds, source, now))
+        conn.commit()
+        return jsonify({'success': True, 'serverTime': now})
+    finally:
+        conn.close()
+
+@app.route('/session-get', methods=['POST'])
+def session_get():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        row = conn.execute('SELECT * FROM live_sessions WHERE username = ?', (username,)).fetchone()
+        now = int(time.time())
+        if not row:
+            return jsonify({'success': True, 'session': None, 'serverTime': now})
+        s = dict(row)
+        # Derived current elapsed (seconds) so the caller can render immediately.
+        if s['status'] == 'running':
+            s['elapsed_seconds'] = s['base_seconds'] + max(0, now - s['started_at'])
+        else:
+            s['elapsed_seconds'] = s['base_seconds']
+        s['server_time'] = now
+        return jsonify({'success': True, 'session': s, 'serverTime': now})
+    finally:
+        conn.close()
+
+
+# ============================================================
+# Premium productivity classifier — decides if the tab the user is on counts as
+# studying. Hard rules catch obvious entertainment; everything ambiguous goes to
+# the Groq model using the server-side keys (never exposed to the browser).
+# ============================================================
+ENTERTAINMENT_DOMAINS = (
+    'youtube.com', 'youtu.be', 'netflix.com', 'tiktok.com', 'instagram.com',
+    'twitch.tv', 'reddit.com', 'facebook.com', 'twitter.com', 'x.com',
+    'primevideo.com', 'hulu.com', 'disneyplus.com', '9gag.com', 'pinterest.com',
+    'snapchat.com', 'tumblr.com', 'roblox.com', 'discord.com', 'twitchgg.com',
+    'crunchyroll.com', 'hbomax.com', 'max.com', 'espn.com',
+)
+CLEAR_STUDY_DOMAINS = (
+    'wikipedia.org', 'khanacademy.org', 'coursera.org', 'edx.org',
+    'docs.google.com', 'classroom.google.com', 'quizlet.com', 'brilliant.org',
+    'wolframalpha.com', 'desmos.com', 'overleaf.com', 'scholar.google.com',
+    'jstor.org', 'sparknotes.com', 'bbc.co.uk/bitesize', 'mathsisfun.com',
+    'savemyexams.com', 'physicsclassroom.com', 'ck12.org', 'duolingo.com',
+)
+STUDY_HINT_WORDS = (
+    'study', 'studying', 'revision', 'revise', 'lecture', 'tutorial', 'course',
+    'lesson', 'exam', 'homework', 'essay', 'maths', 'math', 'algebra', 'calculus',
+    'biology', 'chemistry', 'physics', 'history', 'geography', 'science',
+    'vocabulary', 'grammar', 'practice problem', 'past paper', 'past papers',
+    'flashcard', 'quiz', 'how to solve', 'theorem', 'documentation', 'reference',
+)
+
+def _domain_of(url):
+    try:
+        m = re.match(r'^[a-z]+://([^/]+)', (url or '').lower())
+        host = m.group(1) if m else ''
+        return host[4:] if host.startswith('www.') else host
+    except Exception:
+        return ''
+
+def _has_study_hint(*texts):
+    blob = ' '.join((t or '') for t in texts).lower()
+    return any(w in blob for w in STUDY_HINT_WORDS)
+
+def classify_productivity(url, title, text):
+    """Return (verdict, reason). verdict ∈ productive | unproductive | uncertain."""
+    domain = _domain_of(url)
+    if not domain or domain.startswith('chrome') or domain in ('newtab', 'localhost'):
+        return ('uncertain', 'Blank or system page')
+    hint = _has_study_hint(title, text[:1200] if text else '')
+    is_ent = any(domain == d or domain.endswith('.' + d) for d in ENTERTAINMENT_DOMAINS)
+    is_study = any(d in (domain + url.lower()) for d in CLEAR_STUDY_DOMAINS)
+    if is_ent and not hint:
+        return ('unproductive', f'{domain} is usually a distraction')
+    if is_study and not is_ent:
+        return ('productive', f'{domain} is a study resource')
+    # Ambiguous (incl. entertainment-with-study-hints) → ask the model.
+    sys_prompt = (
+        "You are a strict study-focus classifier inside VuliStudy. Given the web page a "
+        "student currently has open, decide whether it is PRODUCTIVE for studying right now. "
+        "Entertainment, social media, shopping, gaming and general browsing are UNPRODUCTIVE "
+        "even on sites that can sometimes be educational, UNLESS the page clearly shows study "
+        "content (e.g. a lecture, tutorial, course, or a specific subject). If you genuinely "
+        "cannot tell, answer UNCERTAIN. "
+        "Reply with EXACTLY one word on the first line — PRODUCTIVE, UNPRODUCTIVE or UNCERTAIN — "
+        "then a second line with a short (max 12 word) reason. No other text."
+    )
+    user_prompt = (
+        f"URL: {url}\nTitle: {title or '(none)'}\n"
+        f"Visible text sample: {(text or '')[:900]}"
+    )
+    for api_key in [GROQ_API_ONE, GROQ_API_TWO]:
+        if not api_key:
+            continue
+        try:
+            out = call_ai(api_key, user_prompt, system_prompt=sys_prompt) or ''
+            first = out.strip().splitlines()
+            verdict_word = (first[0].strip().upper() if first else '')
+            reason = (first[1].strip() if len(first) > 1 else '').strip()[:120]
+            if 'UNPRODUCTIVE' in verdict_word:
+                return ('unproductive', reason or 'Not study-related')
+            if 'PRODUCTIVE' in verdict_word:
+                return ('productive', reason or 'Looks study-related')
+            return ('uncertain', reason or 'Could not tell')
+        except Exception as e:
+            print(f"[classify error]: {e}")
+            continue
+    # No key / all failed — let the user decide.
+    return ('uncertain', 'Ask yourself: is this helping you study?')
+
+@app.route('/classify-productivity', methods=['POST'])
+def classify_productivity_route():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        user = conn.execute('SELECT is_premium FROM users WHERE username = ?', (username,)).fetchone()
+        conn.commit()
+        if not user or not user['is_premium']:
+            return jsonify({'success': False, 'error': 'premium_required'})
+    finally:
+        conn.close()
+    url = (data.get('url') or '')[:600]
+    title = (data.get('title') or '')[:300]
+    text = (data.get('text') or '')[:2000]
+    verdict, reason = classify_productivity(url, title, text)
+    return jsonify({'success': True, 'verdict': verdict, 'reason': reason})
+
+
+# ============================================================
+# Focus reports — VuliTab posts a per-session productivity breakdown; both the
+# tab and (later) the app can read the history.
+# ============================================================
+@app.route('/focus-session-save', methods=['POST'])
+def focus_session_save():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        prod = max(0, min(int(data.get('productiveSeconds', 0) or 0), 200000))
+        dist = max(0, min(int(data.get('distractedSeconds', 0) or 0), 200000))
+        neut = max(0, min(int(data.get('neutralSeconds', 0) or 0), 200000))
+        started_at = int(data.get('startedAt', 0) or 0)
+        ended_at = int(data.get('endedAt', int(time.time())) or int(time.time()))
+        total = prod + dist + neut
+        focus_score = round(100 * prod / total) if total > 0 else 0
+        sites = data.get('sites', [])
+        try:
+            sites_json = json.dumps(sites)[:4000]
+        except Exception:
+            sites_json = '[]'
+        now = int(time.time())
+        conn.execute('''INSERT INTO focus_sessions
+            (username, started_at, ended_at, productive_seconds, distracted_seconds,
+             neutral_seconds, focus_score, sites_json, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?)''',
+            (username, started_at, ended_at, prod, dist, neut, focus_score, sites_json, now))
+        # Keep only the most recent 60 reports per user.
+        conn.execute('''DELETE FROM focus_sessions WHERE username = ? AND id NOT IN
+            (SELECT id FROM focus_sessions WHERE username = ? ORDER BY id DESC LIMIT 60)''',
+            (username, username))
+        conn.commit()
+        return jsonify({'success': True, 'focusScore': focus_score})
+    finally:
+        conn.close()
+
+@app.route('/focus-history', methods=['POST'])
+def focus_history():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        rows = conn.execute('''SELECT id, started_at, ended_at, productive_seconds,
+            distracted_seconds, neutral_seconds, focus_score, sites_json
+            FROM focus_sessions WHERE username = ? ORDER BY id DESC LIMIT 30''',
+            (username,)).fetchall()
+        sessions = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d['sites'] = json.loads(d.pop('sites_json') or '[]')
+            except Exception:
+                d['sites'] = []
+            sessions.append(d)
+        agg = conn.execute('''SELECT
+            COALESCE(SUM(productive_seconds),0) AS prod,
+            COALESCE(SUM(distracted_seconds),0) AS dist,
+            COUNT(*) AS n
+            FROM focus_sessions WHERE username = ?''', (username,)).fetchone()
+        return jsonify({'success': True, 'sessions': sessions,
+                        'totalProductive': agg['prod'], 'totalDistracted': agg['dist'],
+                        'sessionCount': agg['n']})
+    finally:
+        conn.close()
+
 
 if __name__ == '__main__':
     app.run()
