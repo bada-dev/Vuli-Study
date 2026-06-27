@@ -13,7 +13,7 @@
 <!--
     Project: VuliStudy
     Author: ETHANTYAGI
-    Version: 1.2.2
+    Version: 1.3.1
     ALL RIGHTS RESERVED
 -->
 
@@ -3989,12 +3989,15 @@ button:disabled {
 
 	<div class="modal" id="usernameModal">
   	  <div class="modal-content">
-    	<div class="modal-title">Set Username</div>
-    	<div class="modal-text">This cannot be changed later!</div>
-    	<input type="text" class="modal-input" id="usernameInput" placeholder="Your name..." maxlength="20">
+    	<div class="modal-title" id="usernameModalTitle">Create Account</div>
+    	<div class="modal-text" id="usernameModalText">Pick a username (cannot be changed later) and a password. Your password lets you log into VuliTab on your computer.</div>
+    	<input type="text" class="modal-input" id="usernameInput" placeholder="Username..." maxlength="20" autocomplete="off" autocapitalize="none" autocorrect="off">
+    	<input type="password" class="modal-input" id="passwordInput" placeholder="Password (min 6 characters)..." maxlength="128" autocomplete="new-password" style="margin-top:8px;">
+    	<input type="password" class="modal-input" id="passwordConfirmInput" placeholder="Confirm password..." maxlength="128" autocomplete="new-password" style="margin-top:8px;">
+    	<div class="modal-text" id="usernameModalNote" style="font-size:12px;color:#9a6a4a;margin-top:8px;">⚠️ Your account lives on this device. To move to a new device later, contact the owner.</div>
     	<div class="modal-buttons">
       	  <button class="modal-btn secondary" id="cancelUsernameBtn">Cancel</button>
-      	  <button class="modal-btn primary" id="saveUsernameBtn">Set Forever</button>
+      	  <button class="modal-btn primary" id="saveUsernameBtn">Create Account</button>
     	</div>
   	  </div>
 	</div>
@@ -6692,6 +6695,7 @@ function startTimer() {
   
   state.timerStartedAt = Date.now();
   state.timerInitialLeft = state.mode === 'stopwatch' ? state.stopwatchTime : state.timeLeft;
+  vtPushSession('running');
 
   state.timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - state.timerStartedAt) / 1000);
@@ -6721,6 +6725,7 @@ function pauseTimer() {
   actionBtn.textContent = 'Resume';
   actionBtn.className = 'action-btn';
   updateCharacterAppearance();
+  vtPushSession('paused');
   
   // Show pause modal with quote
   const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
@@ -6820,6 +6825,7 @@ function finalizeStop(elapsedMins, coinsEarned, penalty) {
   state.isPaused = false;
   clearInterval(state.timerInterval);
   stopFloatingEmojis();
+  vtPushSession('idle');
 
   if (state.mode === 'stopwatch') {
     if (elapsedMins >= 5) {
@@ -6869,6 +6875,7 @@ function completeSession() {
   stopFloatingEmojis();
   playSound('complete');
   state.isRunning = false;
+  vtPushSession('idle');
   
   if (state.mode === 'stopwatch') {
     const duration = Math.floor(state.stopwatchTime / 60);
@@ -8563,7 +8570,9 @@ function saveState() {
     evoLevel: state.evoLevel || 0,
     isPremium: state.isPremium || false,
     equippedCosmetics: state.equippedCosmetics || {},
-    tamperBanned: state.tamperBanned || false
+    tamperBanned: state.tamperBanned || false,
+    vtToken: state.vtToken || null,
+    vtClaimPrompted: state.vtClaimPrompted || false
   };
   // === ANTI-TAMPER CHECKSUM ===
   // We sign the critical economy fields. If they're edited in DevTools without going through
@@ -10280,6 +10289,18 @@ loadState();
 initUsername();
 updatePremiumUI();
 syncLeaderboard();
+vtInitLiveSync();
+// Legacy account with no password yet — offer to secure it once so VuliTab login works.
+if (state.username && !state.vtToken && !state.vtClaimPrompted) {
+  state.vtClaimPrompted = true;
+  saveState();
+  setTimeout(() => { if (isOnline) openClaimModal(); }, 1500);
+}
+// Median wraps this site in a webview that resumes (not reloads) on app open —
+// re-check the backend for a browser-started session every time we come back.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') vtInitLiveSync();
+});
 checkIfKickedFromLeaderboard();
 setBackground(state.activeBackground);
 renderCosmetic();
@@ -10402,14 +10423,52 @@ function openAccountSettings() {
   document.getElementById('accountSettingsModal').classList.add('active');
 }
 
+// The signup/claim modal has two modes: a brand-new account ('signup') or
+// securing a legacy passwordless account with a password ('claim').
+let usernameModalMode = 'signup';
+
+function openSignupModal() {
+  usernameModalMode = 'signup';
+  document.getElementById('usernameModalTitle').textContent = 'Create Account';
+  document.getElementById('usernameModalText').textContent =
+    'Pick a username (cannot be changed later) and a password. Your password lets you log into VuliTab on your computer.';
+  document.getElementById('usernameModalNote').style.display = '';
+  const u = document.getElementById('usernameInput');
+  u.style.display = ''; u.value = '';
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('passwordConfirmInput').value = '';
+  document.getElementById('saveUsernameBtn').textContent = 'Create Account';
+  document.getElementById('usernameModal').classList.add('active');
+  setTimeout(() => u.focus(), 100);
+}
+
+function openClaimModal() {
+  usernameModalMode = 'claim';
+  document.getElementById('usernameModalTitle').textContent = 'Secure Your Account';
+  document.getElementById('usernameModalText').textContent =
+    `Set a password for "${state.username}" so you can log into VuliTab on your computer.`;
+  document.getElementById('usernameModalNote').style.display = '';
+  const u = document.getElementById('usernameInput');
+  u.value = state.username || ''; u.style.display = 'none';
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('passwordConfirmInput').value = '';
+  document.getElementById('saveUsernameBtn').textContent = 'Set Password';
+  document.getElementById('usernameModal').classList.add('active');
+  setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+}
+
 document.getElementById('usernameSettingItem').addEventListener('click', () => {
+  if (state.username && !state.vtToken) {
+    // Legacy account with no password yet → let them claim one.
+    openClaimModal();
+    return;
+  }
   if (state.username) {
-    // Username is set → account settings.
+    // Username + password set → account settings.
     openAccountSettings();
     return;
   }
-  document.getElementById('usernameModal').classList.add('active');
-  setTimeout(() => document.getElementById('usernameInput').focus(), 100);
+  openSignupModal();
 });
 
 document.getElementById('openAccountSettingsItem')?.addEventListener('click', openAccountSettings);
@@ -10434,28 +10493,121 @@ document.getElementById('cancelUsernameBtn').addEventListener('click', () => {
 });
 
 document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
-  if (!requiresInternet('Setting a username')) return;
+  if (!requiresInternet('Account setup')) return;
+  const pw = document.getElementById('passwordInput').value;
+  const pwc = document.getElementById('passwordConfirmInput').value;
+  if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+  if (pw !== pwc) { alert('Passwords do not match.'); return; }
+
+  // CLAIM: legacy account adding a password for the first time.
+  if (usernameModalMode === 'claim') {
+    const res = await fetch('/set-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: state.username, password: pw, platform: 'app'})
+    });
+    const data = await res.json();
+    if (data.success) {
+      state.vtToken = data.token;
+      saveState();
+      document.getElementById('usernameModal').classList.remove('active');
+      alert('✅ Password set! You can now log into VuliTab with your username and password.');
+    } else {
+      alert(`❌ ${data.error || 'Could not set password'}`);
+    }
+    return;
+  }
+
+  // SIGNUP: brand-new account.
   const name = document.getElementById('usernameInput').value.trim();
   if (!name) { alert('Please enter a username!'); return; }
-  if (!confirm(`Set "${name}" forever? Ts Cannot be undone!`)) return;
+  if (!confirm(`Create account "${name}"? Your username can never be changed.`)) return;
   const res = await fetch('/set-username', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: name})
+    body: JSON.stringify({username: name, password: pw, platform: 'app'})
   });
   const data = await res.json();
   if (data.success) {
     state.username = name;
+    state.vtToken = data.token || null;
     saveState();
     initUsername();
     updatePremiumUI();
     document.getElementById('usernameModal').classList.remove('active');
     await syncLeaderboard();
-    alert(`✅ Username "${name}" set!`);
+    alert(`✅ Account "${name}" created! Use this username + password to log into VuliTab.`);
   } else {
-    alert(`❌ ${data.error || 'Could not set username'}`);
+    alert(`❌ ${data.error || 'Could not create account'}`);
   }
 });
+
+// ============================================================
+// Live session sync — keep the focus timer in lock-step with VuliTab.
+// The phone and browser both write session state to the backend on
+// start/pause/stop and read it on open, so a session continues across devices.
+// ============================================================
+function vtAuthToken() { return state.vtToken || null; }
+
+function vtPushSession(status) {
+  const token = vtAuthToken();
+  if (!token) return;
+  const mode = state.mode;
+  let base = 0, target = 0;
+  if (mode === 'stopwatch') {
+    base = Math.max(0, Math.floor(state.stopwatchTime || 0)); // elapsed counts up
+  } else {
+    target = Math.max(0, Math.floor(state.timeLeft || 0));    // remaining counts down
+  }
+  try {
+    fetch('/session-update', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token, mode, status, baseSeconds: base, targetSeconds: target, source: 'app' })
+    }).catch(() => {});
+  } catch {}
+}
+
+async function vtPullSession() {
+  const token = vtAuthToken();
+  if (!token) return null;
+  try {
+    const res = await fetch('/session-get', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    return data.success ? data.session : null;
+  } catch { return null; }
+}
+
+function vtAdoptMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.mode === mode));
+}
+
+// On launch / returning to the app, resume a session that's live on the backend
+// (e.g. started in VuliTab) — but never clobber a session already in progress here.
+async function vtInitLiveSync() {
+  if (!vtAuthToken()) return;
+  if (state.isRunning || state.isPaused) return;
+  const s = await vtPullSession();
+  if (!s || s.status !== 'running') return;
+  if ((s.server_time - s.updated_at) > 6 * 3600) return; // stale, ignore
+  const elapsed = s.elapsed_seconds || 0;
+  vtAdoptMode(s.mode);
+  if (s.mode === 'stopwatch') {
+    state.stopwatchTime = elapsed;
+  } else {
+    const remaining = Math.max(0, (s.target_seconds || 0) - elapsed);
+    if (remaining <= 0) return;
+    state.timeLeft = remaining;
+  }
+  startTimer(); // re-anchors the session to this device
+  try { toast('Resumed your session from VuliTab 🔗', 'info', 3200); } catch {}
+}
 
 async function syncLeaderboard() {
   if (!state.username) return;
@@ -10680,7 +10832,7 @@ function applyCharOffset() {
 
 
 // === AUTO-SAVE ===
-setInterval(() => { saveState(); syncLeaderboard(); }, 120000);
+setInterval(() => { saveState(); syncLeaderboard(); if (state.isRunning && !state.isPaused) vtPushSession('running'); }, 120000);
 setInterval(saveState, 3000);
 window.addEventListener('beforeunload', saveState);
 window.addEventListener('pagehide', saveState);
