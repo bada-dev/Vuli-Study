@@ -26,10 +26,11 @@ def download_playlist(playlist_url, output_path="downloads"):
             ydl.download([playlist_url])
         print("download complete")
     except Exception as e:
-        print(f"bun u herees a big ass error: {e}")
+        print(f"Huge error!11!!!!1!: {e}")
 
 if __name__ == "__main__":
     url = input("Playlist URL: ")
     download_playlist(url)
 
 ```
+The app (runs on website and median.co) does expect you to drop the files given by that program. However, for any case, it does also exept mp4 videos for example.
