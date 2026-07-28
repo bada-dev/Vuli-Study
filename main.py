@@ -36,6 +36,41 @@ init_db()
 
 
 # ===========================================================================
+# CORS — required now that the app is an APK
+#
+# When the site served the HTML itself, the app and the API were the same
+# origin and none of this was needed. Inside the APK the page lives on
+# https://localhost and the API is on Render, which makes every call
+# cross-origin. Without these headers the WebView silently blocks the request
+# before it is ever sent, and the app looks permanently offline.
+#
+# Allowing any origin is safe here because the API authenticates with headers
+# (token + HMAC signature), not cookies — so a hostile page cannot ride along on
+# a logged-in session the way it could with cookie auth. The browser console is
+# a different matter, and it is deliberately NOT covered by this.
+# ===========================================================================
+CORS_PATH_PREFIXES = ('/api/', '/healthz', '/login', '/vt-', '/session-',
+                      '/focus-', '/classify-productivity')
+
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': (
+        'Content-Type, X-Vuli-Token, X-Vuli-Device, X-Vuli-Timestamp, '
+        'X-Vuli-Nonce, X-Vuli-Sign, X-Vuli-Admin'),
+    'Access-Control-Max-Age': '86400',
+}
+
+
+@app.after_request
+def apply_cors(response):
+    if request.path.startswith(CORS_PATH_PREFIXES):
+        for header, value in CORS_HEADERS.items():
+            response.headers[header] = value
+    return response
+
+
+# ===========================================================================
 # Helpers
 # ===========================================================================
 def body():
