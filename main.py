@@ -10,7 +10,7 @@ import urllib.error
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone, timedelta
 import re
-# too many imports
+
 app = Flask(__name__)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 SECOND_ADMIN_PASSWORD = os.environ.get('SECOND_ADMIN_PASSWORD')
@@ -132,7 +132,40 @@ def init_db():
         neutral_seconds INTEGER DEFAULT 0,
         focus_score INTEGER DEFAULT 0,
         sites_json TEXT DEFAULT '[]',
+        events_json TEXT DEFAULT '[]',
         created_at INTEGER DEFAULT 0
+    )''')
+    try:
+        conn.execute("ALTER TABLE focus_sessions ADD COLUMN events_json TEXT DEFAULT '[]'")
+    except Exception:
+        pass
+    # Shared tasks (two-way sync between the app and VuliTab). Tombstoned, not
+    # hard-deleted, so a delete on one device propagates to the other.
+    conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
+        cid TEXT NOT NULL,
+        username TEXT NOT NULL,
+        text TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        deadline TEXT DEFAULT NULL,
+        completed INTEGER DEFAULT 0,
+        deleted INTEGER DEFAULT 0,
+        updated_at INTEGER DEFAULT 0,
+        created_at INTEGER DEFAULT 0,
+        PRIMARY KEY (username, cid)
+    )''')
+    # Per-user website blocklist / whitelist, synced across devices.
+    conn.execute('''CREATE TABLE IF NOT EXISTS blocklists (
+        username TEXT PRIMARY KEY,
+        mode TEXT DEFAULT 'off',
+        sites_json TEXT DEFAULT '[]',
+        updated_at INTEGER DEFAULT 0
+    )''')
+    # Achievements unlocked by a user (shown in both app and VuliTab).
+    conn.execute('''CREATE TABLE IF NOT EXISTS achievements (
+        username TEXT NOT NULL,
+        code TEXT NOT NULL,
+        unlocked_at INTEGER DEFAULT 0,
+        PRIMARY KEY (username, code)
     )''')
     try:
         conn.execute('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0')
@@ -232,6 +265,12 @@ def service_worker():
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/ping')
+def ping():
+    # Tiny, dependency-free endpoint. Clients hit this the instant they open so
+    # a sleeping Render dyno starts warming before any real request is needed.
+    return jsonify({'ok': True, 't': int(time.time())})
 
 @app.route('/check-password', methods=['POST'])
 def check_password():
@@ -377,8 +416,13 @@ def sync_score():
             return jsonify({'success': False, 'error': 'Rate limited'})
         conn.execute('INSERT OR REPLACE INTO sync_ratelimit (username, last_sync) VALUES (?, ?)',
                      (username, int(time.time())))
-        old_data = conn.execute('SELECT total_minutes FROM users WHERE username = ?', (username,)).fetchone()
+        old_data = conn.execute(
+            'SELECT total_minutes, streak, reborns, last_active FROM users WHERE username = ?',
+            (username,)).fetchone()
         old_minutes = old_data['total_minutes'] if old_data else 0
+        old_streak = (old_data['streak'] if old_data else 0) or 0
+        old_reborns = (old_data['reborns'] if old_data else 0) or 0
+        old_last_active = (old_data['last_active'] if old_data else 0) or 0
 
         total_minutes = min(int(data.get('totalMinutes', 0)), MAX_MINUTES)
         streak = min(int(data.get('streak', 0)), MAX_STREAK)
@@ -389,6 +433,19 @@ def sync_score():
             total_minutes = old_minutes
         elif total_minutes - old_minutes > 480:
             total_minutes = old_minutes + 480
+        # Streak/reborns are server-clamped so a client can't inflate the leaderboard
+        # (e.g. by editing localStorage). They may only grow at a believable rate.
+        now_ts = int(time.time())
+        days_since = ((now_ts - old_last_active) // (20 * 3600)) if old_last_active else 1
+        max_streak_now = old_streak + max(1, days_since) + 1
+        if streak > max_streak_now:
+            streak = max_streak_now
+        if streak < 0:
+            streak = old_streak
+        if reborns > old_reborns + 1:
+            reborns = old_reborns + 1
+        if reborns < old_reborns:
+            reborns = old_reborns
         equipped_cosmetic = data.get('equippedCosmetic', None)
         active_background = data.get('activeBackground', 'default')
         character_width = min(max(int(data.get('characterWidth', 140)), 140), 420)
@@ -513,11 +570,20 @@ def delete_user():
     if not username:
         return jsonify({'success': False})
     conn = get_db()
-    conn.execute('DELETE FROM users WHERE username = ?', (username,))
-    conn.execute('DELETE FROM sync_ratelimit WHERE username = ?', (username,))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True})
+    try:
+        # Only the account's own token holder or an admin may delete it — previously
+        # anyone could delete any username by POSTing it.
+        token_user = user_from_token(conn, data.get('token', ''))
+        is_admin = bool(ADMIN_PASSWORD) and data.get('password') == ADMIN_PASSWORD
+        if not (is_admin or token_user == username):
+            return jsonify({'success': False, 'error': 'Unauthorized'})
+        conn.execute('DELETE FROM users WHERE username = ?', (username,))
+        conn.execute('DELETE FROM sync_ratelimit WHERE username = ?', (username,))
+        conn.execute('DELETE FROM vt_sessions WHERE username = ?', (username,))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
 
 @app.route('/create-chat', methods=['POST'])
 def create_chat():
@@ -1467,12 +1533,17 @@ def focus_session_save():
             sites_json = json.dumps(sites)[:4000]
         except Exception:
             sites_json = '[]'
+        events = data.get('events', [])   # tab-switch timeline for Distraction Replay
+        try:
+            events_json = json.dumps(events)[:8000]
+        except Exception:
+            events_json = '[]'
         now = int(time.time())
         conn.execute('''INSERT INTO focus_sessions
             (username, started_at, ended_at, productive_seconds, distracted_seconds,
-             neutral_seconds, focus_score, sites_json, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?)''',
-            (username, started_at, ended_at, prod, dist, neut, focus_score, sites_json, now))
+             neutral_seconds, focus_score, sites_json, events_json, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)''',
+            (username, started_at, ended_at, prod, dist, neut, focus_score, sites_json, events_json, now))
         # Keep only the most recent 60 reports per user.
         conn.execute('''DELETE FROM focus_sessions WHERE username = ? AND id NOT IN
             (SELECT id FROM focus_sessions WHERE username = ? ORDER BY id DESC LIMIT 60)''',
@@ -1492,7 +1563,7 @@ def focus_history():
             return jsonify({'success': False, 'error': 'auth'})
         conn.commit()
         rows = conn.execute('''SELECT id, started_at, ended_at, productive_seconds,
-            distracted_seconds, neutral_seconds, focus_score, sites_json
+            distracted_seconds, neutral_seconds, focus_score, sites_json, events_json
             FROM focus_sessions WHERE username = ? ORDER BY id DESC LIMIT 30''',
             (username,)).fetchall()
         sessions = []
@@ -1502,6 +1573,10 @@ def focus_history():
                 d['sites'] = json.loads(d.pop('sites_json') or '[]')
             except Exception:
                 d['sites'] = []
+            try:
+                d['events'] = json.loads(d.pop('events_json') or '[]')
+            except Exception:
+                d['events'] = []
             sessions.append(d)
         agg = conn.execute('''SELECT
             COALESCE(SUM(productive_seconds),0) AS prod,
@@ -1511,6 +1586,222 @@ def focus_history():
         return jsonify({'success': True, 'sessions': sessions,
                         'totalProductive': agg['prod'], 'totalDistracted': agg['dist'],
                         'sessionCount': agg['n']})
+    finally:
+        conn.close()
+
+
+# ============================================================
+# Shared tasks — two-way sync between the app and VuliTab.
+# Last-write-wins by updated_at; deletes are tombstones so they propagate.
+# ============================================================
+@app.route('/tasks-sync', methods=['POST'])
+def tasks_sync():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        now = int(time.time())
+        incoming = data.get('tasks', [])
+        if isinstance(incoming, list):
+            for t in incoming[:200]:
+                if not isinstance(t, dict):
+                    continue
+                cid = str(t.get('cid', '')).strip()[:40]
+                if not cid:
+                    continue
+                text = str(t.get('text', ''))[:300]
+                desc = str(t.get('description', ''))[:1000]
+                deadline = t.get('deadline')
+                deadline = str(deadline)[:40] if deadline else None
+                completed = 1 if t.get('completed') else 0
+                deleted = 1 if t.get('deleted') else 0
+                upd = int(t.get('updated_at', now) or now)
+                created = int(t.get('created_at', now) or now)
+                row = conn.execute('SELECT updated_at FROM tasks WHERE username=? AND cid=?',
+                                   (username, cid)).fetchone()
+                if row is None:
+                    conn.execute('''INSERT INTO tasks
+                        (cid, username, text, description, deadline, completed, deleted, updated_at, created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?)''',
+                        (cid, username, text, desc, deadline, completed, deleted, upd, created))
+                elif upd >= row['updated_at']:
+                    conn.execute('''UPDATE tasks SET text=?, description=?, deadline=?, completed=?,
+                        deleted=?, updated_at=? WHERE username=? AND cid=?''',
+                        (text, desc, deadline, completed, deleted, upd, username, cid))
+        conn.commit()
+        rows = conn.execute('''SELECT cid, text, description, deadline, completed, deleted, updated_at, created_at
+            FROM tasks WHERE username=? ORDER BY created_at ASC''', (username,)).fetchall()
+        return jsonify({'success': True, 'tasks': [dict(r) for r in rows], 'serverTime': now})
+    finally:
+        conn.close()
+
+
+# ============================================================
+# Website blocklist / whitelist — synced across devices, enforced by VuliTab.
+# ============================================================
+@app.route('/blocklist-get', methods=['POST'])
+def blocklist_get():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        row = conn.execute('SELECT mode, sites_json FROM blocklists WHERE username=?', (username,)).fetchone()
+        if not row:
+            return jsonify({'success': True, 'mode': 'off', 'sites': []})
+        try:
+            sites = json.loads(row['sites_json'] or '[]')
+        except Exception:
+            sites = []
+        return jsonify({'success': True, 'mode': row['mode'], 'sites': sites})
+    finally:
+        conn.close()
+
+@app.route('/blocklist-set', methods=['POST'])
+def blocklist_set():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        mode = data.get('mode', 'off')
+        if mode not in ('off', 'block', 'allow'):
+            mode = 'off'
+        sites = data.get('sites', [])
+        if not isinstance(sites, list):
+            sites = []
+        clean = []
+        for s in sites[:100]:
+            s = str(s).strip().lower().replace('https://', '').replace('http://', '').replace('www.', '')
+            s = s.split('/')[0]
+            if s:
+                clean.append(s)
+        now = int(time.time())
+        conn.execute('''INSERT INTO blocklists (username, mode, sites_json, updated_at)
+            VALUES (?,?,?,?) ON CONFLICT(username) DO UPDATE SET
+            mode=excluded.mode, sites_json=excluded.sites_json, updated_at=excluded.updated_at''',
+            (username, mode, json.dumps(clean), now))
+        conn.commit()
+        return jsonify({'success': True, 'mode': mode, 'sites': clean})
+    finally:
+        conn.close()
+
+
+# ============================================================
+# Achievements — shared between app and VuliTab.
+# ============================================================
+ACHIEVEMENTS = {
+    'vulitab_linked':      {'name': 'Linked Up',     'icon': '🔗', 'desc': 'Connected VuliTab to your VuliStudy account'},
+    'browser_first_focus': {'name': 'Tab Scholar',   'icon': '🦉', 'desc': 'Completed your first focus session in the browser'},
+    'deep_focus':          {'name': 'Locked In',     'icon': '🎯', 'desc': 'Scored 90%+ focus on a session'},
+    'distraction_free':    {'name': 'Untouchable',   'icon': '🛡️', 'desc': 'A full session with zero distractions'},
+    'artist':              {'name': 'Margin Doodler', 'icon': '🎨', 'desc': 'Drew on a page during a session'},
+}
+
+@app.route('/achievement-unlock', methods=['POST'])
+def achievement_unlock():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        code = str(data.get('code', '')).strip()
+        if code not in ACHIEVEMENTS:
+            return jsonify({'success': False, 'error': 'unknown'})
+        existing = conn.execute('SELECT 1 FROM achievements WHERE username=? AND code=?',
+                                (username, code)).fetchone()
+        newly = not existing
+        if newly:
+            conn.execute('INSERT OR IGNORE INTO achievements (username, code, unlocked_at) VALUES (?,?,?)',
+                         (username, code, int(time.time())))
+            conn.commit()
+        ach = dict(ACHIEVEMENTS[code]); ach['code'] = code
+        return jsonify({'success': True, 'newlyUnlocked': newly, 'achievement': ach})
+    finally:
+        conn.close()
+
+@app.route('/achievements-get', methods=['POST'])
+def achievements_get():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        unlocked = {r['code']: r['unlocked_at'] for r in
+                    conn.execute('SELECT code, unlocked_at FROM achievements WHERE username=?', (username,)).fetchall()}
+        out = []
+        for code, meta in ACHIEVEMENTS.items():
+            out.append({'code': code, 'name': meta['name'], 'icon': meta['icon'], 'desc': meta['desc'],
+                        'unlocked': code in unlocked, 'unlocked_at': unlocked.get(code, 0)})
+        return jsonify({'success': True, 'achievements': out})
+    finally:
+        conn.close()
+
+
+# ============================================================
+# Analytics dashboard — focus vs distraction over time, worst sites, peak hours.
+# ============================================================
+@app.route('/analytics', methods=['POST'])
+def analytics():
+    data = request.get_json()
+    conn = get_db()
+    try:
+        username = user_from_token(conn, data.get('token', ''))
+        if not username:
+            return jsonify({'success': False, 'error': 'auth'})
+        conn.commit()
+        rows = conn.execute('''SELECT started_at, ended_at, productive_seconds, distracted_seconds,
+            neutral_seconds, focus_score, sites_json FROM focus_sessions
+            WHERE username=? ORDER BY id DESC LIMIT 120''', (username,)).fetchall()
+        by_day = {}      # 'YYYY-MM-DD' -> {prod, dist}
+        site_totals = {}  # domain -> distracted seconds
+        peak_hours = [0] * 24
+        total_prod = total_dist = 0
+        for r in rows:
+            ts = r['started_at'] or r['ended_at'] or 0
+            d = datetime.fromtimestamp(ts, tz=timezone.utc) if ts else None
+            if d:
+                key = d.strftime('%Y-%m-%d')
+                by_day.setdefault(key, {'prod': 0, 'dist': 0})
+                by_day[key]['prod'] += r['productive_seconds']
+                by_day[key]['dist'] += r['distracted_seconds']
+                peak_hours[d.hour] += r['productive_seconds']
+            total_prod += r['productive_seconds']
+            total_dist += r['distracted_seconds']
+            try:
+                for s in json.loads(r['sites_json'] or '[]'):
+                    if s.get('category') == 'distracted':
+                        dom = s.get('domain', '')
+                        if dom:
+                            site_totals[dom] = site_totals.get(dom, 0) + int(s.get('seconds', 0))
+            except Exception:
+                pass
+        days = sorted(by_day.keys())[-14:]
+        day_series = [{'date': k, 'prod': by_day[k]['prod'], 'dist': by_day[k]['dist']} for k in days]
+        top_sites = sorted(site_totals.items(), key=lambda kv: kv[1], reverse=True)[:8]
+        top_sites = [{'domain': d, 'seconds': s} for d, s in top_sites]
+        best_hour = max(range(24), key=lambda h: peak_hours[h]) if any(peak_hours) else None
+        user = conn.execute('SELECT streak FROM users WHERE username=?', (username,)).fetchone()
+        return jsonify({
+            'success': True,
+            'daySeries': day_series,
+            'topSites': top_sites,
+            'peakHours': peak_hours,
+            'bestHour': best_hour,
+            'totalProductive': total_prod,
+            'totalDistracted': total_dist,
+            'sessionCount': len(rows),
+            'streak': (user['streak'] if user else 0) or 0,
+        })
     finally:
         conn.close()
 
