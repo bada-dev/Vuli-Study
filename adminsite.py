@@ -1,24 +1,9 @@
 """
-VuliStudy — the human-facing site
-=================================
+The page for editing everything
+
 Project: VuliStudy
 Author: ETHANTYAGI
 ALL RIGHTS RESERVED
-
-This is what a person sees if they open the Render URL in a browser: a password
-prompt, then plain editable tables.
-
-It is deliberately boring. It has no app UI, no branding to spoof, no Groq keys
-and no premium logic on the page. The phone never comes here — it lives entirely
-in /api/v1 — and this never touches the API's authentication.
-
-Security posture:
-  * WEB_PASSWORD is required. If the environment variable is not set, every human
-    route returns 503 rather than opening up. It fails closed, on purpose.
-  * The session cookie is signed by Flask's SECRET_KEY, itself required.
-  * Only whitelisted (table, column) pairs can be edited. There is no free-text
-    SQL path anywhere in this file — that was how the old /admin-import-db went
-    wrong, and it is not repeated here.
 """
 
 import hmac
