@@ -6,6 +6,7 @@ Author: ETHANTYAGI
 ALL RIGHTS RESERVED
 
 please dont hack ;-;
+The most sophisticated file dedicated only to gather the render variables and do everything in its power to prevent unfairly studying
 """
 
 import hashlib
@@ -122,7 +123,16 @@ def _verify_signature(conn, username, device_id, body_bytes, now):
         return 'unknown_device'
 
     body_hash = hashlib.sha256(body_bytes or b'').hexdigest()
-    canonical = '\n'.join([request.method, request.path, ts, nonce, body_hash])
+
+    # The client signs the path it actually requested, query string included, so
+    # nobody can rewrite ?period=weekly in flight. request.path drops the query,
+    # which made every request that had one fail as a forgery — that was the
+    # leaderboard, and only the leaderboard, which is why it never once loaded.
+    signed_path = request.path
+    if request.query_string:
+        signed_path += '?' + request.query_string.decode('utf-8', 'ignore')
+
+    canonical = '\n'.join([request.method, signed_path, ts, nonce, body_hash])
     expected = hmac.new(bytes.fromhex(row['device_secret']),
                         canonical.encode('utf-8'), hashlib.sha256).hexdigest()
 
