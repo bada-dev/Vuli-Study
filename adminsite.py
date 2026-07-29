@@ -16,7 +16,7 @@ from flask import (Response, abort, g, redirect, render_template_string, request
                    session, url_for)
 
 import economy
-from db import get_db
+from db import get_db, table_columns
 
 WEB_PASSWORD = os.environ.get('WEB_PASSWORD')
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -175,6 +175,19 @@ def _looks_like_browser():
     return 'text/html' in accept or accept in ('', '*/*')
 
 
+def _order_column(conn, table):
+    """
+    Newest-first ordering without SQLite's rowid, which Postgres doesn't have.
+    Prefers a real id, then a timestamp, then falls back to the first column.
+    """
+    cols = table_columns(conn, table)
+    for candidate in ('id', 'at', 'created_at', 'timestamp', 'processed_at',
+                      'updated_at', 'last_seen', 'week_start', 'day'):
+        if candidate in cols:
+            return candidate
+    return cols[0] if cols else 'username'
+
+
 def _coerce(spec, raw):
     """Validate a submitted value against its column spec. Raises ValueError too annoying."""
     kind = spec[0]
@@ -288,10 +301,12 @@ def register(app):
 
         conn = get_db()
         try:
+            # Postgres has no rowid, so order by whatever this table actually
+            # has: an id, else a timestamp, else its primary key.
+            order = _order_column(conn, table)
             rows = conn.execute(
-                f'SELECT * FROM "{table}" ORDER BY rowid DESC LIMIT 300').fetchall()
-            cols = rows[0].keys() if rows else [
-                r[1] for r in conn.execute(f'PRAGMA table_info("{table}")').fetchall()]
+                f'SELECT * FROM "{table}" ORDER BY "{order}" DESC LIMIT 300').fetchall()
+            cols = list(rows[0].keys()) if rows else table_columns(conn, table)
         finally:
             conn.close()
 
@@ -423,8 +438,10 @@ def register(app):
                                     err='Code must be 1-30 characters.'))
         conn = get_db()
         try:
-            conn.execute('INSERT OR REPLACE INTO premium_codes (code, created_at, redeemed)'
-                         ' VALUES (?,?,0)', (code, int(time.time())))
+            conn.execute('INSERT INTO premium_codes (code, created_at, redeemed) VALUES (?,?,0)'
+                         ' ON CONFLICT (code) DO UPDATE SET created_at = EXCLUDED.created_at,'
+                         ' redeemed = 0, redeemed_by = NULL, redeemed_at = NULL',
+                         (code, int(time.time())))
             conn.commit()
         finally:
             conn.close()
