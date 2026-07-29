@@ -71,7 +71,7 @@ class EconomyError(Exception):
 
 # ---------------------------------------------------------------------------
 # HHELPER
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 def _clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
@@ -167,6 +167,8 @@ def snapshot(conn, username):
         'characterWidth': u['character_width'],
         'totalMinutes': u['total_minutes'],
         'isPremium': bool(u['is_premium']),
+        # So the app can draw your own face without a second round trip.
+        'avatar': u['avatar'] if 'avatar' in u.keys() else None,
     }
 
 
@@ -195,7 +197,10 @@ def _load(conn, username):
 # THE Rate limit
 def _minutes_earned_recently(conn, username, now_ts, window=3600):
     row = conn.execute(
-        '''SELECT COALESCE(SUM(json_extract(result_json,'$.minutes')),0) AS m
+        # NB: no jsonb `?` operator here. `?` is the placeholder marker the db
+        # layer rewrites to `%s`, so using Postgres's own `?` would be mangled.
+        # `->>` yields NULL when the key is absent and SUM skips NULLs anyway.
+        '''SELECT COALESCE(SUM((result_json::jsonb ->> 'minutes')::int), 0) AS m
            FROM processed_events
            WHERE username=? AND event_type='session_completed' AND processed_at > ?''',
         (username, now_ts - window)
@@ -281,11 +286,13 @@ def apply_session_completed(conn, username, tz_offset, payload, now_ts):
         day = local_date(tz_offset, now_ts)
         conn.execute(
             '''INSERT INTO daily_study (username, day, minutes) VALUES (?,?,?)
-               ON CONFLICT(username, day) DO UPDATE SET minutes = minutes + excluded.minutes''',
+               ON CONFLICT(username, day) DO UPDATE
+                 SET minutes = daily_study.minutes + excluded.minutes''',
             (username, day, minutes))
         conn.execute(
             '''INSERT INTO weekly_study (username, week_start, minutes) VALUES (?,?,?)
-               ON CONFLICT(username, week_start) DO UPDATE SET minutes = minutes + excluded.minutes''',
+               ON CONFLICT(username, week_start) DO UPDATE
+                 SET minutes = weekly_study.minutes + excluded.minutes''',
             (username, week_start_ts(now_ts), minutes))
         new_total = min(int(u['total_minutes'] or 0) + minutes, MAX_TOTAL_MINUTES)
         conn.execute(
