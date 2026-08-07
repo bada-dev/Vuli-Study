@@ -29,9 +29,14 @@ WEB_PASSWORD = os.environ.get('WEB_PASSWORD')
 
 PBKDF2_ITERATIONS = 200_000
 TOKEN_TTL = 365 * 24 * 60 * 60
-ADMIN_TOKEN_TTL = 15 * 60
+# An hour, not 15 minutes. It is bound to one account on one device, needs the
+# password to obtain, and every action it authorises is audited — so a short
+# expiry bought very little and mostly meant the panel silently stopped
+# working mid-use, which reads as a bug rather than as security.
+ADMIN_TOKEN_TTL = 60 * 60
 MAX_CLOCK_SKEW = 120          # seconds
 NONCE_RETENTION = 600         # seconds; must exceed MAX_CLOCK_SKEW comfortably
+NONCE_PRUNE_EVERY = 97        # prune on ~1 request in 97, not on every one
 MAX_BODY_BYTES = 256 * 1024
 
 
@@ -95,116 +100,139 @@ def issue_device_secret(conn, username, device_id):
     return secret
 
 
-def _prune_nonces(conn, now):
-    conn.execute('DELETE FROM nonces WHERE seen_at < ?', (now - NONCE_RETENTION,))
-
-
-def _verify_signature(conn, username, device_id, body_bytes, now):
-    """Returns None if valid, else an error string."""
-    ts = request.headers.get('X-Vuli-Timestamp', '')
-    nonce = request.headers.get('X-Vuli-Nonce', '')
-    sig = request.headers.get('X-Vuli-Sign', '')
-
-    if not (ts and nonce and sig):
-        return 'signature_missing'
-
-    try:
-        ts_int = int(ts)
-    except ValueError:
-        return 'bad_timestamp'
-
-    if abs(now - ts_int) > MAX_CLOCK_SKEW:
-        return 'stale_request'
-
-    row = conn.execute(
-        'SELECT device_secret FROM devices WHERE username=? AND device_id=?',
-        (username, device_id)).fetchone()
-    if not row:
-        return 'unknown_device'
-
-    body_hash = hashlib.sha256(body_bytes or b'').hexdigest()
-
-    # The client signs the path it actually requested, query string included, so
-    # nobody can rewrite ?period=weekly in flight. request.path drops the query,
-    # which made every request that had one fail as a forgery — that was the
-    # leaderboard, and only the leaderboard, which is why it never once loaded.
-    signed_path = request.path
+def _signed_path():
+    """
+    The path the client signed, query string included, so nobody can rewrite
+    ?period=weekly in flight. request.path drops the query, which once made
+    every request carrying one fail as a forgery — that was the leaderboard,
+    and only the leaderboard, which is why it never loaded.
+    """
+    path = request.path
     if request.query_string:
-        signed_path += '?' + request.query_string.decode('utf-8', 'ignore')
-
-    canonical = '\n'.join([request.method, signed_path, ts, nonce, body_hash])
-    expected = hmac.new(bytes.fromhex(row['device_secret']),
-                        canonical.encode('utf-8'), hashlib.sha256).hexdigest()
-
-    if not hmac.compare_digest(expected, sig):
-        return 'bad_signature'
-
-    # Single use. Insert fails if this nonce has been seen — that's a replay.
-    try:
-        conn.execute('INSERT INTO nonces (nonce, seen_at) VALUES (?,?)', (nonce, now))
-    except Exception:
-        return 'replayed_request'
-
-    _prune_nonces(conn, now)
-    return None
+        path += '?' + request.query_string.decode('utf-8', 'ignore')
+    return path
 
 
 def app_auth(f):
     """
     Every authenticated app endpoint wears this.
 
-    On success it sets g.username / g.device_id. Handlers must use those and never
-    a username taken from the request body — that was the original hole, where any
-    client could act as any account simply by naming it.
+    On success it sets g.username / g.device_id. Handlers must use those and
+    never a username taken from the request body — that was the original hole,
+    where any client could act as any account simply by naming it.
+
+    PERFORMANCE. This used to issue eight separate statements: look up the
+    session, look up the user, look up the device secret, insert the nonce,
+    prune old nonces, touch two last_seen columns, commit. Against a hosted
+    Postgres that was roughly two seconds of pure network round-trips on every
+    single call, and it was why the app felt broken rather than merely slow.
+
+    It is now two: one read that joins all three tables, and one write that
+    does the nonce and both timestamps in a single statement. Nothing about
+    what is *checked* has been relaxed — the same facts are verified, they are
+    simply fetched together instead of one at a time.
     """
     @wraps(f)
     def wrapper(*args, **kwargs):
         now = int(time.time())
         token = request.headers.get('X-Vuli-Token', '')
         device_id = request.headers.get('X-Vuli-Device', '')
+        ts = request.headers.get('X-Vuli-Timestamp', '')
+        nonce = request.headers.get('X-Vuli-Nonce', '')
+        sig = request.headers.get('X-Vuli-Sign', '')
 
         if not token or not device_id:
             return jsonify({'success': False, 'error': 'auth_required'}), 401
+        if not (ts and nonce and sig):
+            return jsonify({'success': False, 'error': 'signature_missing'}), 401
+
+        # Cheap checks first — no reason to touch the database to reject a
+        # request whose own timestamp is nonsense.
+        try:
+            ts_int = int(ts)
+        except ValueError:
+            return jsonify({'success': False, 'error': 'bad_timestamp'}), 401
+        if abs(now - ts_int) > MAX_CLOCK_SKEW:
+            return jsonify({'success': False, 'error': 'stale_request'}), 401
 
         body_bytes = request.get_data(cache=True)
         if len(body_bytes) > MAX_BODY_BYTES:
             return jsonify({'success': False, 'error': 'body_too_large'}), 413
 
         conn = get_db()
-        try:
-            row = conn.execute(
-                'SELECT username, last_seen, device_id FROM sessions WHERE token=?',
-                (token,)).fetchone()
-            if not row:
-                return jsonify({'success': False, 'error': 'invalid_token'}), 401
-            if now - row['last_seen'] > TOKEN_TTL:
-                conn.execute('DELETE FROM sessions WHERE token=?', (token,))
-                conn.commit()
-                return jsonify({'success': False, 'error': 'token_expired'}), 401
-            if row['device_id'] != device_id:
-                return jsonify({'success': False, 'error': 'device_mismatch'}), 401
 
-            username = row['username']
+        # ---- round trip 1: everything the check needs, in one go -----------
+        row = conn.execute(
+            '''SELECT s.username        AS username,
+                      s.device_id       AS session_device,
+                      s.last_seen       AS last_seen,
+                      u.is_banned       AS is_banned,
+                      u.tz_offset       AS tz_offset,
+                      d.device_secret   AS device_secret
+               FROM sessions s
+               JOIN users u   ON u.username = s.username
+               LEFT JOIN devices d
+                      ON d.username = s.username AND d.device_id = ?
+               WHERE s.token = ?''',
+            (device_id, token)).fetchone()
 
-            banned = conn.execute('SELECT is_banned FROM users WHERE username=?',
-                                  (username,)).fetchone()
-            if banned and banned['is_banned']:
-                return jsonify({'success': False, 'error': 'account_disabled'}), 403
-
-            problem = _verify_signature(conn, username, device_id, body_bytes, now)
-            if problem:
-                return jsonify({'success': False, 'error': problem}), 401
-
-            conn.execute('UPDATE sessions SET last_seen=? WHERE token=?', (now, token))
-            conn.execute('UPDATE devices SET last_seen=? WHERE username=? AND device_id=?',
-                         (now, username, device_id))
+        if not row:
+            return jsonify({'success': False, 'error': 'invalid_token'}), 401
+        if now - row['last_seen'] > TOKEN_TTL:
+            conn.execute('DELETE FROM sessions WHERE token=?', (token,))
             conn.commit()
+            return jsonify({'success': False, 'error': 'token_expired'}), 401
+        if row['session_device'] != device_id:
+            return jsonify({'success': False, 'error': 'device_mismatch'}), 401
+        if row['is_banned']:
+            return jsonify({'success': False, 'error': 'account_disabled'}), 403
+        if not row['device_secret']:
+            return jsonify({'success': False, 'error': 'unknown_device'}), 401
 
-            g.username = username
-            g.device_id = device_id
-            g.now = now
-        finally:
-            conn.close()
+        username = row['username']
+
+        # ---- signature: pure CPU, no database ------------------------------
+        body_hash = hashlib.sha256(body_bytes or b'').hexdigest()
+        canonical = '\n'.join([request.method, _signed_path(), ts, nonce, body_hash])
+        expected = hmac.new(bytes.fromhex(row['device_secret']),
+                            canonical.encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, sig):
+            return jsonify({'success': False, 'error': 'bad_signature'}), 401
+
+        # ---- round trip 2: burn the nonce and touch both last_seen ---------
+        # A CTE lets one statement do all three writes. The INSERT is the
+        # gatekeeper: if this nonce has been seen the primary key rejects it,
+        # which is exactly the replay we want to catch.
+        try:
+            conn.execute(
+                '''WITH burn AS (
+                       INSERT INTO nonces (nonce, seen_at) VALUES (?, ?)
+                       RETURNING nonce
+                   ), touch_session AS (
+                       UPDATE sessions SET last_seen = ? WHERE token = ?
+                   )
+                   UPDATE devices SET last_seen = ?
+                    WHERE username = ? AND device_id = ?''',
+                (nonce, now, now, token, now, username, device_id))
+        except Exception:
+            conn.rollback()
+            return jsonify({'success': False, 'error': 'replayed_request'}), 401
+
+        # Housekeeping, occasionally. Pruning on every request added a round
+        # trip to pay for a table that only ever holds a few minutes of rows.
+        if not (now % NONCE_PRUNE_EVERY):
+            try:
+                conn.execute('DELETE FROM nonces WHERE seen_at < ?',
+                             (now - NONCE_RETENTION,))
+            except Exception:
+                pass
+
+        conn.commit()
+
+        g.username = username
+        g.device_id = device_id
+        g.now = now
+        g.tz_offset = row['tz_offset'] or 0    # already here; saves a lookup
 
         return f(*args, **kwargs)
     return wrapper
