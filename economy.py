@@ -137,13 +137,26 @@ def shop_catalogue(is_premium):
 
 
 
-# the client is told after every change
+# the client is told after every change.
+# One joined read rather than two round trips — this runs on the end of almost
+# every request, so halving it halves a lot.
+SNAPSHOT_SQL = '''
+    SELECT e.coins, e.carrots, e.happiness, e.streak, e.last_streak_date,
+           e.streak_freeze, e.has_book, e.is_dead, e.revivals, e.carrots_fed,
+           e.reborns, e.longest_session, e.highest_coins, e.owned_json,
+           u.equipped_cosmetic, u.active_background, u.character_width,
+           u.total_minutes, u.is_premium, u.avatar
+      FROM economy e
+      JOIN users u ON u.username = e.username
+     WHERE e.username = ?'''
+
+
 def snapshot(conn, username):
-    e = conn.execute('SELECT * FROM economy WHERE username = ?', (username,)).fetchone()
-    u = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-    if not e or not u:
+    row = conn.execute(SNAPSHOT_SQL, (username,)).fetchone()
+    if not row:
         return None
-    owned = load_owned(e)
+    e = u = row
+    owned = load_owned(row)
     return {
         'username': username,
         'coins': e['coins'],
@@ -186,7 +199,12 @@ def _save(conn, username, e, now_ts):
 
 
 def _load(conn, username):
-    row = conn.execute('SELECT * FROM economy WHERE username = ?', (username,)).fetchone()
+    # Pulls is_premium along for the ride so purchase pricing doesn't need a
+    # second query for it.
+    row = conn.execute(
+        '''SELECT e.*, u.is_premium, u.total_minutes
+             FROM economy e JOIN users u ON u.username = e.username
+            WHERE e.username = ?''', (username,)).fetchone()
     if not row:
         raise EconomyError('No economy row for this account.')
     e = dict(row)
@@ -255,8 +273,7 @@ def apply_session_completed(conn, username, tz_offset, payload, now_ts):
             raise EconomyError('Hourly study limit reached.')
 
     e = _load(conn, username)
-    u = conn.execute('SELECT total_minutes, is_premium FROM users WHERE username=?',
-                     (username,)).fetchone()
+    u = e                      # _load already joined users
 
     coins = 0
     book_used = False
@@ -349,10 +366,9 @@ def apply_purchase(conn, username, item_id, now_ts):
     if item_id not in SHOP:
         raise EconomyError('That item does not exist.')
 
-    u = conn.execute('SELECT is_premium FROM users WHERE username=?', (username,)).fetchone()
     e = _load(conn, username)
     item = SHOP[item_id]
-    cost = price_for(item_id, bool(u['is_premium']))
+    cost = price_for(item_id, bool(e['is_premium']))
 
     if e['coins'] < cost:
         raise EconomyError('Not enough coins.')
