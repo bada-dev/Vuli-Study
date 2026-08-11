@@ -607,6 +607,35 @@ def register(app):
             conn.close()
         return redirect(url_for('console_errors'))
 
+    @app.route('/console/ops/delete-user', methods=['POST'])
+    def console_delete_user():
+        """Delete anyone. Typed twice, because there is no undo behind it."""
+        username = (request.form.get('username') or '').strip()
+        confirm = (request.form.get('confirm') or '').strip()
+        if username != confirm:
+            return redirect(url_for('console_ops',
+                                    err='The two names did not match. Nothing deleted.'))
+        conn = get_db()
+        try:
+            if not conn.execute('SELECT 1 FROM users WHERE username=?',
+                                (username,)).fetchone():
+                return redirect(url_for('console_ops', err='No such user'))
+            # Imported here, not at module scope: main.py imports adminsite at
+            # the bottom of itself, so a top-level import would be circular. By
+            # the time a request reaches this line main is fully loaded.
+            import main as main_mod
+            main_mod.purge_user(conn, username)
+            conn.execute(
+                'INSERT INTO admin_audit (actor, device_id, action, target, detail, ip, at)'
+                ' VALUES (?,?,?,?,?,?,?)',
+                (g.get('console_user', 'console'), 'console', 'delete_user',
+                 username, 'full purge from the console',
+                 request.remote_addr or '', int(time.time())))
+            conn.commit()
+        finally:
+            conn.close()
+        return redirect(url_for('console_ops', msg=f'{username} deleted permanently.'))
+
     @app.route('/console/ops/reset-password', methods=['POST'])
     def console_reset_password():
         """Password reset, issued by you, by hand.
@@ -704,6 +733,17 @@ def register(app):
             f'currently {"CLOSED" if locked else "open"}</span></form></div>')
 
         parts.append('<div class="grid">')
+        parts.append(
+            f'<div class="card"><h3>Delete an account</h3>'
+            f'<p><b>Permanent.</b> Wipes their economy, sessions, devices, chat '
+            f'messages, friend requests, todos, study history, suggestions and '
+            f'error reports. Chats they created stay up so other members keep '
+            f'theirs. Type the username twice to confirm.</p>'
+            f'<form method="post" action="{url_for("console_delete_user")}">'
+            f'<div class="row"><input name="username" placeholder="username" required>'
+            f'<input name="confirm" placeholder="type it again" required></div>'
+            f'<div class="row" style="margin-top:8px"><button class="danger">'
+            f'delete permanently</button></div></form></div>')
         parts.append(
             f'<div class="card"><h3>Reset a password</h3>'
             f'<p>Nobody has an email on file, so this is the only reset there is. '
