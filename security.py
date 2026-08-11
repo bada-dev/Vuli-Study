@@ -6,7 +6,7 @@ Author: ETHANTYAGI
 ALL RIGHTS RESERVED
 
 please dont hack ;-;
-The most sophisticated file dedicated only to gather the render variables and do everything in its power to prevent unfairly studying
+An entire folder dedicated to prevent getting carrots without studies!
 """
 
 import hashlib
@@ -324,5 +324,22 @@ def rate_limit(conn, key, limit, window):
 
 
 def client_ip():
+    """The address our own proxy observed — NOT the one the caller claims.
+
+    X-Forwarded-For is "client, proxy1, proxy2...", and the left-hand entries
+    are written by whoever sent the request. Reading the leftmost value meant a
+    caller could put anything there and get a brand new identity for every
+    request, which quietly defeated every per-IP limit in the app: signup
+    (5/hour), login (30/15min) and VuliTab login. Sending
+    `X-Forwarded-For: <random>` on each attempt made them all unlimited.
+
+    Render appends the address it actually saw, so the RIGHTMOST entry is the
+    one written by infrastructure we control. A caller can prepend as many fake
+    hops as they like and it changes nothing.
+    """
     fwd = request.headers.get('X-Forwarded-For', '')
-    return fwd.split(',')[0].strip() if fwd else (request.remote_addr or 'unknown')
+    if fwd:
+        hops = [h.strip() for h in fwd.split(',') if h.strip()]
+        if hops:
+            return hops[-1]
+    return request.remote_addr or 'unknown'
