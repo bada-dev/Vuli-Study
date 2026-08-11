@@ -7,8 +7,11 @@ Version: 2.0.0
 ALL RIGHTS RESERVED
 """
 
+import hashlib
 import json
 import os
+import secrets
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -17,7 +20,8 @@ import uuid
 from flask import Flask, g, jsonify, request
 
 import economy
-from db import ensure_economy_row, get_db, init_db
+from db import (ensure_economy_row, get_db, init_db, list_tables,
+                release_request_connection)
 from security import (ADMIN_PASSWORD, SECOND_ADMIN_PASSWORD, admin_auth,
                       app_auth, audit, client_ip, hash_password, issue_admin_token,
                       issue_device_secret, issue_token, password_problem,
@@ -28,6 +32,23 @@ app.config['MAX_CONTENT_LENGTH'] = 512 * 1024
 
 GROQ_API_ONE = os.environ.get('GROQ_API_ONE')
 GROQ_API_TWO = os.environ.get('GROQ_API_TWO')
+
+# --- Discord + caps --------------------------------------------------------
+# Every one of these is optional. Unset simply turns that feature off; nothing
+# here can raise on a missing variable, because a missing webhook must never be
+# able to stop someone signing up or sending a suggestion.
+#
+# These URLs are the reason the old feedback box had to go. It POSTed straight
+# from the phone to Formspree with the form id hidden by string-splitting, which
+# is a two-minute job to pull out of an APK and then spam forever. A webhook
+# lives here and only here — the app never learns where its message goes, it
+# only learns whether it was accepted.
+SUGGEST_HOOK   = os.environ.get('SUGGEST_HOOK')      # pings you
+NEW_JOIN_HOOK  = os.environ.get('NEW_JOIN_HOOK')     # silent
+ALERT_HOOK     = os.environ.get('ALERT_HOOK')        # pings you
+OWNER_ID       = (os.environ.get('OWNER_ID') or '').strip()
+MAX_ACC        = int(os.environ.get('MAX_ACC') or 0)
+LATEST_VERSION = (os.environ.get('LATEST_VERSION') or '').strip()
 
 FEEDBACK_COOLDOWN = 48 * 60 * 60
 BLOCKED_USERNAMES = {'admin', 'system', 'null', 'undefined', 'test', 'mod', 'owner'}
@@ -62,6 +83,11 @@ CORS_HEADERS = {
 }
 
 
+# One database connection per request, released here. Without this the shared
+# connection from get_db() would never go back to the pool.
+app.teardown_request(release_request_connection)
+
+
 @app.after_request
 def apply_cors(response):
     if request.path.startswith(CORS_PATH_PREFIXES):
@@ -89,7 +115,88 @@ def state_of(conn, username):
     return economy.snapshot(conn, username)
 
 
+# ===========================================================================
+# Discord
+# ===========================================================================
+def discord(hook, title, fields, colour=0x6BCF7F, ping=False):
+    """Post one embed. Returns True only if Discord actually accepted it.
+
+    Two attempts, because a single transient 5xx losing a suggestion is the one
+    outcome that matters here. allowed_mentions is set explicitly so the join
+    feed can never ping even if a username somehow contained a mention.
+    """
+    if not hook:
+        return False
+    mentions = {'users': [OWNER_ID]} if (ping and OWNER_ID) else {'parse': []}
+    payload = json.dumps({
+        'content': f'<@{OWNER_ID}>' if (ping and OWNER_ID) else '',
+        'allowed_mentions': mentions,
+        'embeds': [{'title': title[:250], 'color': colour,
+                    'fields': [{'name': str(n)[:250],
+                                'value': (str(v) if v not in (None, '') else '—')[:1024],
+                                'inline': bool(i)} for n, v, i in fields]}],
+    }).encode()
+    req = urllib.request.Request(hook, data=payload,
+                                 headers={'Content-Type': 'application/json'})
+    for attempt in (1, 2):
+        try:
+            with urllib.request.urlopen(req, timeout=6) as r:
+                if r.status < 300:
+                    return True
+        except Exception as exc:
+            app.logger.warning('discord "%s" attempt %d failed: %s', title, attempt, exc)
+            time.sleep(0.5)
+    return False
+
+
+def discord_async(hook, *args, **kwargs):
+    """For pings nobody is waiting on. Joins and cap alerts must not add a
+    single millisecond to the request that triggered them."""
+    if hook:
+        threading.Thread(target=discord, args=(hook,) + args,
+                         kwargs=kwargs, daemon=True).start()
+
+
+def purge_user(conn, username):
+    """Remove every trace of one account. Used by both the user's own delete and
+    the console's delete-anyone, so the two can never drift apart.
+
+    This used to clear four tables. Everything else — their chat messages,
+    friend requests, todos, study history, suggestions — was left orphaned under
+    a username that no longer existed.
+
+    Chats they OWNED are deliberately left standing: deleting one would take
+    every other member's messages with it, and one person leaving should not
+    destroy a group.
+    """
+    for table in ('economy', 'sessions', 'devices', 'processed_events',
+                  'admin_tokens', 'chat_members', 'chat_messages',
+                  'chat_timer_presence', 'weekly_study', 'daily_study',
+                  'live_sessions', 'focus_sessions', 'todos', 'suggestions',
+                  'inbox', 'app_errors'):
+        try:
+            conn.execute(f'DELETE FROM {table} WHERE username=?', (username,))
+        except Exception:
+            conn.rollback()      # a table that isn't there yet must not abort the rest
+    try:
+        conn.execute('DELETE FROM friend_requests WHERE from_user=? OR to_user=?',
+                     (username, username))
+    except Exception:
+        conn.rollback()
+    conn.execute('DELETE FROM users WHERE username=?', (username,))
+
+
+def setting(conn, key, default=''):
+    row = conn.execute('SELECT value FROM settings WHERE key=?', (key,)).fetchone()
+    return row['value'] if row else default
+
+
 def tz_of(conn, username):
+    # Authentication already read this row, so in a normal request it costs
+    # nothing. The query is only a fallback for callers outside app_auth.
+    cached = getattr(g, 'tz_offset', None)
+    if cached is not None:
+        return cached
     row = conn.execute('SELECT tz_offset FROM users WHERE username=?', (username,)).fetchone()
     return row['tz_offset'] if row else 0
 
@@ -130,6 +237,25 @@ def api_signup():
             conn.commit()
             return fail('Too many signups from this connection. Try later.', 429)
 
+        # Manual lockdown, flipped from the console. Beats the cap.
+        if setting(conn, 'lockdown') == '1':
+            conn.commit()
+            return fail('Signups are closed right now. Check back soon.', 403)
+
+        # MAX_ACC. Only new accounts are refused — everyone who already has one
+        # carries on untouched. You get pinged once a day at most, not once per
+        # rejected attempt.
+        total = conn.execute('SELECT COUNT(*) AS c FROM users').fetchone()['c']
+        if MAX_ACC and total >= MAX_ACC:
+            quiet = rate_limit(conn, 'alert:maxacc', limit=1, window=86400)
+            conn.commit()
+            if not quiet:
+                discord_async(ALERT_HOOK, 'Account cap reached',
+                              [('Cap (MAX_ACC)', MAX_ACC, True), ('Accounts', total, True),
+                               ('Effect', 'New signups are being refused.', False)],
+                              colour=0xFF6B6B, ping=True)
+            return fail('VuliStudy is currently full. Try again later.', 403)
+
         if conn.execute('SELECT 1 FROM users WHERE username=?', (username,)).fetchone():
             conn.commit()
             return fail('Username taken')
@@ -143,6 +269,10 @@ def api_signup():
         token = issue_token(conn, username, device_id, data.get('platform', 'app'))
         secret = issue_device_secret(conn, username, device_id)
         conn.commit()
+        discord_async(NEW_JOIN_HOOK, 'New account',
+                      [('Username', username, True),
+                       ('Accounts now', total + 1, True)],
+                      colour=0x70A1FF, ping=False)
         return ok(token=token, device_secret=secret, state=state_of(conn, username))
     finally:
         conn.close()
@@ -237,7 +367,9 @@ def api_logout():
 def api_me():
     conn = get_db()
     try:
-        return ok(state=state_of(conn, g.username))
+        # The inbox rides this poll rather than getting a loop of its own — the
+        # app already asks for /me every 20 seconds while it is open.
+        return ok(state=state_of(conn, g.username), inbox=inbox_for(conn, g.username))
     finally:
         conn.close()
 
@@ -251,10 +383,7 @@ def api_delete_me():
     """
     conn = get_db()
     try:
-        conn.execute('DELETE FROM users WHERE username=?', (g.username,))
-        conn.execute('DELETE FROM economy WHERE username=?', (g.username,))
-        conn.execute('DELETE FROM sessions WHERE username=?', (g.username,))
-        conn.execute('DELETE FROM devices WHERE username=?', (g.username,))
+        purge_user(conn, g.username)
         conn.commit()
         return ok()
     finally:
@@ -294,12 +423,180 @@ def api_set_tz():
 
 
 # ===========================================================================
+# Profile pictures
+#
+# Stored as a data URL on the user row. The phone crops to a square and shrinks
+# to 128px before sending, so a picture is a handful of kilobytes — small enough
+# that a separate image host would be more moving parts than it is worth.
+#
+# Nothing here trusts the client. The declared MIME type is ignored in favour of
+# the actual magic bytes, because "image/png" on the front of a zip file is the
+# oldest trick there is.
+# ===========================================================================
+AVATAR_MAX_BYTES = 60 * 1024      # generous for a 128px square
+AVATAR_TYPES = {
+    'png':  (b'\x89PNG\r\n\x1a\n', 'image/png'),
+    'jpeg': (b'\xff\xd8\xff',      'image/jpeg'),
+    'webp': (b'RIFF',              'image/webp'),
+}
+
+
+def _sniff_image(raw):
+    """Return a MIME type based on the bytes themselves, or None."""
+    for kind, (magic, mime) in AVATAR_TYPES.items():
+        if raw.startswith(magic):
+            if kind == 'webp' and raw[8:12] != b'WEBP':
+                continue
+            return mime
+    return None
+
+
+@app.route('/api/v1/me/avatar', methods=['POST'])
+@app_auth
+def api_set_avatar():
+    import base64
+
+    data_url = (body().get('image') or '').strip()
+    if not data_url:
+        return fail('No image supplied')
+    if not data_url.startswith('data:'):
+        return fail('Image must be a data URL')
+
+    try:
+        header, encoded = data_url.split(',', 1)
+    except ValueError:
+        return fail('Malformed image')
+    if ';base64' not in header:
+        return fail('Image must be base64')
+
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except Exception:
+        return fail('Image is not valid base64')
+
+    if len(raw) > AVATAR_MAX_BYTES:
+        return fail('Picture is too large — it should be shrunk before sending')
+    if len(raw) < 64:
+        return fail('That is not an image')
+
+    mime = _sniff_image(raw)
+    if not mime:
+        return fail('Only PNG, JPEG and WebP pictures are allowed')
+
+    # Re-encode from the bytes we verified, so whatever the client claimed in
+    # the header is discarded entirely.
+    clean = 'data:' + mime + ';base64,' + base64.b64encode(raw).decode('ascii')
+
+    conn = get_db()
+    try:
+        if rate_limit(conn, f'avatar:{g.username}', limit=10, window=3600):
+            conn.commit()
+            return fail('Too many picture changes. Try again later.', 429)
+        conn.execute('UPDATE users SET avatar=?, avatar_updated=? WHERE username=?',
+                     (clean, g.now, g.username))
+        conn.commit()
+        return ok(avatar=clean)
+    finally:
+        conn.close()
+
+
+@app.route('/api/v1/me/avatar', methods=['DELETE'])
+@app_auth
+def api_clear_avatar():
+    conn = get_db()
+    try:
+        conn.execute('UPDATE users SET avatar=NULL, avatar_updated=? WHERE username=?',
+                     (g.now, g.username))
+        conn.commit()
+        return ok()
+    finally:
+        conn.close()
+
+
+@app.route('/api/v1/users/profile', methods=['POST'])
+@app_auth
+def api_user_profile():
+    """
+    The full profile shown when you tap someone. Deliberately separate from the
+    leaderboard: testers wanted pictures on the person you tapped, not smeared
+    across every row of the table.
+    """
+    target = (body().get('username') or '').strip()
+    if not target:
+        return fail('No user')
+    conn = get_db()
+    try:
+        row = conn.execute(
+            '''SELECT u.username, u.total_minutes, u.streak, u.reborns, u.is_premium,
+                      u.equipped_cosmetic, u.active_background, u.created_at, u.avatar,
+                      COALESCE(e.happiness, 100) AS happiness,
+                      COALESCE(e.longest_session, 0) AS longest_session
+               FROM users u LEFT JOIN economy e ON e.username = u.username
+               WHERE u.username = ? AND u.is_banned = 0''', (target,)).fetchone()
+        if not row:
+            return fail('User not found', 404)
+
+        profile = dict(row)
+        # Are we friends? Changes what the app offers to do next.
+        fr = conn.execute(
+            '''SELECT status FROM friend_requests
+               WHERE (from_user=? AND to_user=?) OR (from_user=? AND to_user=?)''',
+            (g.username, target, target, g.username)).fetchone()
+        profile['friendship'] = fr['status'] if fr else None
+        profile['is_self'] = (target == g.username)
+        return ok(profile=profile)
+    finally:
+        conn.close()
+
+
+@app.route('/api/v1/users/avatars', methods=['POST'])
+@app_auth
+def api_bulk_avatars():
+    """
+    Pictures for a list of usernames in one call — chat needs a face beside every
+    message and fetching them one at a time would be absurd.
+    """
+    names = body().get('usernames') or []
+    if not isinstance(names, list) or not names:
+        return ok(avatars={})
+    names = [str(n)[:20] for n in names[:60]]
+
+    conn = get_db()
+    try:
+        placeholders = ','.join(['?'] * len(names))
+        rows = conn.execute(
+            f'SELECT username, avatar FROM users WHERE username IN ({placeholders})',
+            tuple(names)).fetchall()
+        return ok(avatars={r['username']: r['avatar'] for r in rows if r['avatar']})
+    finally:
+        conn.close()
+
+
+# ===========================================================================
 # Events — the only way the economy changes through normal play
 # ===========================================================================
 EVENT_HANDLERS = {
     'session_completed', 'carrot_fed', 'shop_purchase', 'equip',
     'happiness_decay', 'character_width', 'legacy_sync',
 }
+
+
+def _undo_event(conn, used_savepoint):
+    """
+    Discard one failed event without losing the ones that already succeeded.
+
+    With a savepoint we rewind to it. Without one (single-event batch) the whole
+    transaction goes, which is the same thing — and either way the connection
+    comes back out of Postgres's aborted state so the rest of the request, in
+    particular reading the user's state back, still works.
+    """
+    try:
+        conn.execute('ROLLBACK TO SAVEPOINT ev' if used_savepoint else 'ROLLBACK')
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 @app.route('/api/v1/events', methods=['POST'])
@@ -342,6 +639,24 @@ def api_events():
                 accepted.append(event_id)
                 continue
 
+            # ---------------------------------------------------------------
+            # Each event gets its own savepoint when there is more than one.
+            #
+            # Postgres is unforgiving here in a way SQLite never was: the moment
+            # ANY statement inside a transaction fails, every later statement
+            # fails too until a rollback. So a single bad event used to poison
+            # the whole batch — including the final read of the user's state —
+            # and the request died with a 500 having saved nothing. That is what
+            # made purchases look like they refunded themselves.
+            #
+            # A savepoint scopes the damage to the one event. Single-event
+            # batches skip it: there is nothing to protect, and it saves two
+            # round trips on much the most common request in the app.
+            # ---------------------------------------------------------------
+            use_savepoint = len(events) > 1
+            if use_savepoint:
+                conn.execute('SAVEPOINT ev')
+
             try:
                 if etype == 'session_completed':
                     res = economy.apply_session_completed(conn, g.username, tz, ev, g.now)
@@ -365,12 +680,18 @@ def api_events():
                     'INSERT INTO processed_events (event_id, username, event_type,'
                     ' processed_at, result_json) VALUES (?,?,?,?,?)',
                     (event_id, g.username, etype, g.now, json.dumps(res)))
+
+                if use_savepoint:
+                    conn.execute('RELEASE SAVEPOINT ev')
                 accepted.append(event_id)
                 results[event_id] = res
 
             except economy.EconomyError as exc:
+                _undo_event(conn, use_savepoint)
                 rejected.append({'event_id': event_id, 'error': str(exc)})
             except Exception:
+                app.logger.exception('event %s (%s) failed', event_id, etype)
+                _undo_event(conn, use_savepoint)
                 rejected.append({'event_id': event_id, 'error': 'internal_error'})
 
         conn.commit()
@@ -404,7 +725,34 @@ def api_leaderboard():
                      (three_days,))
         conn.commit()
 
-        if request.args.get('period') == 'weekly':
+        period = request.args.get('period')
+
+        # Friends board. Everyone here is someone you both agreed to, so this is
+        # the only view where the ranking is against people you actually know —
+        # and where a new account can realistically be near the top.
+        if period == 'friends':
+            rows = conn.execute(
+                '''SELECT u.username, u.total_minutes, u.streak, u.reborns,
+                          u.equipped_cosmetic, u.active_background, u.character_width,
+                          u.is_premium, COALESCE(e.happiness,100) AS happiness
+                   FROM users u
+                   LEFT JOIN economy e ON e.username=u.username
+                   WHERE u.is_banned=0 AND (u.username=? OR u.username IN (
+                       SELECT CASE WHEN from_user=? THEN to_user ELSE from_user END
+                       FROM friend_requests
+                       WHERE status='accepted' AND (from_user=? OR to_user=?)))
+                   ORDER BY u.total_minutes DESC LIMIT 50''',
+                (g.username, g.username, g.username, g.username)).fetchall()
+            ranked = [dict(r) for r in rows]
+            mine = next((i for i, r in enumerate(ranked)
+                         if r['username'] == g.username), None)
+            return jsonify({'top': ranked,
+                            'me': None if mine is None else {
+                                'username': g.username, 'rank': mine + 1,
+                                'minutes': ranked[mine]['total_minutes'] or 0,
+                                'total': len(ranked)}})
+
+        if period == 'weekly':
             rows = conn.execute(
                 '''SELECT u.username, u.total_minutes, u.streak, u.reborns,
                           u.equipped_cosmetic, u.active_background, u.character_width,
@@ -426,9 +774,42 @@ def api_leaderboard():
                    WHERE u.is_active=1 AND u.is_banned=0
                    ORDER BY u.total_minutes DESC LIMIT 20''').fetchall()
 
-        return jsonify([dict(r) for r in rows])
+        # The caller's OWN position, whatever it is. Without this the app can
+        # only show you the top 20 — so anyone outside it opened the leaderboard
+        # and found nothing about themselves at all, which is why it read as
+        # "this isn't for me". Two cheap counts, no window function needed.
+        return jsonify({'top': [dict(r) for r in rows],
+                        'me': my_rank(conn, request.args.get('period'))})
     finally:
         conn.close()
+
+
+def my_rank(conn, period):
+    """{rank, minutes, total} for g.username, or None if they aren't ranked."""
+    if period == 'weekly':
+        ws = economy.week_start_ts(g.now)
+        row = conn.execute(
+            'SELECT COALESCE(minutes,0) AS m FROM weekly_study WHERE username=? AND week_start=?',
+            (g.username, ws)).fetchone()
+        mine = row['m'] if row else 0
+        ahead = conn.execute(
+            '''SELECT COUNT(*) AS c FROM users u
+               LEFT JOIN weekly_study w ON u.username=w.username AND w.week_start=?
+               WHERE u.is_active=1 AND u.is_banned=0 AND COALESCE(w.minutes,0) > ?''',
+            (ws, mine)).fetchone()['c']
+    else:
+        row = conn.execute('SELECT total_minutes AS m, is_active, is_banned FROM users'
+                           ' WHERE username=?', (g.username,)).fetchone()
+        if not row:
+            return None
+        mine = row['m'] or 0
+        ahead = conn.execute(
+            'SELECT COUNT(*) AS c FROM users WHERE is_active=1 AND is_banned=0'
+            ' AND total_minutes > ?', (mine,)).fetchone()['c']
+
+    total = conn.execute('SELECT COUNT(*) AS c FROM users WHERE is_active=1'
+                         ' AND is_banned=0').fetchone()['c']
+    return {'username': g.username, 'rank': ahead + 1, 'minutes': mine, 'total': total}
 
 
 @app.route('/api/v1/users/stats', methods=['POST'])
@@ -637,9 +1018,10 @@ def api_timer_start():
             return fail('A timer is already running in this chat')
         cur = conn.execute(
             'INSERT INTO chat_timers (chat_id,creator,duration_seconds,started_at,completed,reward_coins)'
-            ' VALUES (?,?,?,?,0,2)', (chat_id, g.username, duration, g.now))
+            ' VALUES (?,?,?,?,0,2) RETURNING id', (chat_id, g.username, duration, g.now))
+        new_id = cur.fetchone()['id']
         conn.commit()
-        return ok(timer_id=cur.lastrowid)
+        return ok(timer_id=new_id)
     finally:
         conn.close()
 
@@ -969,14 +1351,189 @@ def api_focus_history():
         conn.close()
 
 
+# ===========================================================================
+# Suggestions
+#
+# Reaching this function at all already required a request signed with the
+# device secret, carrying a UTC timestamp inside MAX_CLOCK_SKEW and a nonce
+# that has never been used. So there is no anonymous path in, no way to replay
+# a captured submission, and no timezone in which the timestamp check drifts —
+# int(time.time()) is UTC everywhere on earth.
+#
+# The cooldown is per ACCOUNT and lives here. The old one was enforced by the
+# phone deciding whether to show the button, which is not enforcement.
+# ===========================================================================
+KINDS = ('general', 'bug', 'idea')
+KIND_COLOUR = {'bug': 0xFF6B6B, 'idea': 0x70A1FF, 'general': 0x6BCF7F}
+
+
+def flush_suggestions(conn):
+    """Send anything not yet on Discord, oldest first. Stops at the first
+    failure so a webhook outage can't turn one submit into a minute of retries;
+    whatever is left keeps delivered=0 and goes out with the next one."""
+    rows = conn.execute('SELECT * FROM suggestions WHERE delivered=0'
+                        ' ORDER BY id LIMIT 5').fetchall()
+    sent_any = False
+    for r in rows:
+        if LATEST_VERSION:
+            tick = '✅ latest' if r['version'] == LATEST_VERSION else '❌ outdated'
+        else:
+            tick = '—  (set LATEST_VERSION)'
+        if not discord(SUGGEST_HOOK, f"{r['kind'].upper()} · {r['username']}",
+                       [('Message', r['message'], False),
+                        ('Version', f"{r['version']}  {tick}", True),
+                        ('Android', r['android'], True),
+                        ('Contact', r['contact'] or 'none — reply from the console', False),
+                        ('Stats', f"Console → search `{r['username']}`", False)],
+                       colour=KIND_COLOUR.get(r['kind'], 0x6BCF7F), ping=True):
+            break
+        conn.execute('UPDATE suggestions SET delivered=1 WHERE id=?', (r['id'],))
+        sent_any = True
+    conn.commit()
+    return sent_any
+
+
+@app.route('/api/v1/feedback', methods=['POST'])
+@app_auth
+def api_feedback():
+    d = body()
+    kind = (d.get('type') or 'general').lower()
+    msg = (d.get('message') or '').strip()
+    if kind not in KINDS:
+        kind = 'general'
+    if not 5 <= len(msg) <= 2000:
+        return fail('Write between 5 and 2000 characters.')
+
+    conn = get_db()
+    try:
+        if rate_limit(conn, f'feedback:{g.username}', limit=1, window=FEEDBACK_COOLDOWN):
+            conn.commit()
+            return fail('You can send one suggestion every 48 hours.', 429)
+
+        # Saved before anything is sent. If Discord is down this row survives and
+        # is retried; it is also what the console reads and replies to.
+        conn.execute(
+            'INSERT INTO suggestions (username,kind,message,contact,version,android,created_at)'
+            ' VALUES (?,?,?,?,?,?,?)',
+            (g.username, kind, msg, (d.get('contact') or '').strip()[:120],
+             (d.get('version') or '?').strip()[:40],
+             (d.get('android') or '?').strip()[:40], g.now))
+        conn.commit()
+        return ok(delivered=flush_suggestions(conn))
+    finally:
+        conn.close()
+
+
+# ===========================================================================
+# Inbox — your console replies, on their way to the phone
+# ===========================================================================
+def inbox_for(conn, username):
+    rows = conn.execute('SELECT id, body, reply_token FROM inbox'
+                        ' WHERE username=? AND seen_at=0 ORDER BY id LIMIT 5',
+                        (username,)).fetchall()
+    return [{'id': r['id'], 'body': r['body'], 'token': r['reply_token'] or ''}
+            for r in rows]
+
+
+@app.route('/api/v1/me/inbox', methods=['POST'])
+@app_auth
+def api_inbox_ack():
+    """Marks a message read, and carries the one reply they are allowed.
+
+    The reply is gated by a single-use token minted with the message and burned
+    here — so there is no second cooldown to maintain, and a reply cannot be
+    sent twice or by anyone the message was not addressed to.
+    """
+    d = body()
+    conn = get_db()
+    try:
+        row = conn.execute('SELECT * FROM inbox WHERE id=? AND username=?',
+                           (int(d.get('id') or 0), g.username)).fetchone()
+        if not row:
+            return fail('No such message')
+        conn.execute('UPDATE inbox SET seen_at=? WHERE id=?', (g.now, row['id']))
+
+        reply = (d.get('reply') or '').strip()[:1000]
+        if reply and not row['replied'] and row['reply_token'] \
+                and secrets.compare_digest(str(d.get('token') or ''), row['reply_token']):
+            conn.execute('UPDATE inbox SET replied=1, reply_token=NULL WHERE id=?',
+                         (row['id'],))
+            discord_async(SUGGEST_HOOK, f'Reply · {g.username}',
+                          [('They said', reply, False)], colour=0xFFD700, ping=True)
+        conn.commit()
+        return ok()
+    finally:
+        conn.close()
+
+
+# ===========================================================================
+# Crash / error reports
+#
+# Fatal errors ping you; everything else waits quietly in the console. That
+# split is deliberate — a single broken build can throw the same non-fatal
+# warning thousands of times, and a Discord channel full of that is a channel
+# you stop reading.
+# ===========================================================================
+@app.route('/api/v1/errors', methods=['POST'])
+@app_auth
+def api_errors():
+    items = body().get('errors') or []
+    if not isinstance(items, list) or not items:
+        return ok(stored=0)
+
+    conn = get_db()
+    try:
+        # Generous, because a genuinely broken build produces a burst — but not
+        # unlimited, because this endpoint writes rows.
+        if rate_limit(conn, f'errors:{g.username}', limit=40, window=3600):
+            conn.commit()
+            return ok(stored=0, throttled=True)
+
+        stored, worst = 0, None
+        for it in items[:20]:
+            if not isinstance(it, dict):
+                continue
+            msg = (str(it.get('message') or '')).strip()[:500]
+            if not msg:
+                continue
+            fatal = 1 if it.get('fatal') else 0
+            conn.execute(
+                'INSERT INTO app_errors (username,message,source,stack,fatal,version,android,created_at)'
+                ' VALUES (?,?,?,?,?,?,?,?)',
+                (g.username, msg, str(it.get('source') or '')[:300],
+                 str(it.get('stack') or '')[:2000], fatal,
+                 str(it.get('version') or '?')[:40],
+                 str(it.get('android') or '?')[:40], g.now))
+            stored += 1
+            if fatal and worst is None:
+                worst = (msg, str(it.get('source') or ''))
+        conn.commit()
+
+        # One ping per distinct crash per hour, not one per report.
+        if worst:
+            key = 'crash:' + hashlib.sha256(worst[0].encode()).hexdigest()[:16]
+            if not rate_limit(conn, key, limit=1, window=3600):
+                conn.commit()
+                discord_async(ALERT_HOOK, 'Crash on a real device',
+                              [('Error', worst[0], False), ('Where', worst[1], False),
+                               ('User', g.username, True),
+                               ('Console', 'Errors tab', True)],
+                              colour=0xFF6B6B, ping=True)
+            conn.commit()
+        return ok(stored=stored)
+    finally:
+        conn.close()
+
+
 @app.route('/api/v1/feedback/cooldown', methods=['GET', 'POST'])
 @app_auth
 def api_feedback_cooldown():
     conn = get_db()
     try:
         if request.method == 'POST':
-            conn.execute('INSERT OR REPLACE INTO feedback_cooldowns (ip,last_submitted)'
-                         ' VALUES (?,?)', (client_ip(), g.now))
+            conn.execute('INSERT INTO feedback_cooldowns (ip,last_submitted) VALUES (?,?)'
+                         ' ON CONFLICT (ip) DO UPDATE SET last_submitted = EXCLUDED.last_submitted',
+                         (client_ip(), g.now))
             conn.commit()
             return ok()
         row = conn.execute('SELECT last_submitted FROM feedback_cooldowns WHERE ip=?',
@@ -1306,9 +1863,7 @@ def api_admin_export():
     """
     conn = get_db()
     try:
-        tables = [r[0] for r in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-        ).fetchall()]
+        tables = list_tables(conn)
         # Signing secrets are never exported.
         tables = [t for t in tables if t not in ('devices', 'sessions', 'admin_tokens', 'nonces')]
         dump = {t: [dict(r) for r in conn.execute(f'SELECT * FROM "{t}"').fetchall()]
@@ -1351,8 +1906,10 @@ def api_admin_premium_set():
         return fail('Invalid code')
     conn = get_db()
     try:
-        conn.execute('INSERT OR REPLACE INTO premium_codes (code, created_at, redeemed)'
-                     ' VALUES (?,?,0)', (code, g.now))
+        conn.execute('INSERT INTO premium_codes (code, created_at, redeemed) VALUES (?,?,0)'
+                     ' ON CONFLICT (code) DO UPDATE SET created_at = EXCLUDED.created_at,'
+                     ' redeemed = 0, redeemed_by = NULL, redeemed_at = NULL',
+                     (code, g.now))
         audit(conn, 'admin_premium_set', None, code)
         conn.commit()
         return ok()
