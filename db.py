@@ -16,9 +16,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
-# Im too broke for a DB path. (Still true — a Render disk costs money, which is
-# exactly why the database lives in Supabase now instead of on the filesystem.)
-#
+# Im too broke for a DB path.
 # Supabase gives you two connection strings. Use the POOLER one (port 6543,
 # "Transaction" mode) — a web app opens and closes connections constantly and
 # the direct connection limit is low.
@@ -97,18 +95,41 @@ class _Connection:
     a cursor. psycopg2 doesn't, so this restores that shape.
     """
 
-    __slots__ = ('_raw', '_closed')
+    __slots__ = ('_raw', '_closed', '_shared', '_used')
 
-    def __init__(self, raw):
+    def __init__(self, raw, shared=False):
         self._raw = raw
         self._closed = False
+        self._shared = shared
+        self._used = False
 
     def execute(self, sql, params=None):
-        cur = self._raw.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # Passing None (rather than an empty tuple) tells psycopg2 to skip
-        # parameter interpolation entirely, so a literal % in the SQL is safe.
-        cur.execute(_translate(sql), params if params else None)
-        return cur
+        query = _translate(sql)
+        args = params if params else None
+        try:
+            cur = self._raw.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(query, args)
+            self._used = True
+            return cur
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            # The connection went stale while it sat in the pool — Supabase
+            # closes idle ones, and deploys drop them. Rather than pay for a
+            # `SELECT 1` health check on every single borrow, we let the first
+            # query fail and swap the connection underneath, once.
+            if self._used:
+                raise            # mid-transaction; retrying would be wrong
+            self._replace()
+            cur = self._raw.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(query, args)
+            self._used = True
+            return cur
+
+    def _replace(self):
+        try:
+            _get_pool().putconn(self._raw, close=True)
+        except Exception:
+            pass
+        self._raw = _get_pool().getconn()
 
     def commit(self):
         self._raw.commit()
@@ -117,6 +138,15 @@ class _Connection:
         self._raw.rollback()
 
     def close(self):
+        # A request-scoped connection is closed once, by the teardown hook. If
+        # every handler's `finally: conn.close()` actually closed it, auth and
+        # the handler would each need their own connection — which is exactly
+        # the doubling this exists to remove.
+        if self._shared:
+            return
+        self._release()
+
+    def _release(self):
         if self._closed:
             return
         self._closed = True
@@ -152,36 +182,56 @@ class _Connection:
         return False
 
 
-def get_db():
-    # Wait for a free slot rather than failing instantly when busy.
+def _borrow():
+    """Take a raw connection from the pool, queueing for a slot if busy."""
     if not _slots.acquire(timeout=_SLOT_TIMEOUT):
         raise RuntimeError('Database is busy — no free connection after '
                            f'{_SLOT_TIMEOUT}s')
     try:
-        raw = _get_pool().getconn()
+        return _get_pool().getconn()
     except Exception:
         _slots.release()
         raise
 
-    # A connection can go stale (Supabase closes idle ones, deploys drop them).
-    # Prove it works before handing it out; replace it if not.
-    try:
-        cur = raw.cursor()
-        cur.execute('SELECT 1')
-        cur.close()
-        raw.rollback()
-    except Exception:
-        try:
-            _get_pool().putconn(raw, close=True)
-        except Exception:
-            pass
-        try:
-            raw = _get_pool().getconn()
-        except Exception:
-            _slots.release()
-            raise
 
-    return _Connection(raw)
+def get_db():
+    """
+    One connection per HTTP request, shared by authentication and the handler.
+
+    This used to open a fresh connection for each — meaning every request paid
+    for two pool borrows and two health checks before doing any real work. Over
+    a link to Supabase that was most of the request. Handlers still call
+    get_db() and close() exactly as before; they simply get the same connection
+    back, and the teardown hook returns it once at the end.
+    """
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            conn = getattr(g, '_vuli_conn', None)
+            if conn is None or conn._closed:
+                conn = _Connection(_borrow(), shared=True)
+                g._vuli_conn = conn
+            return conn
+    except (ImportError, RuntimeError):
+        pass                       # outside a request (init_db, scripts, tests)
+    return _Connection(_borrow())
+
+
+def release_request_connection(exc=None):
+    """Flask teardown hook — hands the request's connection back to the pool."""
+    try:
+        from flask import g
+        conn = getattr(g, '_vuli_conn', None)
+    except Exception:
+        return
+    if conn is None:
+        return
+    try:
+        if exc is not None:
+            conn.rollback()
+    except Exception:
+        pass
+    conn._release()
 
 
 # ---------------------------------------------------------------------------
@@ -393,6 +443,51 @@ SCHEMA = [
         ip             TEXT PRIMARY KEY,
         last_submitted BIGINT DEFAULT 0
     )''',
+    # A suggestion is written here BEFORE anyone tries to send it to Discord.
+    # If the webhook is down, unset, or rate-limited, the message still exists
+    # and delivered=0 makes the next submit retry it. Nothing is ever lost.
+    '''CREATE TABLE IF NOT EXISTS suggestions (
+        id         BIGSERIAL PRIMARY KEY,
+        username   TEXT NOT NULL,
+        kind       TEXT NOT NULL,
+        message    TEXT NOT NULL,
+        contact    TEXT,
+        version    TEXT,
+        android    TEXT,
+        created_at BIGINT NOT NULL,
+        delivered  INT DEFAULT 0,
+        reply      TEXT
+    )''',
+    # Console replies waiting to be shown in the app. reply_token is single-use:
+    # it is the entire defence for the one allowed reply back, so no second
+    # cooldown has to exist.
+    '''CREATE TABLE IF NOT EXISTS inbox (
+        id          BIGSERIAL PRIMARY KEY,
+        username    TEXT NOT NULL,
+        body        TEXT NOT NULL,
+        created_at  BIGINT NOT NULL,
+        seen_at     BIGINT DEFAULT 0,
+        reply_token TEXT,
+        replied     INT DEFAULT 0
+    )''',
+    '''CREATE TABLE IF NOT EXISTS settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT
+    )''',
+    # Errors from real phones. Before this existed, a bug on a tester's device
+    # produced no information anywhere — which is why "it's broken" was as
+    # specific as any report ever got.
+    '''CREATE TABLE IF NOT EXISTS app_errors (
+        id         BIGSERIAL PRIMARY KEY,
+        username   TEXT,
+        message    TEXT NOT NULL,
+        source     TEXT,
+        stack      TEXT,
+        fatal      INT DEFAULT 0,
+        version    TEXT,
+        android    TEXT,
+        created_at BIGINT NOT NULL
+    )''',
 ]
 
 INDEXES = [
@@ -405,6 +500,9 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_friends_to ON friend_requests(to_user, status)',
     'CREATE INDEX IF NOT EXISTS idx_audit_at ON admin_audit(at)',
     'CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active, total_minutes)',
+    'CREATE INDEX IF NOT EXISTS idx_inbox_unseen ON inbox(username, seen_at)',
+    'CREATE INDEX IF NOT EXISTS idx_sugg_undelivered ON suggestions(delivered, id)',
+    'CREATE INDEX IF NOT EXISTS idx_errors_at ON app_errors(created_at)',
 ]
 
 # Columns added after the first Postgres deploy. Adding a column to a live table
@@ -433,14 +531,17 @@ def init_db():
 
 
 def ensure_economy_row(conn, username, now_ts):
-    """Every account has exactly one economy row. Created lazily, never by a client."""
-    row = conn.execute('SELECT username FROM economy WHERE username = ?', (username,)).fetchone()
-    if not row:
-        conn.execute(
-            'INSERT INTO economy (username, updated_at) VALUES (?, ?)'
-            ' ON CONFLICT (username) DO NOTHING',
-            (username, now_ts)
-        )
+    """
+    Every account has exactly one economy row. Created lazily, never by a client.
+
+    A single upsert — the SELECT that used to check first was a wasted round
+    trip on every request that touched the economy, and ON CONFLICT already
+    makes this safe against a race.
+    """
+    conn.execute(
+        'INSERT INTO economy (username, updated_at) VALUES (?, ?)'
+        ' ON CONFLICT (username) DO NOTHING',
+        (username, now_ts))
 
 
 def table_columns(conn, table):
