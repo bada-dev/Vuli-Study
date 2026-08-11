@@ -136,13 +136,33 @@ def discord(hook, title, fields, colour=0x6BCF7F, ping=False):
                                 'value': (str(v) if v not in (None, '') else '—')[:1024],
                                 'inline': bool(i)} for n, v, i in fields]}],
     }).encode()
-    req = urllib.request.Request(hook, data=payload,
-                                 headers={'Content-Type': 'application/json'})
+    # The User-Agent is not decoration. urllib defaults to "Python-urllib/3.x",
+    # and Cloudflare — which sits in front of discord.com — blocks that outright.
+    # The webhook works fine from a browser or curl and every post from here is
+    # refused, which is exactly the "my webhook is correct, so your code is
+    # wrong" symptom. It was.
+    req = urllib.request.Request(hook, data=payload, headers={
+        'Content-Type': 'application/json',
+        'User-Agent': 'VuliStudy (https://studybuddy-r616.onrender.com, 1.2.0)',
+    })
     for attempt in (1, 2):
         try:
             with urllib.request.urlopen(req, timeout=6) as r:
                 if r.status < 300:
                     return True
+                app.logger.warning('discord "%s" returned %s', title, r.status)
+        except urllib.error.HTTPError as exc:
+            # Read the body. Discord says precisely what it disliked, and
+            # throwing that away is why this failed silently for weeks.
+            try:
+                detail = exc.read().decode('utf-8', 'replace')[:400]
+            except Exception:
+                detail = '(no body)'
+            app.logger.warning('discord "%s" attempt %d: HTTP %s — %s',
+                               title, attempt, exc.code, detail)
+            if exc.code in (400, 401, 403, 404):
+                return False          # malformed or wrong URL; retrying cannot help
+            time.sleep(0.5)
         except Exception as exc:
             app.logger.warning('discord "%s" attempt %d failed: %s', title, attempt, exc)
             time.sleep(0.5)
