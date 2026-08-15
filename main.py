@@ -1572,8 +1572,8 @@ def call_ai(api_key, prompt, system_prompt=None):
     if not api_key:
         raise ValueError('No API key')
 
-    models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile",
-              "llama3-70b-8192", "mixtral-8x7b-32768"]
+    models = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b",
+              "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
     default_system = (
         "Your name is VuliAi. You are VuliAi — the personal study coach AI inside the "
