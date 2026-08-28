@@ -204,6 +204,15 @@ def discord(hook, title, fields, colour=0x6BCF7F, ping=False):
                                title, attempt, exc.code, detail)
             if exc.code in (400, 401, 403, 404):
                 return False          # malformed or wrong URL; retrying cannot help
+            if exc.code == 429 and '1015' in detail:
+                # Cloudflare, not Discord. 1015 is the edge rate-limiting the
+                # CALLER'S IP — and on Render that IP is shared with every other
+                # free service on the box, so this can trigger on traffic that
+                # was never ours. It lasts minutes, so a second attempt half a
+                # second later is guaranteed to fail too. Give up now and let
+                # the retry loop pick it up once the block has aged out; the row
+                # is already saved with delivered=0, so nothing is lost.
+                return False
             time.sleep(0.5)
         except Exception as exc:
             app.logger.warning('discord "%s" attempt %d failed: %s', title, attempt, exc)
@@ -1453,6 +1462,39 @@ def flush_suggestions(conn):
         sent_any = True
     conn.commit()
     return sent_any
+
+
+# Undelivered suggestions, retried on a timer.
+#
+# flush_suggestions() already retries — but only when the NEXT person submits
+# one. With a handful of users that means a message can sit undelivered for
+# days, which is precisely what a Cloudflare 1015 causes: the block is on
+# Render's shared outbound IP, it clears itself after a few minutes, and by
+# then there is nothing left to trigger the retry.
+SUGGEST_FLUSH_SECONDS = int(os.environ.get('SUGGEST_FLUSH_SECONDS') or 600)
+
+
+def _suggestion_retry():
+    while True:
+        time.sleep(SUGGEST_FLUSH_SECONDS)
+        try:
+            conn = get_db()
+            try:
+                # Cheap lock, reusing the rate limiter: both gunicorn workers
+                # run this loop, and without it they would race to send the
+                # same backlog and double-post everything to Discord.
+                if rate_limit(conn, 'flush:suggestions', limit=1,
+                              window=max(60, SUGGEST_FLUSH_SECONDS - 60)):
+                    conn.commit()
+                    continue
+                flush_suggestions(conn)
+            finally:
+                conn.close()
+        except Exception as exc:
+            app.logger.warning('suggestion retry failed: %s', exc)
+
+
+threading.Thread(target=_suggestion_retry, daemon=True).start()
 
 
 @app.route('/api/v1/feedback', methods=['POST'])
