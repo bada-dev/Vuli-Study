@@ -29,6 +29,9 @@ MAX_REBORNS = 500
 
 VALID_COSMETICS = [None, 'tophat', 'wizard', 'pirate',
                    'premium-crown', 'premium-glow', 'premium-shades']
+# Granted by the subscription rather than bought, so they never appear in
+# owned['cosmetics'] and have to be permitted separately — see apply_equip.
+PREMIUM_COSMETICS = ('premium-crown', 'premium-glow', 'premium-shades')
 VALID_BACKGROUNDS = ['default', 'ocean', 'sunset', 'lavender',
                      'mint', 'rose', 'midnight', 'forest']
 VALID_MODES = ('focus', 'stopwatch', 'long')
@@ -409,11 +412,18 @@ def apply_equip(conn, username, slot, item_id, now_ts):
     owned = e['owned']
 
     if slot == 'cosmetic':
-        if item_id is not None and item_id not in owned['cosmetics'] \
-           and item_id not in ('premium-crown', 'premium-glow', 'premium-shades'):
-            raise EconomyError('You do not own that.')
+        # Checked before ownership so an unknown id says so, rather than being
+        # reported as something you failed to buy.
         if item_id not in VALID_COSMETICS:
             raise EconomyError('Unknown cosmetic.')
+        if item_id is not None and item_id not in owned['cosmetics']:
+            # The premium three come with the subscription instead of being
+            # bought, so they are never in owned['cosmetics'] — but that
+            # exemption used to apply to EVERYONE, which let any free account
+            # equip the crown, glow and shades simply by naming them. The
+            # subscription is the thing being checked here, not the purchase.
+            if not (item_id in PREMIUM_COSMETICS and e['is_premium']):
+                raise EconomyError('You do not own that.')
         conn.execute('UPDATE users SET equipped_cosmetic=? WHERE username=?', (item_id, username))
 
     elif slot == 'background':
