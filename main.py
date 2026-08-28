@@ -30,8 +30,8 @@ from security import (ADMIN_PASSWORD, SECOND_ADMIN_PASSWORD, admin_auth,
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 512 * 1024
 
-GROQ_API_ONE = os.environ.get('GROQ_API_ONE')
-GROQ_API_TWO = os.environ.get('GROQ_API_TWO')
+API_ONE = os.environ.get('API_ONE')
+API_TWO = os.environ.get('API_TWO')
 
 # --- Discord + caps --------------------------------------------------------
 # Every one of these is optional. Unset simply turns that feature off; nothing
@@ -54,6 +54,48 @@ FEEDBACK_COOLDOWN = 48 * 60 * 60
 BLOCKED_USERNAMES = {'admin', 'system', 'null', 'undefined', 'test', 'mod', 'owner'}
 
 init_db()
+
+
+# ===========================================================================
+# Keeping Supabase awake
+#
+# The free tier suspends a project after about a week with no DATABASE
+# activity, and a suspended project refuses every connection — which takes the
+# whole app down while Render sits there looking perfectly healthy, still
+# serving /healthz as if nothing were wrong.
+#
+# An uptime pinger cannot fix this on its own. It keeps RENDER awake, but
+# /healthz and /classify-productivity never open a connection, so as far as
+# Supabase is concerned nothing has happened for a week. The only thing that
+# counts as activity is an actual query, so that is what this does.
+#
+# Deliberately not folded into /healthz: a health check that fails when the
+# database blips would have Render marking the whole deploy unhealthy over
+# something the process itself survived perfectly well.
+#
+# Each gunicorn worker starts one of these, so the real interval is one SELECT
+# per worker. At six hours apart that is nothing, and the redundancy is welcome.
+# ===========================================================================
+KEEPALIVE_SECONDS = int(os.environ.get('KEEPALIVE_SECONDS') or 6 * 3600)
+
+
+def _keepalive():
+    while True:
+        time.sleep(KEEPALIVE_SECONDS)
+        try:
+            conn = get_db()
+            try:
+                conn.execute('SELECT 1').fetchone()
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception as exc:
+            # This thread must never die. The ping that fails is immediately
+            # before the one that matters most.
+            app.logger.warning('supabase keepalive failed: %s', exc)
+
+
+threading.Thread(target=_keepalive, daemon=True).start()
 
 
 # ===========================================================================
@@ -1565,15 +1607,36 @@ def api_feedback_cooldown():
 
 
 # ===========================================================================
-# AI study plan — Groq keys never leave this process
+# AI study plan — API keys never leave this process
+#
+# OpenRouter, not Groq. Groq's free tier kept retiring models underneath us —
+# a dead model id doesn't fail fast, it burns a whole HTTP round trip before
+# the fallback list moves on, so a stale list makes every request slow AND
+# broken. OpenRouter is one OpenAI-compatible endpoint that routes across many
+# providers and fails over internally, which is what the list below was trying
+# to do by hand.
+#
+# Ordered cheapest-capable first. At 420 output tokens a plan costs a fraction
+# of a penny, and /api/v1/ai/plan is premium-only and capped at 3 a day per
+# user, so the whole feature is pennies a month — cheap enough that paying is
+# worth it purely to stop free-tier deprecations breaking the app again. The
+# :free entry is a last resort, not the plan.
+#
+# Verified live on OpenRouter 2026-08-28. Re-check with:
+#   curl -s https://openrouter.ai/api/v1/models | grep -o '"id":"[^"]*"'
 # ===========================================================================
+OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+
 def call_ai(api_key, prompt, system_prompt=None):
     api_key = (api_key or '').strip().strip('"').strip("'")
     if not api_key:
         raise ValueError('No API key')
 
-    models = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b",
-              "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    models = ["google/gemini-2.5-flash-lite",
+              "deepseek/deepseek-v3.2",
+              "anthropic/claude-haiku-4.5",
+              "z-ai/glm-5.2:free"]
 
     default_system = (
         "Your name is VuliAi. You are VuliAi — the personal study coach AI inside the "
@@ -1599,16 +1662,32 @@ def call_ai(api_key, prompt, system_prompt=None):
             ],
         }).encode('utf-8')
         req = urllib.request.Request(
-            "https://api.groq.com/openai/v1/chat/completions",
+            OPENROUTER_URL,
             data=payload,
             headers={"Authorization": f"Bearer {api_key}",
                      "Content-Type": "application/json",
+                     # OpenRouter uses these two for attribution. Neither is
+                     # required, and neither identifies a user.
+                     "HTTP-Referer": "https://studybuddy-r616.onrender.com",
+                     "X-Title": "VuliStudy",
                      "User-Agent": "VuliStudy/2.0"})
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 result = json.loads(resp.read().decode('utf-8'))
-                content = result['choices'][0]['message']['content']
-                if content and len(content) > 1250:
+                # OpenRouter can answer 200 and still have failed — an upstream
+                # refusal comes back as an error object, and a filtered reply
+                # comes back as an empty string. Both must fall through to the
+                # next model rather than being returned as the study plan.
+                if result.get('error'):
+                    last_error = RuntimeError(
+                        f"OpenRouter [{model}]: {str(result['error'])[:240]}")
+                    continue
+                choices = result.get('choices') or []
+                content = (choices[0].get('message', {}).get('content') or '').strip() if choices else ''
+                if not content:
+                    last_error = RuntimeError(f'Empty reply from {model}')
+                    continue
+                if len(content) > 1250:
                     cut = content[:1250]
                     sp = cut.rfind(' ')
                     if sp > 1000:
@@ -1617,13 +1696,13 @@ def call_ai(api_key, prompt, system_prompt=None):
                 return content
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='ignore')
-            last_error = RuntimeError(f'Groq HTTP {exc.code} [{model}]: {detail[:240]}')
+            last_error = RuntimeError(f'OpenRouter HTTP {exc.code} [{model}]: {detail[:240]}')
             continue
         except Exception as exc:
             last_error = exc
             continue
 
-    raise last_error or RuntimeError('Groq request failed for all models')
+    raise last_error or RuntimeError('OpenRouter request failed for all models')
 
 
 @app.route('/api/v1/ai/plan', methods=['POST'])
@@ -1733,7 +1812,7 @@ Hard formatting rules:
 - If you use a quote, it MUST be the final line, alone.
 {quotes_block}{convo_text}"""
 
-        for key in (GROQ_API_ONE, GROQ_API_TWO):
+        for key in (API_ONE, API_TWO):
             if not key:
                 continue
             try:
