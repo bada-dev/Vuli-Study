@@ -1,7 +1,7 @@
 """
 Economy engine
 Project: VuliStudy
-Author: ETHANTYAGI
+Author: BadaDev
 ALL RIGHTS RESERVED
 """
 
