@@ -2,7 +2,7 @@
 VuliStudy — server
 ==================
 Project: VuliStudy
-Author: ETHANTYAGI
+Author: BadaDev
 Version: 2.0.0
 ALL RIGHTS RESERVED
 """
