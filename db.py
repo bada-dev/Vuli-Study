@@ -2,7 +2,7 @@
 VuliStudy — database layer
 ==========================
 Project: VuliStudy
-Author: ETHANTYAGI
+Author: BadaDev
 ALL RIGHTS RESERVED
 
 Postgres, not SQLite any more. An entirely new language.
