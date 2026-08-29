@@ -2,7 +2,7 @@
 VuliStudy — authentication and request integrity
 ================================================
 Project: VuliStudy
-Author: ETHANTYAGI
+Author: BadaDev
 ALL RIGHTS RESERVED
 
 please dont hack ;-;
