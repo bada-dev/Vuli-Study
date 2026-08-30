@@ -23,6 +23,11 @@ CARROTS_PER_REVIVAL = 3
 # stop capping rules
 MAX_SESSION_MINUTES = 480      # realistically no one is studying over 8 hours
 MAX_MINUTES_PER_HOUR = 480     # rolling cap across all events
+# How far a claimed length may exceed the elapsed wall-clock time before it gets
+# trimmed. Generous on purpose: a phone correcting its clock mid-session, or a
+# minute lost rounding, must never cost anyone their study time. A forged claim
+# is capped at exactly this, so the cost of being generous is five minutes.
+WALL_CLOCK_GRACE_MINUTES = 5
 MAX_TOTAL_MINUTES = 50_000
 MAX_STREAK = 5_000
 MAX_REBORNS = 500
@@ -254,19 +259,48 @@ def apply_session_completed(conn, username, tz_offset, payload, now_ts):
 
     if minutes <= 0:
         return {'coins_awarded': 0, 'minutes': 0, 'reason': 'empty'}
-    if minutes > MAX_SESSION_MINUTES:
-        raise EconomyError('Session too long to be genuine.')
 
-    # A session that claims 60 minutes must have actually spanned like 60 minutes.
+    # Trimmed, not refused. Someone who leaves a stopwatch running overnight has
+    # not cheated, they have forgotten to press stop — taking the whole session
+    # off them teaches nothing and just loses their evening's work.
+    trimmed = False
+    if minutes > MAX_SESSION_MINUTES:
+        minutes = MAX_SESSION_MINUTES
+        trimmed = True
+
+    # A session claiming 60 minutes should have spanned roughly 60 minutes.
+    #
+    # This used to REJECT outright, and rejecting is far too blunt: one odd
+    # reading cost someone their entire session. It now trims the claim to what
+    # the clock can vouch for instead. An honest user keeps everything real, a
+    # forged claim gets cut to the grace window, and nothing here raises.
+    #
+    # Being offline, asleep, backgrounded or having the screen off all make the
+    # span LONGER than the claim, never shorter, so none of them can trigger
+    # this at all. Only a claim bigger than the elapsed time can.
     started = payload.get('started_at')
     ended = payload.get('ended_at')
     if started and ended:
         try:
-            span = int(ended) - int(started)
-            if span < (minutes * 60) - 90:
-                raise EconomyError('Session length does not match its duration.')
+            span_minutes = (int(ended) - int(started)) // 60
         except (TypeError, ValueError):
-            pass
+            span_minutes = None
+
+        # A negative or impossible span means the device clock moved underneath
+        # us — an NTP correction mid-session does exactly that, and so does the
+        # user changing the time by hand. That is the phone being wrong, not the
+        # person, so the check is skipped rather than applied to a number we
+        # already know is nonsense. Abuse stays bounded either way: the cap
+        # above and the rolling hourly limit below do not depend on this.
+        if span_minutes is not None and 0 <= span_minutes <= MAX_SESSION_MINUTES:
+            # A flat allowance, deliberately NOT a percentage of the claim —
+            # a percentage scales with the number the client sent, so claiming
+            # eight hours would buy an eight-hour tolerance.
+            if minutes > span_minutes + WALL_CLOCK_GRACE_MINUTES:
+                minutes = max(0, span_minutes + WALL_CLOCK_GRACE_MINUTES)
+                trimmed = True
+        if minutes <= 0:
+            return {'coins_awarded': 0, 'minutes': 0, 'reason': 'empty'}
 
     # Need to save money.
     already = _minutes_earned_recently(conn, username, now_ts)
@@ -319,7 +353,11 @@ def apply_session_completed(conn, username, tz_offset, payload, now_ts):
             'UPDATE users SET total_minutes=?, streak=?, last_active=?, is_active=1 WHERE username=?',
             (new_total, e['streak'], now_ts, username))
 
-    return {'coins_awarded': coins, 'minutes': minutes, 'book_used': book_used}
+    # `trimmed` tells the client its claim was cut down rather than honoured in
+    # full, so it can reconcile quietly instead of showing a number that never
+    # arrives. It is not an accusation and nothing is refused because of it.
+    return {'coins_awarded': coins, 'minutes': minutes,
+            'book_used': book_used, 'trimmed': trimmed}
 
 
 def _apply_streak(e, today):
