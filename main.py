@@ -228,6 +228,102 @@ def discord_async(hook, *args, **kwargs):
                          kwargs=kwargs, daemon=True).start()
 
 
+# ===========================================================================
+# Backup delivery routes
+#
+# Discord sits behind Cloudflare, and Cloudflare rate-limits by SOURCE IP.
+# Render's free tier shares one outbound IP between every service on the box,
+# so the budget gets spent by strangers and every webhook post comes back 429
+# with Cloudflare error 1015 — instantly, at a volume of three requests a day.
+# Nothing in this codebase can fix that: we do not control the IP or the
+# neighbours, and retrying just fails faster.
+#
+# Note this is Discord's OWN rate-limit configuration, not Cloudflare policy.
+# Supabase and OpenRouter are both behind Cloudflare too and both work fine
+# from Render — Discord is simply far stricter about it.
+#
+# So the suggestion box gets routes that cannot hit that wall. ntfy.sh and
+# api.telegram.org both run on nginx with no Cloudflare in front of either.
+# Both are optional: unset means "skip", exactly like the webhooks.
+# ===========================================================================
+TELEGRAM_TOKEN   = (os.environ.get('TELEGRAM_TOKEN') or '').strip()
+TELEGRAM_CHAT_ID = (os.environ.get('TELEGRAM_CHAT_ID') or '').strip()
+NTFY_TOPIC       = (os.environ.get('NTFY_TOPIC') or '').strip()
+
+
+def _plain(title, fields):
+    """The embed, flattened to text that reads properly in any app."""
+    lines = [str(title)]
+    for name, value, _inline in fields:
+        val = str(value) if value not in (None, '') else '—'
+        lines.append(f'{name}: {val}')
+    return '\n'.join(lines)[:3500]
+
+
+def _post(url, data, headers, timeout=8):
+    req = urllib.request.Request(url, data=data, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status < 300
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = exc.read().decode('utf-8', 'replace')[:300]
+        except Exception:
+            detail = '(no body)'
+        app.logger.warning('%s -> HTTP %s: %s', url.split('/')[2], exc.code, detail)
+    except Exception as exc:
+        app.logger.warning('%s failed: %s', url.split('/')[2], exc)
+    return False
+
+
+def telegram(title, fields):
+    if not (TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
+        return False
+    payload = json.dumps({
+        'chat_id': TELEGRAM_CHAT_ID,
+        'text': _plain(title, fields),
+        'disable_web_page_preview': True,
+    }).encode()
+    return _post(f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage',
+                 payload, {'Content-Type': 'application/json',
+                           'User-Agent': 'VuliStudy/2.0'})
+
+
+def ntfy(title, fields):
+    """
+    No account and no token — the topic name IS the address, so anyone who
+    knows it can read the messages. Use a long random one, not 'vulistudy'.
+    """
+    if not NTFY_TOPIC:
+        return False
+    return _post(f'https://ntfy.sh/{NTFY_TOPIC}',
+                 _plain('', fields).lstrip('\n').encode('utf-8'),
+                 {'Title': str(title)[:200].encode('utf-8').decode('latin-1', 'ignore'),
+                  'Content-Type': 'text/plain; charset=utf-8',
+                  'User-Agent': 'VuliStudy/2.0'})
+
+
+def notify(hook, title, fields, colour=0x6BCF7F, ping=False):
+    """Try every configured route, stop at the first that actually accepted it.
+
+    Discord stays first so that if its block ever lifts, nothing has to change
+    back. Returns True if ANY route delivered — that is what lets a suggestion
+    be marked delivered and stop being retried.
+    """
+    if discord(hook, title, fields, colour=colour, ping=ping):
+        return True
+    if telegram(title, fields):
+        return True
+    if ntfy(title, fields):
+        return True
+    return False
+
+
+def notify_async(hook, *args, **kwargs):
+    threading.Thread(target=notify, args=(hook,) + args,
+                     kwargs=kwargs, daemon=True).start()
+
+
 def purge_user(conn, username):
     """Remove every trace of one account. Used by both the user's own delete and
     the console's delete-anyone, so the two can never drift apart.
@@ -321,7 +417,7 @@ def api_signup():
             quiet = rate_limit(conn, 'alert:maxacc', limit=1, window=86400)
             conn.commit()
             if not quiet:
-                discord_async(ALERT_HOOK, 'Account cap reached',
+                notify_async(ALERT_HOOK, 'Account cap reached',
                               [('Cap (MAX_ACC)', MAX_ACC, True), ('Accounts', total, True),
                                ('Effect', 'New signups are being refused.', False)],
                               colour=0xFF6B6B, ping=True)
@@ -1450,7 +1546,7 @@ def flush_suggestions(conn):
             tick = '✅ latest' if r['version'] == LATEST_VERSION else '❌ outdated'
         else:
             tick = '—  (set LATEST_VERSION)'
-        if not discord(SUGGEST_HOOK, f"{r['kind'].upper()} · {r['username']}",
+        if not notify(SUGGEST_HOOK, f"{r['kind'].upper()} · {r['username']}",
                        [('Message', r['message'], False),
                         ('Version', f"{r['version']}  {tick}", True),
                         ('Android', r['android'], True),
@@ -1562,7 +1658,7 @@ def api_inbox_ack():
                 and secrets.compare_digest(str(d.get('token') or ''), row['reply_token']):
             conn.execute('UPDATE inbox SET replied=1, reply_token=NULL WHERE id=?',
                          (row['id'],))
-            discord_async(SUGGEST_HOOK, f'Reply · {g.username}',
+            notify_async(SUGGEST_HOOK, f'Reply · {g.username}',
                           [('They said', reply, False)], colour=0xFFD700, ping=True)
         conn.commit()
         return ok()
@@ -1618,7 +1714,7 @@ def api_errors():
             key = 'crash:' + hashlib.sha256(worst[0].encode()).hexdigest()[:16]
             if not rate_limit(conn, key, limit=1, window=3600):
                 conn.commit()
-                discord_async(ALERT_HOOK, 'Crash on a real device',
+                notify_async(ALERT_HOOK, 'Crash on a real device',
                               [('Error', worst[0], False), ('Where', worst[1], False),
                                ('User', g.username, True),
                                ('Console', 'Errors tab', True)],
