@@ -2,7 +2,7 @@
 The page for editing everything
 
 Project: VuliStudy
-Author: ETHANTYAGI
+Author: BadaDev
 ALL RIGHTS RESERVED
 """
 
