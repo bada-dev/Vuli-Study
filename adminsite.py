@@ -784,6 +784,14 @@ def register(app):
             f'<form class="row" method="post" action="{url_for("console_new_code")}">'
             f'<input name="code" placeholder="CODE" maxlength="30" required>'
             f'<button>create / reset</button></form></div>')
+        parts.append(
+            f'<div class="card"><h3>Test the alert channels</h3>'
+            f'<p>Sends a real alert down every route that is configured and tells '
+            f'you which ones actually worked. Use it after changing SUGGEST_HOOK, '
+            f'IMP_EMAIL or the SMTP variables — it is the only way to find out '
+            f'whether email is really wired up without waiting for a crash.</p>'
+            f'<form method="post" action="{url_for("console_test_alert")}">'
+            f'<div class="row"><button>send test alert</button></div></form></div>')
         parts.append('</div>')
         return _render('ops', ''.join(parts))
 
@@ -807,6 +815,48 @@ def register(app):
             conn.close()
         return redirect(url_for('console_ops',
                                 msg='Signups closed.' if on == '1' else 'Signups re-opened.'))
+
+    @app.route('/console/ops/test-alert', methods=['POST'])
+    def console_test_alert():
+        """Fire a real alert and report, per channel, what actually happened.
+
+        Deliberately reports each route separately rather than one pass/fail:
+        "it didn't work" is useless when there are two independent channels and
+        you need to know which of them is the broken one.
+        """
+        # Imported here, not at module scope — main.py imports adminsite at the
+        # bottom of itself, so a top-level import would be circular.
+        import main as main_mod
+        fields = [
+            ('What', 'Test alert fired from the console', False),
+            ('When', time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()), True),
+            ('Meaning', 'If you are reading this, this channel works.', False),
+        ]
+        by_hook = main_mod.notify(main_mod.ALERT_HOOK, 'Test alert', fields)
+        by_mail = main_mod.email_alert('Test alert', fields)
+
+        hook_txt = 'webhook: delivered' if by_hook else \
+                   'webhook: FAILED (or ALERT_HOOK is unset)'
+        if by_mail:
+            how = 'Resend' if main_mod.RESEND_KEY else 'SMTP'
+            mail_txt = f'email: sent to {main_mod.IMP_EMAIL} via {how}'
+        elif not main_mod.IMP_EMAIL:
+            mail_txt = 'email: skipped — IMP_EMAIL is not set'
+        elif not (main_mod.RESEND_KEY or (main_mod.SMTP_USER and main_mod.SMTP_PASS)):
+            mail_txt = ('email: skipped — set RESEND_KEY (easiest), '
+                        'or SMTP_USER + SMTP_PASS')
+        else:
+            mail_txt = 'email: FAILED — check the Render logs for the reason'
+
+        conn = get_db()
+        try:
+            _audit(conn, 'test-alert', None, f'{hook_txt} | {mail_txt}')
+            conn.commit()
+        finally:
+            conn.close()
+
+        key = 'msg' if (by_hook or by_mail) else 'err'
+        return redirect(url_for('console_ops', **{key: f'{hook_txt}  ·  {mail_txt}'}))
 
     @app.route('/console/ops/create-user', methods=['POST'])
     def console_create_user():
