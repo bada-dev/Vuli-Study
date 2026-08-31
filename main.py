@@ -635,6 +635,12 @@ def api_logout():
 def api_me():
     conn = get_db()
     try:
+        # Charge any happiness lost while they were away before reading the
+        # state back, so what the app receives is already current. This is the
+        # only place decay happens — it used to happen on the phone, where the
+        # very next poll overwrote it.
+        economy.apply_time_decay(conn, g.username, g.now)
+        conn.commit()
         # The inbox rides this poll rather than getting a loop of its own — the
         # app already asks for /me every 20 seconds while it is open.
         return ok(state=state_of(conn, g.username), inbox=inbox_for(conn, g.username))
