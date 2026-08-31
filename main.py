@@ -11,11 +11,13 @@ import hashlib
 import json
 import os
 import secrets
+import smtplib
 import threading
 import time
 import urllib.error
 import urllib.request
 import uuid
+from email.message import EmailMessage
 
 from flask import Flask, g, jsonify, request
 
@@ -324,6 +326,105 @@ def notify_async(hook, *args, **kwargs):
                      kwargs=kwargs, daemon=True).start()
 
 
+# ===========================================================================
+# Email — for the things that actually matter
+#
+# A crash on a real device, or signups being turned away, should reach you even
+# if Discord is having a day. Email fails independently of everything else here,
+# which is the entire reason it is worth the extra moving part.
+#
+# IMP_EMAIL is only the RECIPIENT — an address cannot send mail by itself, so
+# there also has to be something to send THROUGH. Two ways, tried in order:
+#
+#   1. RESEND_KEY  — an email API over plain HTTPS. This is the way to do it.
+#      Sign up at resend.com, take the re_... key. Port 443 like every other
+#      request the app makes, so no host can block it the way SMTP ports get
+#      blocked, and there is no password anywhere.
+#
+#   2. SMTP_USER + SMTP_PASS — a fallback if you would rather not use a third
+#      party. Gmail needs an App Password here, not your real one, and plenty
+#      of hosts block outbound SMTP entirely.
+#
+# Set neither and email is silently skipped, exactly like an unset webhook.
+# ===========================================================================
+IMP_EMAIL  = (os.environ.get('IMP_EMAIL') or '').strip()
+
+RESEND_KEY = (os.environ.get('RESEND_KEY') or '').strip()
+# resend.dev is their shared sender, which works without owning a domain. Point
+# MAIL_FROM at your own domain once you have one verified with them.
+MAIL_FROM  = (os.environ.get('MAIL_FROM') or 'VuliStudy <onboarding@resend.dev>').strip()
+
+SMTP_HOST = (os.environ.get('SMTP_HOST') or 'smtp.gmail.com').strip()
+SMTP_PORT = int(os.environ.get('SMTP_PORT') or 587)
+SMTP_USER = (os.environ.get('SMTP_USER') or '').strip()
+SMTP_PASS = (os.environ.get('SMTP_PASS') or '')
+
+
+def email_via_api(subject, fields):
+    """HTTPS to Resend. Preferred — nothing to block, no password to leak."""
+    if not (RESEND_KEY and IMP_EMAIL):
+        return False
+    payload = json.dumps({
+        'from': MAIL_FROM,
+        'to': [IMP_EMAIL],
+        'subject': f'[VuliStudy] {subject}'[:200],
+        'text': _plain(subject, fields),
+    }).encode()
+    return _post('https://api.resend.com/emails', payload,
+                 {'Authorization': f'Bearer {RESEND_KEY}',
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'VuliStudy/2.0'})
+
+
+def email_via_smtp(subject, fields):
+    if not (IMP_EMAIL and SMTP_USER and SMTP_PASS):
+        return False
+    msg = EmailMessage()
+    msg['Subject'] = f'[VuliStudy] {subject}'[:200]
+    msg['From'] = SMTP_USER
+    msg['To'] = IMP_EMAIL
+    msg.set_content(_plain(subject, fields))
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+                s.login(SMTP_USER, SMTP_PASS)
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+                s.starttls()
+                s.login(SMTP_USER, SMTP_PASS)
+                s.send_message(msg)
+        return True
+    except Exception as exc:
+        # Never let a failed email break the request that triggered it.
+        app.logger.warning('smtp alert "%s" failed: %s', subject, exc)
+        return False
+
+
+def email_alert(subject, fields):
+    return email_via_api(subject, fields) or email_via_smtp(subject, fields)
+
+
+def alert(hook, title, fields, colour=0xFF6B6B, ping=True):
+    """Important things go BOTH ways, deliberately.
+
+    An alert exists to reach you when something is broken, and "something is
+    broken" is exactly the situation where one channel is likely to be the
+    thing that broke. Discord and email fail independently, so sending to both
+    is the point rather than duplication.
+    """
+    by_hook = notify(hook, title, fields, colour=colour, ping=ping)
+    by_mail = email_alert(title, fields)
+    if not (by_hook or by_mail):
+        app.logger.warning('alert "%s" reached nobody', title)
+    return by_hook or by_mail
+
+
+def alert_async(hook, *args, **kwargs):
+    threading.Thread(target=alert, args=(hook,) + args,
+                     kwargs=kwargs, daemon=True).start()
+
+
 def purge_user(conn, username):
     """Remove every trace of one account. Used by both the user's own delete and
     the console's delete-anyone, so the two can never drift apart.
@@ -417,7 +518,7 @@ def api_signup():
             quiet = rate_limit(conn, 'alert:maxacc', limit=1, window=86400)
             conn.commit()
             if not quiet:
-                notify_async(ALERT_HOOK, 'Account cap reached',
+                alert_async(ALERT_HOOK, 'Account cap reached',
                               [('Cap (MAX_ACC)', MAX_ACC, True), ('Accounts', total, True),
                                ('Effect', 'New signups are being refused.', False)],
                               colour=0xFF6B6B, ping=True)
@@ -1714,7 +1815,7 @@ def api_errors():
             key = 'crash:' + hashlib.sha256(worst[0].encode()).hexdigest()[:16]
             if not rate_limit(conn, key, limit=1, window=3600):
                 conn.commit()
-                notify_async(ALERT_HOOK, 'Crash on a real device',
+                alert_async(ALERT_HOOK, 'Crash on a real device',
                               [('Error', worst[0], False), ('Where', worst[1], False),
                                ('User', g.username, True),
                                ('Console', 'Errors tab', True)],
