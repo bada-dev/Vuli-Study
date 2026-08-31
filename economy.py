@@ -477,6 +477,43 @@ def apply_equip(conn, username, slot, item_id, now_ts):
     return {'slot': slot, 'item': item_id}
 
 
+def apply_time_decay(conn, username, now_ts):
+    """
+    Happiness falls while you are away. Charged on READ, so nothing has to be
+    running for it to happen — no cron, no timer, no open app.
+
+    This exists because the decay was never actually reaching the server. The
+    phone dropped happiness locally every 30 minutes, the server never decayed
+    at all, and the /me poll — which runs every 20 seconds — copied the server's
+    untouched 100 straight back over the top. The buddy could not get sad.
+
+    `updated_at` is the anchor: it is the last time anything touched this
+    account's economy, and _save() bumps it. That makes the charge naturally
+    self-limiting — decaying writes a new updated_at, so the next call sees zero
+    days elapsed and does nothing until another day has actually passed.
+    """
+    e = _load(conn, username)
+    if e['is_dead'] or e['happiness'] <= 0:
+        return e['happiness']
+
+    anchor = int(e['updated_at'] or 0)
+    if anchor <= 0:
+        # A legacy row that predates updated_at being written. Start its clock
+        # from now rather than reading 1970 and killing the buddy instantly.
+        _save(conn, username, e, now_ts)
+        return e['happiness']
+
+    days = (now_ts - anchor) // 86400
+    if days <= 0:
+        return e['happiness']
+
+    e['happiness'] = _clamp(e['happiness'] - HAPPINESS_DECAY * int(days), 0, 100)
+    if e['happiness'] == 0:
+        e['is_dead'] = 1
+    _save(conn, username, e, now_ts)
+    return e['happiness']
+
+
 def apply_happiness_decay(conn, username, now_ts):
     """Called on read, not on a timer — the buddy gets sad while you're away."""
     e = _load(conn, username)
