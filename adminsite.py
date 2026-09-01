@@ -537,6 +537,12 @@ def register(app):
             replied = f'<div class="meta">You replied: {_esc(r["reply"])}</div>' if r['reply'] else ''
             parts.append(
                 f'<div class="sg">'
+                f'<form method="post" action="{url_for("console_delete_suggestion")}" '
+                f'style="float:right;margin:-4px -4px 0 8px">'
+                f'<input type="hidden" name="id" value="{r["id"]}">'
+                f'<button class="danger" title="Delete this suggestion" '
+                f'style="padding:2px 9px;font-size:14px;line-height:1.2">&times;</button>'
+                f'</form>'
                 f'<div class="meta"><span class="tag {kind}">{kind}</span> '
                 f'<b>{_esc(r["username"])}</b> · {when} UTC · v{_esc(r["version"])} '
                 f'· Android {_esc(r["android"])} '
@@ -702,6 +708,20 @@ def register(app):
         return redirect(url_for('console_suggestions',
                                 msg=f'Reply queued for {row["username"]}.'))
 
+    @app.route('/console/suggestions/delete', methods=['POST'])
+    def console_delete_suggestion():
+        """Cross one off. Suggestions are the only thing here worth keeping by
+        hand, so they are removed one at a time rather than swept by age."""
+        sid = (request.form.get('id') or '').strip()
+        conn = get_db()
+        try:
+            conn.execute('DELETE FROM suggestions WHERE id=?', (sid,))
+            _audit(conn, 'delete-suggestion', sid, '')
+            conn.commit()
+        finally:
+            conn.close()
+        return redirect(url_for('console_suggestions', msg=f'Suggestion {sid} deleted.'))
+
     # -----------------------------------------------------------------------
     # Ops — the switches that are not row edits
     # -----------------------------------------------------------------------
@@ -785,11 +805,21 @@ def register(app):
             f'<input name="code" placeholder="CODE" maxlength="30" required>'
             f'<button>create / reset</button></form></div>')
         parts.append(
+            f'<div class="card"><h3>Clean up old junk</h3>'
+            f'<p>Deletes everything older than <b>7 days</b> from the audit log, '
+            f'error reports, the processed-events ledger, nonces, rate limits, '
+            f'and inbox messages already read. These grow forever and are worth '
+            f'nothing once they are old. <b>Suggestions are never touched</b> — '
+            f'cross those off individually on the suggestions page.</p>'
+            f'<form method="post" action="{url_for("console_cleanup")}">'
+            f'<div class="row"><button class="danger">delete junk older than 7 days'
+            f'</button></div></form></div>')
+        parts.append(
             f'<div class="card"><h3>Test the alert channels</h3>'
-            f'<p>Sends a real alert down every route that is configured and tells '
-            f'you which ones actually worked. Use it after changing SUGGEST_HOOK, '
-            f'IMP_EMAIL or the SMTP variables — it is the only way to find out '
-            f'whether email is really wired up without waiting for a crash.</p>'
+            f'<p>Fires a separate test down <b>every</b> route — all three webhooks by '
+            f'name, Telegram, ntfy and email — and reports each one individually, '
+            f'so you can see exactly which channel is broken rather than just '
+            f'that something is.</p>'
             f'<form method="post" action="{url_for("console_test_alert")}">'
             f'<div class="row"><button>send test alert</button></div></form></div>')
         parts.append('</div>')
@@ -832,31 +862,105 @@ def register(app):
             ('When', time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()), True),
             ('Meaning', 'If you are reading this, this channel works.', False),
         ]
-        by_hook = main_mod.notify(main_mod.ALERT_HOOK, 'Test alert', fields)
-        by_mail = main_mod.email_alert('Test alert', fields)
+        # Every route, individually, named. All three hooks currently point at
+        # the same relay, so firing only one of them proves nothing about the
+        # other two — and a title of "Test alert" alone would not tell you which
+        # channel it arrived through.
+        lines, any_ok = [], False
+        for label, hook in (('SUGGEST_HOOK',  main_mod.SUGGEST_HOOK),
+                            ('NEW_JOIN_HOOK', main_mod.NEW_JOIN_HOOK),
+                            ('ALERT_HOOK',    main_mod.ALERT_HOOK)):
+            if not hook:
+                lines.append(f'{label}: unset')
+                continue
+            ok = main_mod.discord(hook, f'TEST · {label}', fields, ping=False)
+            any_ok = any_ok or ok
+            lines.append(f'{label}: {"delivered" if ok else "FAILED"}')
 
-        hook_txt = 'webhook: delivered' if by_hook else \
-                   'webhook: FAILED (or ALERT_HOOK is unset)'
+        if main_mod.TELEGRAM_TOKEN and main_mod.TELEGRAM_CHAT_ID:
+            ok = main_mod.telegram('TEST · telegram', fields)
+            any_ok = any_ok or ok
+            lines.append('telegram: ' + ('sent' if ok else 'FAILED'))
+        else:
+            lines.append('telegram: unset')
+
+        if main_mod.NTFY_TOPIC:
+            ok = main_mod.ntfy('TEST · ntfy', fields)
+            any_ok = any_ok or ok
+            lines.append('ntfy: ' + ('sent' if ok else 'FAILED'))
+        else:
+            lines.append('ntfy: unset')
+
+        by_mail = main_mod.email_alert('TEST · email', fields)
+        any_ok = any_ok or by_mail
         if by_mail:
             how = 'Resend' if main_mod.RESEND_KEY else 'SMTP'
-            mail_txt = f'email: sent to {main_mod.IMP_EMAIL} via {how}'
+            lines.append(f'email: sent to {main_mod.IMP_EMAIL} via {how}')
         elif not main_mod.IMP_EMAIL:
-            mail_txt = 'email: skipped — IMP_EMAIL is not set'
+            lines.append('email: unset (IMP_EMAIL)')
         elif not (main_mod.RESEND_KEY or (main_mod.SMTP_USER and main_mod.SMTP_PASS)):
-            mail_txt = ('email: skipped — set RESEND_KEY (easiest), '
-                        'or SMTP_USER + SMTP_PASS')
+            lines.append('email: unset (RESEND_KEY, or SMTP_USER + SMTP_PASS)')
         else:
-            mail_txt = 'email: FAILED — check the Render logs for the reason'
+            lines.append('email: FAILED — see the Render logs')
+
+        summary = '  ·  '.join(lines)
 
         conn = get_db()
         try:
-            _audit(conn, 'test-alert', None, f'{hook_txt} | {mail_txt}')
+            _audit(conn, 'test-alert', None, summary)
             conn.commit()
         finally:
             conn.close()
 
-        key = 'msg' if (by_hook or by_mail) else 'err'
-        return redirect(url_for('console_ops', **{key: f'{hook_txt}  ·  {mail_txt}'}))
+        key = 'msg' if any_ok else 'err'
+        return redirect(url_for('console_ops', **{key: summary}))
+
+    # Tables that accumulate forever and are worthless once they are old. Each
+    # is (table, timestamp column). Deliberately does NOT include suggestions —
+    # those are feedback from real people and get deleted one at a time, on
+    # purpose, from the suggestions page.
+    CLEANUP_TABLES = [
+        ('admin_audit',      'at'),
+        ('app_errors',       'created_at'),
+        ('processed_events', 'processed_at'),
+        ('nonces',           'seen_at'),
+        ('rate_limits',      'window_start'),
+    ]
+
+    @app.route('/console/ops/cleanup', methods=['POST'])
+    def console_cleanup():
+        """Delete the junk older than a week.
+
+        processed_events is the idempotency ledger, so dropping old rows in
+        theory allows a week-old event_id to be credited twice — in practice no
+        client holds a queued event for seven days, and it is by far the fastest
+        growing table here. nonces and rate_limits regenerate themselves.
+        """
+        cutoff = int(time.time()) - 7 * 24 * 3600
+        done = []
+        conn = get_db()
+        try:
+            for table, col in CLEANUP_TABLES:
+                try:
+                    cur = conn.execute(f'DELETE FROM "{table}" WHERE "{col}" < ?', (cutoff,))
+                    done.append(f'{table} {cur.rowcount}')
+                except Exception:
+                    # A table that does not exist yet must not abort the rest.
+                    conn.rollback()
+                    done.append(f'{table} skipped')
+            try:
+                cur = conn.execute(
+                    'DELETE FROM inbox WHERE seen_at > 0 AND created_at < ?', (cutoff,))
+                done.append(f'inbox(read) {cur.rowcount}')
+            except Exception:
+                conn.rollback()
+                done.append('inbox skipped')
+            _audit(conn, 'cleanup', None, ', '.join(done))
+            conn.commit()
+        finally:
+            conn.close()
+        return redirect(url_for('console_ops',
+                                msg='Deleted rows older than 7 days — ' + ', '.join(done)))
 
     @app.route('/console/ops/create-user', methods=['POST'])
     def console_create_user():
