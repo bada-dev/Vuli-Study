@@ -518,7 +518,7 @@ def api_signup():
             quiet = rate_limit(conn, 'alert:maxacc', limit=1, window=86400)
             conn.commit()
             if not quiet:
-                alert_async(ALERT_HOOK, 'Account cap reached',
+                alert_async(ALERT_HOOK, 'ALERT · account cap reached',
                               [('Cap (MAX_ACC)', MAX_ACC, True), ('Accounts', total, True),
                                ('Effect', 'New signups are being refused.', False)],
                               colour=0xFF6B6B, ping=True)
@@ -537,7 +537,7 @@ def api_signup():
         token = issue_token(conn, username, device_id, data.get('platform', 'app'))
         secret = issue_device_secret(conn, username, device_id)
         conn.commit()
-        discord_async(NEW_JOIN_HOOK, 'New account',
+        discord_async(NEW_JOIN_HOOK, 'JOIN · new account',
                       [('Username', username, True),
                        ('Accounts now', total + 1, True)],
                       colour=0x70A1FF, ping=False)
@@ -1653,7 +1653,7 @@ def flush_suggestions(conn):
             tick = '✅ latest' if r['version'] == LATEST_VERSION else '❌ outdated'
         else:
             tick = '—  (set LATEST_VERSION)'
-        if not notify(SUGGEST_HOOK, f"{r['kind'].upper()} · {r['username']}",
+        if not notify(SUGGEST_HOOK, f"SUGGESTION · {r['kind'].upper()} · {r['username']}",
                        [('Message', r['message'], False),
                         ('Version', f"{r['version']}  {tick}", True),
                         ('Android', r['android'], True),
@@ -1765,7 +1765,7 @@ def api_inbox_ack():
                 and secrets.compare_digest(str(d.get('token') or ''), row['reply_token']):
             conn.execute('UPDATE inbox SET replied=1, reply_token=NULL WHERE id=?',
                          (row['id'],))
-            notify_async(SUGGEST_HOOK, f'Reply · {g.username}',
+            notify_async(SUGGEST_HOOK, f'SUGGESTION · reply from {g.username}',
                           [('They said', reply, False)], colour=0xFFD700, ping=True)
         conn.commit()
         return ok()
@@ -1821,7 +1821,7 @@ def api_errors():
             key = 'crash:' + hashlib.sha256(worst[0].encode()).hexdigest()[:16]
             if not rate_limit(conn, key, limit=1, window=3600):
                 conn.commit()
-                alert_async(ALERT_HOOK, 'Crash on a real device',
+                alert_async(ALERT_HOOK, 'ALERT · crash on a real device',
                               [('Error', worst[0], False), ('Where', worst[1], False),
                                ('User', g.username, True),
                                ('Console', 'Errors tab', True)],
@@ -1997,6 +1997,26 @@ def api_ai_plan():
         is_low_data = (total_mins < 30 and streak_days < 2 and not subjects and not pending)
         is_followup = bool(convo)
 
+        # One person is not a student to VuliAi — he is the reason VuliAi runs at
+        # all. Rather than ordering the model to "be funny", which reliably
+        # produces the worst possible jokes, it is given one specific true fact
+        # and left to do something with it. The plan itself stays completely
+        # serious; only the aside changes.
+        easter_egg = ''
+        if g.username == 'EthanGenius':
+            easter_egg = (
+                "\n\nONE MORE THING, and treat it as true rather than as a joke to "
+                "perform: the student you are talking to right now is the developer "
+                "who built VuliStudy. He wrote the timer, the buddy, the shop, the "
+                "server you are running on, and the code that is sending you this "
+                "very prompt. You exist because he kept going at it. Work exactly "
+                "ONE short aside about that into your reply — somewhere natural, "
+                "not the opening line — and let it carry the specific irony that "
+                "you are now the one telling HIM to manage his time better. Dry and "
+                "affectionate, not sycophantic, and absolutely no more than one "
+                "sentence. Everything else in the plan stays exactly as serious and "
+                "as useful as it would be for anyone else.")
+
         if is_followup:
             mode_instructions = (
                 "MODE: FOLLOW-UP REPLY. The student just sent you a single reply. Respond "
@@ -2055,7 +2075,7 @@ Hard formatting rules:
 - Keep the ENTIRE response under 1250 characters.
 - Always use second person.
 - If you use a quote, it MUST be the final line, alone.
-{quotes_block}{convo_text}"""
+{quotes_block}{convo_text}{easter_egg}"""
 
         for key in (API_ONE, API_TWO):
             if not key:
