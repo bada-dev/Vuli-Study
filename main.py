@@ -440,8 +440,8 @@ def purge_user(conn, username):
     for table in ('economy', 'sessions', 'devices', 'processed_events',
                   'admin_tokens', 'chat_members', 'chat_messages',
                   'chat_timer_presence', 'weekly_study', 'daily_study',
-                  'live_sessions', 'focus_sessions', 'todos', 'suggestions',
-                  'inbox', 'app_errors'):
+                  'manual_study', 'live_sessions', 'focus_sessions', 'todos',
+                  'suggestions', 'inbox', 'app_errors'):
         try:
             conn.execute(f'DELETE FROM {table} WHERE username=?', (username,))
         except Exception:
@@ -989,6 +989,52 @@ def api_shop():
 # ===========================================================================
 # Leaderboard
 # ===========================================================================
+# ---------------------------------------------------------------------------
+# Leaderboard placeholders
+#
+# Rows the console owns that sit on the board alongside real people. They are
+# not accounts and never touch auth, the economy or any reward path — the whole
+# feature is this one read, merged in at display time.
+#
+# They are left OFF the friends board on purpose. You cannot be friends with a
+# placeholder, and the friends board is the one where every name is someone the
+# user actually agreed to.
+# ---------------------------------------------------------------------------
+def ghost_rows(conn, weekly):
+    """Enabled placeholders, shaped exactly like a leaderboard row."""
+    try:
+        rows = conn.execute(
+            'SELECT username, weekly_minutes, total_minutes, streak, happiness,'
+            ' is_premium, equipped_cosmetic, active_background'
+            ' FROM ghost_users WHERE enabled=1').fetchall()
+    except Exception:
+        return []          # table not created yet — the board must still work
+    out = []
+    for r in rows:
+        row = {'username': r['username'],
+               'total_minutes': int(r['total_minutes'] or 0),
+               'streak': int(r['streak'] or 0),
+               'reborns': 0,
+               'equipped_cosmetic': r['equipped_cosmetic'],
+               'active_background': r['active_background'] or 'default',
+               'character_width': 140,
+               'is_premium': int(r['is_premium'] or 0),
+               'happiness': int(r['happiness'] if r['happiness'] is not None else 100)}
+        if weekly:
+            row['weekly_minutes'] = int(r['weekly_minutes'] or 0)
+        out.append(row)
+    return out
+
+
+def merge_ghosts(rows, ghosts, weekly, limit=20):
+    """Sort real rows and placeholders together, same ordering as the query."""
+    if not ghosts:
+        return rows
+    key = ((lambda r: (r.get('weekly_minutes', 0), r.get('total_minutes', 0)))
+           if weekly else (lambda r: r.get('total_minutes', 0)))
+    return sorted(rows + ghosts, key=key, reverse=True)[:limit]
+
+
 @app.route('/api/v1/leaderboard', methods=['GET'])
 @app_auth
 def api_leaderboard():
@@ -1052,8 +1098,10 @@ def api_leaderboard():
         # only show you the top 20 — so anyone outside it opened the leaderboard
         # and found nothing about themselves at all, which is why it read as
         # "this isn't for me". Two cheap counts, no window function needed.
-        return jsonify({'top': [dict(r) for r in rows],
-                        'me': my_rank(conn, request.args.get('period'))})
+        top = merge_ghosts([dict(r) for r in rows],
+                           ghost_rows(conn, period == 'weekly'),
+                           period == 'weekly')
+        return jsonify({'top': top, 'me': my_rank(conn, period)})
     finally:
         conn.close()
 
@@ -1083,6 +1131,22 @@ def my_rank(conn, period):
 
     total = conn.execute('SELECT COUNT(*) AS c FROM users WHERE is_active=1'
                          ' AND is_banned=0').fetchone()['c']
+
+    # Placeholders are visible on the board, so they have to be counted here as
+    # well. Leaving them out is what makes them obvious: you would be shown as
+    # 1st while plainly sitting underneath someone in the list.
+    column = 'weekly_minutes' if period == 'weekly' else 'total_minutes'
+    try:
+        g_ahead = conn.execute(
+            f'SELECT COUNT(*) AS c FROM ghost_users WHERE enabled=1 AND {column} > ?',
+            (mine,)).fetchone()['c']
+        g_total = conn.execute(
+            'SELECT COUNT(*) AS c FROM ghost_users WHERE enabled=1').fetchone()['c']
+    except Exception:
+        g_ahead = g_total = 0
+    ahead += g_ahead
+    total += g_total
+
     return {'username': g.username, 'rank': ahead + 1, 'minutes': mine, 'total': total}
 
 
@@ -1621,6 +1685,136 @@ def api_focus_history():
             'SELECT * FROM focus_sessions WHERE username=? ORDER BY id DESC LIMIT 30',
             (g.username,)).fetchall()
         return ok(sessions=[dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+# ===========================================================================
+# Logged study — sessions the user types in by hand
+#
+# Someone studies in a lesson, or on paper, or their phone dies mid-session.
+# That time is real and it should show up on their graph. But we cannot verify
+# a single second of it, so it earns NOTHING: no coins, no carrots, no
+# happiness, no streak, no total_minutes, and — the one that would actually
+# matter — no place on the leaderboard.
+#
+# The way that is guaranteed is not a flag on a row that every future query has
+# to remember to filter. It is a separate table that the paying code never
+# reads at all. economy.apply_session_completed is simply never called from
+# here, so there is no reward path to leak through.
+#
+# Cheating this gets you a nicer looking graph on your own phone. That is the
+# entire prize, which is the point.
+# ===========================================================================
+LOG_MAX_MINUTES_PER_ENTRY = 1440      # 24h — a single entry can't exceed a day
+LOG_MAX_MINUTES_PER_DAY = 1440        # and neither can a day's entries together
+LOG_MAX_BACKDATE_DAYS = 30            # far enough to fix a forgotten week
+LOG_MAX_ENTRIES_PER_DAY = 20          # stops the table being used as storage
+LOG_NOTE_MAX = 60
+
+
+def _log_allowed_days(conn, username, now_ts):
+    """The dates this user may log against: their own local today, back 30 days.
+
+    Uses the same tz_offset as streaks do, so someone can't shift their clock to
+    open up a future date. Returns (today, set_of_allowed_days)."""
+    row = conn.execute('SELECT tz_offset FROM users WHERE username=?',
+                       (username,)).fetchone()
+    tz = row['tz_offset'] if row else 0
+    days = [economy.local_date(tz, now_ts - i * 86400)
+            for i in range(LOG_MAX_BACKDATE_DAYS + 1)]
+    return days[0], set(days)
+
+
+def _logged_map(conn, username):
+    """{'YYYY-MM-DD': minutes} for everything this user has logged by hand."""
+    rows = conn.execute(
+        'SELECT day, SUM(minutes) AS m FROM manual_study WHERE username=?'
+        ' GROUP BY day', (username,)).fetchall()
+    return {r['day']: int(r['m'] or 0) for r in rows}
+
+
+@app.route('/api/v1/study/log', methods=['POST'])
+@app_auth
+def api_study_log():
+    d = body()
+    try:
+        minutes = int(d.get('minutes', 0))
+    except (TypeError, ValueError):
+        return fail('Minutes must be a number.')
+    day = str(d.get('day') or '').strip()
+    note = str(d.get('note') or '').strip()[:LOG_NOTE_MAX]
+
+    if minutes < 1:
+        return fail('Log at least one minute.')
+    if minutes > LOG_MAX_MINUTES_PER_ENTRY:
+        return fail('That is more than a day.')
+
+    conn = get_db()
+    try:
+        today, allowed = _log_allowed_days(conn, g.username, g.now)
+        if day not in allowed:
+            # Covers a malformed date, a future date, and anything older than
+            # the backdate window, all with one honest message.
+            return fail('Pick a day between today and %d days ago.'
+                        % LOG_MAX_BACKDATE_DAYS)
+
+        if rate_limit(conn, f'studylog:{g.username}',
+                      limit=LOG_MAX_ENTRIES_PER_DAY, window=86400):
+            conn.commit()
+            return fail('You have logged enough for one day.', 429)
+
+        already = conn.execute(
+            'SELECT COALESCE(SUM(minutes),0) AS m FROM manual_study'
+            ' WHERE username=? AND day=?', (g.username, day)).fetchone()
+        if int(already['m'] or 0) + minutes > LOG_MAX_MINUTES_PER_DAY:
+            conn.commit()
+            return fail('That day would go over 24 hours.')
+
+        conn.execute(
+            'INSERT INTO manual_study (username,day,minutes,note,created_at)'
+            ' VALUES (?,?,?,?,?)',
+            (g.username, day, minutes, note, g.now))
+        conn.commit()
+        # No state=... here on purpose: nothing about the economy changed.
+        return ok(logged=_logged_map(conn, g.username), today=today)
+    finally:
+        conn.close()
+
+
+@app.route('/api/v1/study/logged', methods=['POST'])
+@app_auth
+def api_study_logged():
+    conn = get_db()
+    try:
+        today, _ = _log_allowed_days(conn, g.username, g.now)
+        rows = conn.execute(
+            'SELECT id, day, minutes, note, created_at FROM manual_study'
+            ' WHERE username=? ORDER BY day DESC, id DESC LIMIT 200',
+            (g.username,)).fetchall()
+        return ok(logged=_logged_map(conn, g.username),
+                  entries=[dict(r) for r in rows], today=today)
+    finally:
+        conn.close()
+
+
+@app.route('/api/v1/study/log/delete', methods=['POST'])
+@app_auth
+def api_study_log_delete():
+    try:
+        entry_id = int(body().get('id', 0))
+    except (TypeError, ValueError):
+        return fail('Bad entry.')
+    conn = get_db()
+    try:
+        # username in the WHERE, not just the id — an id alone would let anyone
+        # delete anyone else's row.
+        cur = conn.execute('DELETE FROM manual_study WHERE id=? AND username=?',
+                           (entry_id, g.username))
+        conn.commit()
+        if not cur.rowcount:
+            return fail('That entry is not there.', 404)
+        return ok(logged=_logged_map(conn, g.username))
     finally:
         conn.close()
 
