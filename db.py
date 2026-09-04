@@ -488,6 +488,43 @@ SCHEMA = [
         android    TEXT,
         created_at BIGINT NOT NULL
     )''',
+
+    # Placeholder entries on the leaderboard, controlled entirely from the
+    # console. They are NOT accounts: they cannot log in, cannot be messaged,
+    # do not count toward MAX_ACC, and hold no economy row. They exist only so
+    # a brand new user does not open the leaderboard and find it empty.
+    #
+    # Kept in their own table for the same reason manual_study is: nothing that
+    # awards, authenticates or charges anything reads this, so a placeholder
+    # can never accidentally become a real participant in any of it.
+    '''CREATE TABLE IF NOT EXISTS ghost_users (
+        id                BIGSERIAL PRIMARY KEY,
+        username          TEXT NOT NULL,
+        weekly_minutes    INTEGER DEFAULT 0,
+        total_minutes     INTEGER DEFAULT 0,
+        streak            INTEGER DEFAULT 0,
+        happiness         INTEGER DEFAULT 100,
+        is_premium        INTEGER DEFAULT 0,
+        equipped_cosmetic TEXT,
+        active_background TEXT DEFAULT 'default',
+        enabled           INTEGER DEFAULT 0,
+        updated_at        BIGINT DEFAULT 0
+    )''',
+
+    # Study the user typed in by hand instead of running the timer.
+    #
+    # This lives in its own table ON PURPOSE. Nothing that pays out — not the
+    # economy, not weekly_study, not users.total_minutes — ever reads it, so
+    # fake minutes cannot leak into a reward by someone (me included) later
+    # forgetting a WHERE clause. Deliberately fails closed.
+    '''CREATE TABLE IF NOT EXISTS manual_study (
+        id         BIGSERIAL PRIMARY KEY,
+        username   TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+        day        TEXT NOT NULL,
+        minutes    INTEGER DEFAULT 0,
+        note       TEXT DEFAULT '',
+        created_at BIGINT DEFAULT 0
+    )''',
 ]
 
 INDEXES = [
@@ -503,6 +540,7 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_inbox_unseen ON inbox(username, seen_at)',
     'CREATE INDEX IF NOT EXISTS idx_sugg_undelivered ON suggestions(delivered, id)',
     'CREATE INDEX IF NOT EXISTS idx_errors_at ON app_errors(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_manual_user_day ON manual_study(username, day)',
 ]
 
 # Columns added after the first Postgres deploy. Adding a column to a live table
