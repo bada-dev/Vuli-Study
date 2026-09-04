@@ -73,11 +73,29 @@ EDITABLE = {
         'pk': 'id',
         'columns': {'name': ('text', 30)},
     },
+    # Leaderboard placeholders. Every field is yours to set from the console --
+    # that is the whole point of them. `enabled` is the switch: 0 and the row is
+    # invisible to the app, so you can set one up before it ever shows.
+    'ghost_users': {
+        'pk': 'id',
+        'columns': {
+            'username':       ('text', 20),
+            'weekly_minutes': ('int', 0, 10_080),
+            'total_minutes':  ('int', 0, economy.MAX_TOTAL_MINUTES),
+            'streak':         ('int', 0, economy.MAX_STREAK),
+            'happiness':      ('int', 0, 100),
+            'is_premium':     ('int', 0, 1),
+            'enabled':        ('int', 0, 1),
+            'equipped_cosmetic': ('choice', economy.VALID_COSMETICS),
+            'active_background': ('choice', economy.VALID_BACKGROUNDS),
+        },
+    },
 }
 
 # Read-only views, for looking without touching.
 VIEWABLE = ['users', 'economy', 'premium_codes', 'inbox', 'chats', 'chat_members',
             'chat_messages', 'friend_requests', 'daily_study', 'weekly_study',
+            'manual_study', 'ghost_users',
             'focus_sessions', 'live_sessions', 'admin_audit', 'processed_events']
 
 # Tables worth searching by person. Anything here gets a search box that filters
@@ -85,6 +103,7 @@ VIEWABLE = ['users', 'economy', 'premium_codes', 'inbox', 'chats', 'chat_members
 SEARCH_COLUMN = {
     'users': 'username', 'economy': 'username', 'inbox': 'username',
     'daily_study': 'username', 'weekly_study': 'username',
+    'manual_study': 'username', 'ghost_users': 'username',
     'focus_sessions': 'username', 'live_sessions': 'username',
     'chat_members': 'username', 'chat_messages': 'username',
     'premium_codes': 'code', 'admin_audit': 'target',
@@ -708,6 +727,134 @@ def register(app):
         return redirect(url_for('console_suggestions',
                                 msg=f'Reply queued for {row["username"]}.'))
 
+    # =======================================================================
+    # Messaging a user
+    #
+    # This reuses the inbox that console replies already ride on, so there is
+    # no second delivery path to keep working. The row sits in `inbox` until
+    # that account next opens the app; /api/v1/me carries it down on the very
+    # next poll and the phone shows it as a dialog. Nothing is pushed, nothing
+    # needs a notification token, and someone who never opens the app again
+    # simply never sees it - which is the honest behaviour.
+    #
+    # A reply token is OPTIONAL here, unlike a suggestion reply. On a broadcast
+    # you almost never want one: every reply pings Discord, so ticking it for
+    # 200 people is asking to be flooded by your own feature.
+    # =======================================================================
+    MESSAGE_MAX = 1000
+    BROADCAST_CAP = 2000
+
+    @app.route('/console/ops/message', methods=['POST'])
+    def console_message():
+        to = (request.form.get('to') or '').strip()
+        text = (request.form.get('body') or '').strip()[:MESSAGE_MAX]
+        allow_reply = request.form.get('reply') == '1'
+        if not text:
+            return redirect(url_for('console_ops', err='Write something first.'))
+
+        conn = get_db()
+        try:
+            if to:
+                row = conn.execute('SELECT username FROM users WHERE username=?',
+                                   (to,)).fetchone()
+                if not row:
+                    return redirect(url_for('console_ops',
+                                            err=f'No account called {to}.'))
+                targets = [row['username']]
+            else:
+                # Messaging everyone is one click away from messaging everyone
+                # by accident, so it needs the box ticked as well.
+                if request.form.get('confirm') != '1':
+                    return redirect(url_for('console_ops',
+                                            err='Tick the box to message everyone.'))
+                rows = conn.execute(
+                    'SELECT username FROM users WHERE is_active=1 AND is_banned=0'
+                    ' ORDER BY username LIMIT ?', (BROADCAST_CAP,)).fetchall()
+                targets = [r['username'] for r in rows]
+
+            now = int(time.time())
+            queued, skipped = 0, 0
+            for username in targets:
+                # Don't stack the same unread message twice. A double-clicked
+                # form should not mean two identical dialogs on their phone.
+                dupe = conn.execute(
+                    'SELECT 1 FROM inbox WHERE username=? AND body=? AND seen_at=0',
+                    (username, text)).fetchone()
+                if dupe:
+                    skipped += 1
+                    continue
+                conn.execute(
+                    'INSERT INTO inbox (username, body, created_at, reply_token)'
+                    ' VALUES (?,?,?,?)',
+                    (username, text, now,
+                     secrets.token_hex(16) if allow_reply else None))
+                queued += 1
+
+            _audit(conn, 'message', to or 'ALL', text[:200])
+            conn.commit()
+        finally:
+            conn.close()
+
+        who = to if to else f'{len(targets)} accounts'
+        note = f'Queued for {who}.'
+        if skipped:
+            note += f' {skipped} already had it unread.'
+        note += ' They see it next time they open the app.'
+        return redirect(url_for('console_ops', msg=note))
+
+    # =======================================================================
+    # Leaderboard placeholders
+    #
+    # Two are created for you the first time you open this card. Everything
+    # about them -- name, minutes, streak, whether they show at all -- is edited
+    # on the ghost_users table page like any other row.
+    #
+    # They are not accounts. Nothing here writes to users, economy or any table
+    # that pays out, so a placeholder cannot earn, be logged into, or be counted
+    # against MAX_ACC.
+    # =======================================================================
+    GHOST_CAP = 10
+
+    @app.route('/console/ops/ghost/add', methods=['POST'])
+    def console_ghost_add():
+        name = (request.form.get('username') or '').strip()[:20]
+        if not name:
+            return redirect(url_for('console_ops', err='Give it a name first.'))
+        conn = get_db()
+        try:
+            n = conn.execute('SELECT COUNT(*) c FROM ghost_users').fetchone()['c']
+            if n >= GHOST_CAP:
+                return redirect(url_for('console_ops',
+                                        err=f'{GHOST_CAP} is plenty. Delete one first.'))
+            clash = conn.execute('SELECT 1 FROM users WHERE username=?', (name,)).fetchone()
+            if clash:
+                return redirect(url_for('console_ops',
+                                        err=f'{name} is a real account. Pick another name.'))
+            conn.execute(
+                'INSERT INTO ghost_users (username, enabled, updated_at) VALUES (?,0,?)',
+                (name, int(time.time())))
+            _audit(conn, 'ghost:add', name, '')
+            conn.commit()
+        finally:
+            conn.close()
+        return redirect(url_for('console_table', table='ghost_users',
+                                msg=f'{name} created, switched off. '
+                                    f'Set its numbers, then set enabled to 1.'))
+
+    @app.route('/console/ops/ghost/delete', methods=['POST'])
+    def console_ghost_delete():
+        gid = (request.form.get('id') or '').strip()
+        conn = get_db()
+        try:
+            cur = conn.execute('DELETE FROM ghost_users WHERE id=?', (gid,))
+            _audit(conn, 'ghost:delete', gid, '')
+            conn.commit()
+        finally:
+            conn.close()
+        if not cur.rowcount:
+            return redirect(url_for('console_ops', err=f'No placeholder with id {gid}.'))
+        return redirect(url_for('console_ops', msg=f'Placeholder {gid} deleted.'))
+
     @app.route('/console/suggestions/delete', methods=['POST'])
     def console_delete_suggestion():
         """Cross one off. Suggestions are the only thing here worth keeping by
@@ -732,6 +879,22 @@ def register(app):
             row = conn.execute("SELECT value FROM settings WHERE key='lockdown'").fetchone()
             locked = bool(row and row['value'] == '1')
             total = conn.execute('SELECT COUNT(*) c FROM users').fetchone()['c']
+            # Two placeholders are created the first time this page is opened,
+            # both switched off, so there is something to edit rather than an
+            # empty table and no way to add to it.
+            try:
+                ghost_n = conn.execute('SELECT COUNT(*) c FROM ghost_users').fetchone()['c']
+                if ghost_n == 0:
+                    now = int(time.time())
+                    for name in ('Robyn', 'Sam'):
+                        conn.execute('INSERT INTO ghost_users (username, enabled,'
+                                     ' updated_at) VALUES (?,0,?)', (name, now))
+                    conn.commit()
+                    ghost_n = 2
+                ghost_on = conn.execute(
+                    'SELECT COUNT(*) c FROM ghost_users WHERE enabled=1').fetchone()['c']
+            except Exception:
+                ghost_n = ghost_on = 0
         finally:
             conn.close()
 
@@ -804,6 +967,41 @@ def register(app):
             f'<form class="row" method="post" action="{url_for("console_new_code")}">'
             f'<input name="code" placeholder="CODE" maxlength="30" required>'
             f'<button>create / reset</button></form></div>')
+        parts.append(
+            f'<div class="card"><h3>Leaderboard placeholders</h3>'
+            f'<p><b>{ghost_on} showing</b> of {ghost_n}. These are not accounts &mdash; '
+            f'they cannot log in, earn, or be messaged, and they never appear on '
+            f'the friends board. Edit their names and numbers on the '
+            f'<a href="{url_for("console_table", table="ghost_users")}">ghost_users</a> '
+            f'page; set <b>enabled</b> to 1 to make one visible.</p>'
+            f'<form class="row" method="post" action="{url_for("console_ghost_add")}">'
+            f'<input name="username" placeholder="name" maxlength="20" required>'
+            f'<button>add</button></form>'
+            f'<form class="row" style="margin-top:8px" method="post" '
+            f'action="{url_for("console_ghost_delete")}">'
+            f'<input name="id" placeholder="id to delete" required>'
+            f'<button class="danger">delete</button></form></div>')
+        parts.append(
+            f'<div class="card"><h3>Message a user</h3>'
+            f'<p>Drops a message into their inbox. They see it as a dialog the '
+            f'next time they open the app - not a push notification, so someone '
+            f'who never opens it again never sees it. '
+            f'<b>Leave the username blank to message everyone</b>, which needs '
+            f'the box ticked as well.</p>'
+            f'<form method="post" action="{url_for("console_message")}">'
+            f'<div class="row"><input name="to" placeholder="username (blank = everyone)">'
+            f'</div>'
+            f'<div class="row" style="margin-top:8px">'
+            f'<textarea name="body" rows="3" maxlength="1000" required '
+            f'placeholder="What do you want to say?" '
+            f'style="width:100%;font:inherit;padding:8px;border-radius:8px;'
+            f'border:1px solid #444;background:#1b1b1b;color:inherit"></textarea></div>'
+            f'<div class="row" style="margin-top:8px;gap:14px">'
+            f'<label><input type="checkbox" name="reply" value="1"> let them reply once</label>'
+            f'<label><input type="checkbox" name="confirm" value="1"> yes, everyone</label>'
+            f'</div>'
+            f'<div class="row" style="margin-top:8px"><button>send</button></div>'
+            f'</form></div>')
         parts.append(
             f'<div class="card"><h3>Clean up old junk</h3>'
             f'<p>Deletes everything older than <b>7 days</b> from the audit log, '
