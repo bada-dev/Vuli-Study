@@ -640,6 +640,20 @@ def api_me():
         # only place decay happens — it used to happen on the phone, where the
         # very next poll overwrote it.
         economy.apply_time_decay(conn, g.username, g.now)
+
+        # Opening the app IS activity. last_active used to move only when you
+        # completed a session or logged in -- so anyone who used the app daily
+        # without finishing a timer went stale after three days and the
+        # leaderboard's own sweep dropped them off the board. You could be the
+        # most active person on it and still not be on it.
+        #
+        # Conditional on purpose: /me is polled every 20 seconds, and this must
+        # not become a write every 20 seconds per user. Stale by an hour or
+        # more and it updates; otherwise the WHERE matches nothing and it costs
+        # a no-op. is_active is deliberately NOT touched here -- coming back
+        # after three days away still goes through the rejoin prompt.
+        conn.execute('UPDATE users SET last_active=? WHERE username=? AND last_active < ?',
+                     (g.now, g.username, g.now - 3600))
         conn.commit()
         # The inbox rides this poll rather than getting a loop of its own — the
         # app already asks for /me every 20 seconds while it is open.
@@ -1180,6 +1194,12 @@ def api_chat_create():
     name = (body().get('name') or '').strip()
     if not name or len(name) > 30:
         return fail('Invalid chat name')
+    # A chat name is displayed in the admin console. Free text there was a way
+    # for any user to put markup into a page rendered with admin privileges, so
+    # the characters that matter in HTML are refused at the door as well as
+    # being escaped on the way out. Belt and braces, deliberately.
+    if any(ch in name for ch in '<>"\'&`'):
+        return fail('Chat names cannot contain < > " \' & or `')
     conn = get_db()
     try:
         count = conn.execute('SELECT COUNT(*) c FROM chat_members WHERE username=?',
@@ -1584,13 +1604,18 @@ def api_premium_redeem():
         if u['is_premium']:
             conn.commit()
             return fail('Already premium')
-        row = conn.execute('SELECT code FROM premium_codes WHERE code=? AND redeemed=0',
-                           (code,)).fetchone()
-        if not row:
+        # The UPDATE is the gate, not a SELECT before it. Checking first and
+        # writing second is two steps with a gap in between, and this server
+        # runs 2 workers x 4 threads -- so two requests carrying the same code
+        # could both pass the check and both be handed premium off one code.
+        # `redeemed=0` in the WHERE makes the database itself the referee:
+        # exactly one UPDATE can match, and rowcount says which caller won.
+        cur = conn.execute(
+            'UPDATE premium_codes SET redeemed=1, redeemed_by=?, redeemed_at=?'
+            ' WHERE code=? AND redeemed=0', (g.username, g.now, code))
+        if not cur.rowcount:
             conn.commit()
             return fail('Invalid or already used code')
-        conn.execute('UPDATE premium_codes SET redeemed=1, redeemed_by=?, redeemed_at=? WHERE code=?',
-                     (g.username, g.now, code))
         conn.execute('UPDATE users SET is_premium=1 WHERE username=?', (g.username,))
         conn.commit()
         return ok(state=state_of(conn, g.username))
