@@ -295,11 +295,15 @@ def admin_auth(require_second=False):
 
 
 def audit(conn, action, target=None, detail=None):
+    # client_ip(), not the raw header. Reading X-Forwarded-For directly wrote
+    # whatever the caller typed into the audit log, so anyone could stamp their
+    # admin actions with someone else's address -- an audit trail you cannot
+    # trust is worse than none, because you would act on it.
     conn.execute(
         'INSERT INTO admin_audit (actor, device_id, action, target, detail, ip, at)'
         ' VALUES (?,?,?,?,?,?,?)',
         (getattr(g, 'username', None), getattr(g, 'device_id', None), action,
-         target, detail, request.headers.get('X-Forwarded-For', request.remote_addr),
+         target, detail, client_ip(),
          int(time.time())))
 
 
