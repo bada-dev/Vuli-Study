@@ -53,7 +53,7 @@ MAX_ACC        = int(os.environ.get('MAX_ACC') or 0)
 LATEST_VERSION = (os.environ.get('LATEST_VERSION') or '').strip()
 
 FEEDBACK_COOLDOWN = 48 * 60 * 60
-BLOCKED_USERNAMES = {'admin', 'system', 'null', 'undefined', 'test', 'mod', 'owner'}
+BLOCKED_USERNAMES = {'bada', 'owner', '', 'error', 'admin', 'administrator', 'genius', 'buddy', '1234567'}
 
 init_db()
 
