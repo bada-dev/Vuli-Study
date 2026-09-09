@@ -221,6 +221,32 @@ def _load(conn, username):
 
 
 # THE Rate limit
+def _server_measured_span(conn, username, now_ts):
+    """Minutes of real time since this account's previous session landed here.
+
+    Every wall-clock number in a session payload is written by the phone, so a
+    caller who simply omits started_at/ended_at -- or sends an impossible pair --
+    used to skip the span check entirely and claim a full session instantly.
+
+    processed_at is stamped by US when the event arrives, so it cannot be
+    forged. If your last session was recorded four minutes ago you cannot have
+    just finished an eight-hour one, whatever your phone says. For a first-ever
+    session there is nothing to measure from, so account age is used instead.
+    """
+    row = conn.execute(
+        "SELECT MAX(processed_at) AS t FROM processed_events"
+        " WHERE username=? AND event_type='session_completed'",
+        (username,)).fetchone()
+    anchor = int(row['t'] or 0) if row else 0
+    if anchor <= 0:
+        created = conn.execute('SELECT created_at FROM users WHERE username=?',
+                               (username,)).fetchone()
+        anchor = int(created['created_at'] or 0) if created else 0
+    if anchor <= 0 or anchor > now_ts:
+        return MAX_SESSION_MINUTES        # nothing usable: fall back to the cap
+    return min(MAX_SESSION_MINUTES, (now_ts - anchor) // 60)
+
+
 def _minutes_earned_recently(conn, username, now_ts, window=3600):
     row = conn.execute(
         # NB: no jsonb `?` operator here. `?` is the placeholder marker the db
@@ -280,27 +306,38 @@ def apply_session_completed(conn, username, tz_offset, payload, now_ts):
     # this at all. Only a claim bigger than the elapsed time can.
     started = payload.get('started_at')
     ended = payload.get('ended_at')
+    span_minutes = None
     if started and ended:
         try:
             span_minutes = (int(ended) - int(started)) // 60
         except (TypeError, ValueError):
             span_minutes = None
 
-        # A negative or impossible span means the device clock moved underneath
-        # us — an NTP correction mid-session does exactly that, and so does the
-        # user changing the time by hand. That is the phone being wrong, not the
-        # person, so the check is skipped rather than applied to a number we
-        # already know is nonsense. Abuse stays bounded either way: the cap
-        # above and the rolling hourly limit below do not depend on this.
-        if span_minutes is not None and 0 <= span_minutes <= MAX_SESSION_MINUTES:
-            # A flat allowance, deliberately NOT a percentage of the claim —
-            # a percentage scales with the number the client sent, so claiming
-            # eight hours would buy an eight-hour tolerance.
-            if minutes > span_minutes + WALL_CLOCK_GRACE_MINUTES:
-                minutes = max(0, span_minutes + WALL_CLOCK_GRACE_MINUTES)
-                trimmed = True
-        if minutes <= 0:
-            return {'coins_awarded': 0, 'minutes': 0, 'reason': 'empty'}
+    # A negative or impossible span means the device clock moved underneath us —
+    # an NTP correction mid-session does exactly that, and so does the user
+    # changing the time by hand. That is the phone being wrong, not the person.
+    #
+    # But it used to be handled by SKIPPING the check, and the timestamps are
+    # supplied by the caller. So omitting started_at/ended_at, or sending
+    # ended < started, turned the check off on request: one POST claiming 480
+    # minutes with no timestamps paid 192 coins instantly, every hour, forever.
+    #
+    # An unusable client clock now falls back to a server-measured span instead
+    # of no check at all. Honest phones with a clock jump still get credited
+    # against real elapsed time; a forged payload gets measured by a clock it
+    # cannot reach.
+    usable = span_minutes is not None and 0 <= span_minutes <= MAX_SESSION_MINUTES
+    if not usable:
+        span_minutes = _server_measured_span(conn, username, now_ts)
+
+    # A flat allowance, deliberately NOT a percentage of the claim — a
+    # percentage scales with the number the client sent, so claiming eight
+    # hours would buy an eight-hour tolerance.
+    if minutes > span_minutes + WALL_CLOCK_GRACE_MINUTES:
+        minutes = max(0, span_minutes + WALL_CLOCK_GRACE_MINUTES)
+        trimmed = True
+    if minutes <= 0:
+        return {'coins_awarded': 0, 'minutes': 0, 'reason': 'empty'}
 
     # Need to save money.
     already = _minutes_earned_recently(conn, username, now_ts)
