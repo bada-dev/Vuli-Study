@@ -391,10 +391,14 @@ def register(app):
         parts = []
         msg = request.args.get('msg')
         err = request.args.get('err')
+        # These come off the query string, so they are attacker-controlled the
+        # moment you click a link someone sends you. The ops page already
+        # escaped them; this one did not, which made every /console/<table>
+        # URL a reflected-XSS hole running with your console session.
         if msg:
-            parts.append(f'<div class="msg ok">{msg}</div>')
+            parts.append(f'<div class="msg ok">{_esc(msg)}</div>')
         if err:
-            parts.append(f'<div class="msg err">{err}</div>')
+            parts.append(f'<div class="msg err">{_esc(err)}</div>')
 
         if search_col:
             parts.append(
@@ -439,15 +443,24 @@ def register(app):
                     col_spec = editable_cols[c]
                     if col_spec[0] == 'choice':
                         opts = ''.join(
-                            f'<option value="{"" if o is None else o}"'
+                            f'<option value="{_esc("" if o is None else o)}"'
                             f'{" selected" if d.get(c) == o else ""}>'
-                            f'{"(none)" if o is None else o}</option>'
+                            f'{_esc("(none)" if o is None else o)}</option>'
                             for o in col_spec[1])
-                        cells.append(f'<td><select name="{c}" form="f_{key_value}">{opts}</select></td>')
+                        cells.append(f'<td><select name="{_esc(c)}" '
+                                     f'form="f_{_esc(key_value)}">{opts}</select></td>')
                     else:
+                        # THE hole. This value is written by users -- a chat name
+                        # is free text -- and it went into an HTML attribute with
+                        # no escaping at all. A chat called
+                        #     " autofocus onfocus=fetch(...) x="
+                        # broke out of value="..." and ran with your console
+                        # session, which is every admin power there is. The
+                        # read-only cells below were escaped all along; only the
+                        # editable ones were not.
                         cells.append(
-                            f'<td><input name="{c}" form="f_{key_value}" '
-                            f'value="{"" if d.get(c) is None else d.get(c)}"></td>')
+                            f'<td><input name="{_esc(c)}" form="f_{_esc(key_value)}" '
+                            f'value="{_esc("" if d.get(c) is None else d.get(c))}"></td>')
                 else:
                     value = '' if d.get(c) is None else str(d.get(c))
                     if len(value) > 90:
@@ -456,9 +469,9 @@ def register(app):
 
             if spec:
                 cells.append(
-                    f'<td><form id="f_{key_value}" class="inline" method="post" '
+                    f'<td><form id="f_{_esc(key_value)}" class="inline" method="post" '
                     f'action="{url_for("console_save", table=table)}">'
-                    f'<input type="hidden" name="__pk" value="{key_value}">'
+                    f'<input type="hidden" name="__pk" value="{_esc(key_value)}">'
                     f'<button>save</button></form></td>')
             body_rows.append('<tr>' + ''.join(cells) + '</tr>')
 
@@ -558,7 +571,7 @@ def register(app):
                 f'<div class="sg">'
                 f'<form method="post" action="{url_for("console_delete_suggestion")}" '
                 f'style="float:right;margin:-4px -4px 0 8px">'
-                f'<input type="hidden" name="id" value="{r["id"]}">'
+                f'<input type="hidden" name="id" value="{_esc(r["id"])}">'
                 f'<button class="danger" title="Delete this suggestion" '
                 f'style="padding:2px 9px;font-size:14px;line-height:1.2">&times;</button>'
                 f'</form>'
@@ -570,7 +583,7 @@ def register(app):
                 f'<div class="meta">contact: {_esc(r["contact"]) or "none"}</div>'
                 f'{replied}'
                 f'<form method="post" action="{url_for("console_reply")}">'
-                f'<input type="hidden" name="id" value="{r["id"]}">'
+                f'<input type="hidden" name="id" value="{_esc(r["id"])}">'
                 f'<textarea name="body" placeholder="Reply to {_esc(r["username"])} — '
                 f'shows in the app next time they open it"></textarea>'
                 f'<div class="row" style="margin-top:6px"><button>send reply</button>'
@@ -841,6 +854,39 @@ def register(app):
                                 msg=f'{name} created, switched off. '
                                     f'Set its numbers, then set enabled to 1.'))
 
+    @app.route('/console/ops/ghost/set', methods=['POST'])
+    def console_ghost_set():
+        """Weekly and all-time minutes for one placeholder, from the ops page.
+
+        The ghost_users table page can edit every field; this exists because
+        weekly minutes are the ones actually worth changing week to week, and
+        going through the table page for that got old fast."""
+        gid = (request.form.get('id') or '').strip()
+        try:
+            weekly = max(0, min(10_080, int(request.form.get('weekly') or 0)))
+            total = max(0, min(economy.MAX_TOTAL_MINUTES,
+                               int(request.form.get('total') or 0)))
+        except (TypeError, ValueError):
+            return redirect(url_for('console_ops', err='Minutes must be numbers.'))
+        enabled = 1 if request.form.get('enabled') == '1' else 0
+
+        conn = get_db()
+        try:
+            cur = conn.execute(
+                'UPDATE ghost_users SET weekly_minutes=?, total_minutes=?,'
+                ' enabled=?, updated_at=? WHERE id=?',
+                (weekly, total, enabled, int(time.time()), gid))
+            _audit(conn, 'ghost:set', gid, f'weekly={weekly} total={total} on={enabled}')
+            conn.commit()
+        finally:
+            conn.close()
+        if not cur.rowcount:
+            return redirect(url_for('console_ops', err=f'No placeholder with id {gid}.'))
+        return redirect(url_for('console_ops',
+                                msg=f'Placeholder {gid}: {weekly}m this week, '
+                                    f'{total}m all-time, '
+                                    f'{"showing" if enabled else "hidden"}.'))
+
     @app.route('/console/ops/ghost/delete', methods=['POST'])
     def console_ghost_delete():
         gid = (request.form.get('id') or '').strip()
@@ -893,8 +939,12 @@ def register(app):
                     ghost_n = 2
                 ghost_on = conn.execute(
                     'SELECT COUNT(*) c FROM ghost_users WHERE enabled=1').fetchone()['c']
+                ghost_rows = conn.execute(
+                    'SELECT id, username, weekly_minutes, total_minutes, enabled'
+                    ' FROM ghost_users ORDER BY id').fetchall()
             except Exception:
                 ghost_n = ghost_on = 0
+                ghost_rows = []
         finally:
             conn.close()
 
@@ -967,15 +1017,33 @@ def register(app):
             f'<form class="row" method="post" action="{url_for("console_new_code")}">'
             f'<input name="code" placeholder="CODE" maxlength="30" required>'
             f'<button>create / reset</button></form></div>')
+        ghost_forms = []
+        for gr in ghost_rows:
+            ghost_forms.append(
+                f'<form class="row" style="margin-top:8px;align-items:center;gap:6px" '
+                f'method="post" action="{url_for("console_ghost_set")}">'
+                f'<input type="hidden" name="id" value="{_esc(gr["id"])}">'
+                f'<b style="min-width:80px">{_esc(gr["username"])}</b>'
+                f'<label style="font-size:12px">week '
+                f'<input name="weekly" type="number" min="0" max="10080" '
+                f'value="{_esc(gr["weekly_minutes"] or 0)}" style="width:70px"></label>'
+                f'<label style="font-size:12px">all-time '
+                f'<input name="total" type="number" min="0" '
+                f'value="{_esc(gr["total_minutes"] or 0)}" style="width:80px"></label>'
+                f'<label style="font-size:12px"><input type="checkbox" name="enabled" '
+                f'value="1" {"checked" if gr["enabled"] else ""}> show</label>'
+                f'<button>save</button></form>')
         parts.append(
             f'<div class="card"><h3>Leaderboard placeholders</h3>'
             f'<p><b>{ghost_on} showing</b> of {ghost_n}. These are not accounts &mdash; '
             f'they cannot log in, earn, or be messaged, and they never appear on '
-            f'the friends board. Edit their names and numbers on the '
-            f'<a href="{url_for("console_table", table="ghost_users")}">ghost_users</a> '
-            f'page; set <b>enabled</b> to 1 to make one visible.</p>'
-            f'<form class="row" method="post" action="{url_for("console_ghost_add")}">'
-            f'<input name="username" placeholder="name" maxlength="20" required>'
+            f'the friends board. Weekly minutes are set here; names, streaks and '
+            f'cosmetics are on the '
+            f'<a href="{url_for("console_table", table="ghost_users")}">ghost_users</a> page.</p>'
+            + ''.join(ghost_forms) +
+            f'<form class="row" style="margin-top:14px" method="post" '
+            f'action="{url_for("console_ghost_add")}">'
+            f'<input name="username" placeholder="new name" maxlength="20" required>'
             f'<button>add</button></form>'
             f'<form class="row" style="margin-top:8px" method="post" '
             f'action="{url_for("console_ghost_delete")}">'
